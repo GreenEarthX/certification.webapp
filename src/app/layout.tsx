@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
+
 // Components
 import Sidebar from "@/components/ui/Sidebar";
 import Navbar from "@/components/ui/Navbar";
@@ -38,11 +39,11 @@ export default function RootLayout({
           <Sidebar />
           <div className="flex flex-col w-full p-6">
             <Navbar
-              title="Main Dashboard"
               notifications={notificationsData}
               userName="Ramadan"
             />
             {children}
+            
           </div>
         </div>
       </body>

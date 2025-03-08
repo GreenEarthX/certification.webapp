@@ -1,52 +1,138 @@
 /* sidebar.module.css */
 .sidebar {
-    width: 240px;
-    flex-shrink: 0;
-  }
-  
-  .sidebarPaper {
-    width: 240px;
-    box-sizing: border-box;
-    border-right: 1px solid rgba(0, 0, 0, 0.12);
-    position: sticky;
-    top: 0;
-    height: 100vh;
-    background-color: #ffffff;
-    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
-  }
-  
-  .logoBox {
-    display: flex;
-    justify-content: center;
-    padding: 16px;
-  }
-  
-  .logo {
-    border-radius: 50%;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
-  
-  .listItem {
-    padding: 12px 24px;
-    display: flex;
-    align-items: center;
-  }
-  
-  .listItemIcon {
-    min-width: 40px;
-  }
-  
-  .listItemActive {
-    background-color: rgba(25, 118, 210, 0.08);
-    color: #1976d2;
-  }
-  
-  .listItemHover:hover {
-    background-color: rgba(25, 118, 210, 0.04);
-  }
-  
-  .signOutItem:hover {
-    background-color: rgba(255, 0, 0, 0.04);
-    color: #d32f2f;
-  }
-  
+  width: 240px;
+  flex-shrink: 0;
+}
+
+.sidebarPaper {
+  width: 240px;
+  box-sizing: border-box;
+  border-right: 1px solid rgba(0, 0, 0, 0.12);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  background-color: #ffffff;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+}
+
+.logoBox {
+  display: flex;
+  justify-content: center;
+  padding: 16px;
+}
+
+.logo {
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.listItem {
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+}
+
+.listItemIcon {
+  min-width: 40px;
+}
+
+.listItemActive {
+  background-color: rgba(25, 118, 210, 0.08);
+  color: #1976d2;
+}
+
+.listItemHover:hover {
+  background-color: rgba(25, 118, 210, 0.04);
+}
+
+.signOutItem:hover {
+  background-color: rgba(255, 0, 0, 0.04);
+  color: #d32f2f;
+}
+
+
+/* Sidebar Collapsed State */
+.collapsed {
+width: 80px !important; /* Adjust width for collapsed state */
+}
+
+.collapsed .logoBox {
+display: flex;
+justify-content: center;
+align-items: center;
+}
+
+.collapsed .listItem {
+justify-content: center;
+}
+
+.collapsed .listItemText {
+display: none; /* Hide text when collapsed */
+}
+
+/* Toggle Button Container - Full Height */
+.toggleButtonContainer {
+position: absolute;
+top: 0;
+right: 0;
+height: 100%; /* Span the full height of the sidebar */
+width: 24px; /* Adjust width for clickable area */
+display: flex;
+justify-content: center;
+align-items: center;
+background: transparent;
+cursor: pointer;
+z-index: 1200; /* Ensure it's above other elements */
+}
+
+.toggleButtonContainer:hover {
+background: rgba(33, 150, 243, 0.1); /* Light blue hover background */
+}
+
+.toggleButton {
+background: none; /* Remove background */
+border: none; /* Remove border */
+padding: 8px; /* Add padding for better hover area */
+transition: transform 0.2s ease, opacity 0.2s ease; /* Smooth transition */
+}
+
+.toggleButton:hover {
+opacity: 0.8; /* Slight fade on hover */
+}
+
+/* Arrow Icon */
+.arrowIcon {
+color: #000; /* Default arrow color */
+transition: color 0.2s ease, filter 0.2s ease; /* Smooth transition */
+}
+
+.toggleButtonContainer:hover .arrowIcon {
+color: #2196F3; /* Blue color on hover */
+filter: drop-shadow(0 0 4px rgba(33, 150, 243, 0.5)); /* Blue reflection effect */
+}
+
+
+
+/* Icon Styles */
+.listItemIcon svg {
+width: 20px; /* Adjust icon size */
+height: 20px; /* Adjust icon size */
+color: #666; /* Default icon color */
+}
+
+.listItemActive .listItemIcon svg {
+color: #2196F3; /* Active icon color */
+}
+
+/* Arrow Icon */
+.arrowIcon {
+width: 16px; /* Adjust arrow size */
+height: 16px; /* Adjust arrow size */
+color: #000; /* Default arrow color */
+transition: color 0.2s ease, filter 0.2s ease; /* Smooth transition */
+}
+
+.toggleButtonContainer:hover .arrowIcon {
+color: #2196F3; /* Blue color on hover */
+filter: drop-shadow(0 0 4px rgba(33, 150, 243, 0.5)); /* Blue reflection effect */
+}

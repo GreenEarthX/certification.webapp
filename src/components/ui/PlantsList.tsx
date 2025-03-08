@@ -13,14 +13,18 @@ interface PlantsListProps {
 }
 
 const PlantsList: React.FC<PlantsListProps> = ({ plants }) => {
-  
   const getRiskScoreColor = (score: number): string => {
-    if (score >= 70) return 'bg-green-500';
-    if (score >= 40) return 'bg-orange-500';
-    return 'bg-red-500';
+    if (score >= 70) return 'bg-red-500'; // High risk = Red
+    if (score >= 40) return 'bg-orange-500'; // Medium risk = Orange
+    return 'bg-green-500'; // Low risk = Green
   };
 
   const getRiskScoreText = (score: number): string => `${score}%`;
+
+  // Mock function for managing a plant
+  const handleManagePlant = (id: number) => {
+    console.log(`Manage plant with ID: ${id}`);
+  };
 
   return (
     <div className="overflow-x-auto">
@@ -31,6 +35,7 @@ const PlantsList: React.FC<PlantsListProps> = ({ plants }) => {
             <th className="pb-3 font-medium">Type</th>
             <th className="pb-3 font-medium">Address</th>
             <th className="pb-3 font-medium">Risk Score</th>
+            <th className="pb-3 font-medium">Actions</th>
           </tr>
         </thead>
         <tbody className="text-gray-700">
@@ -50,6 +55,14 @@ const PlantsList: React.FC<PlantsListProps> = ({ plants }) => {
                   <span className="text-sm font-medium">{getRiskScoreText(riskScore)}</span>
                 </div>
               </td>
+              <td className="py-4">
+                <div
+                  onClick={() => handleManagePlant(id)}
+                  className="flex items-center space-x-2 cursor-pointer text-blue-600 hover:text-blue-700"
+                >
+                  <span className="text-sm font-medium">Manage Plant</span>
+                </div>
+              </td>
             </tr>
           ))}
         </tbody>
@@ -58,4 +71,4 @@ const PlantsList: React.FC<PlantsListProps> = ({ plants }) => {
   );
 };
 
-export default memo(PlantsList);  // Memoize the component to avoid unnecessary re-renders.
+export default memo(PlantsList);

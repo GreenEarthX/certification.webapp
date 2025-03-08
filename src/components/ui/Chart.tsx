@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+import plantsData from '@/data/plantsData.json'; 
 
 interface TrendChartProps {
   data: {
@@ -15,14 +16,25 @@ interface TrendChartProps {
   };
 }
 
+interface Plant {
+  id: number;
+  name: string;
+  type: string;
+  address: string;
+  riskScore: number;
+}
+
 const Chart: React.FC<TrendChartProps> = ({ data }) => {
   const [view, setView] = useState<'day' | 'week' | 'month' | 'year'>('month');
+  const [selectedPlant, setSelectedPlant] = useState<Plant>(plantsData[0]); 
   const [displayData, setDisplayData] = useState<typeof data>({
     ...data,
     primaryData: data.primaryData,
     secondaryData: data.secondaryData,
     months: data.months,
   });
+  const [showPlantDropdown, setShowPlantDropdown] = useState(false); 
+  const [showTimeRangeDropdown, setShowTimeRangeDropdown] = useState(false); 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const updateDataForView = useCallback((view: 'day' | 'week' | 'month' | 'year') => {
@@ -164,42 +176,107 @@ const Chart: React.FC<TrendChartProps> = ({ data }) => {
       ctx.lineWidth = 2;
       ctx.stroke();
     }
-
   }, [displayData]);
 
   return (
     <div className="flex flex-col">
       <div className="flex justify-between items-center mb-4">
-        <div className="flex space-x-2">
-          <button 
-            className={`px-4 py-2 text-sm ${view === 'day' ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-200 text-black'} rounded-md transition-transform hover:scale-105`}
-            onClick={() => setView('day')}>
-            Day
-          </button>
-          <button 
-            className={`px-4 py-2 text-sm ${view === 'week' ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-200 text-black'} rounded-md transition-transform hover:scale-105`}
-            onClick={() => setView('week')}>
-            Week
-          </button>
-          <button 
-            className={`px-4 py-2 text-sm ${view === 'month' ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-200 text-black'} rounded-md transition-transform hover:scale-105`}
-            onClick={() => setView('month')}>
-            Month
-          </button>
-          <button 
-            className={`px-4 py-2 text-sm ${view === 'year' ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-200 text-black'} rounded-md transition-transform hover:scale-105`}
-            onClick={() => setView('year')}>
-            Year
-          </button>
+        {/* Time Range Selector (Minimalist Design) */}
+        <div className="relative">
+          <div
+            onClick={() => setShowTimeRangeDropdown(!showTimeRangeDropdown)}
+            className="flex items-center space-x-2 cursor-pointer text-blue-600 hover:text-blue-700"
+          >
+            {/* Calendar Icon */}
+            <svg
+              className="h-4 w-4"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fillRule="evenodd"
+                d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
+                clipRule="evenodd"
+              />
+            </svg>
+            <span className="text-sm font-medium capitalize">{view}</span>
+            <svg
+              className="h-4 w-4"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fillRule="evenodd"
+                d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </div>
+          {showTimeRangeDropdown && (
+            <div className="absolute mt-2 w-24 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+              {['day', 'week', 'month', 'year'].map((option) => (
+                <div
+                  key={option}
+                  onClick={() => {
+                    setView(option as 'day' | 'week' | 'month' | 'year');
+                    setShowTimeRangeDropdown(false);
+                  }}
+                  className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer capitalize"
+                >
+                  {option}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Plant Dropdown (Minimalist Design) */}
+        <div className="relative">
+          <div
+            onClick={() => setShowPlantDropdown(!showPlantDropdown)}
+            className="flex items-center space-x-2 cursor-pointer text-blue-600 hover:text-blue-700"
+          >
+            <span className="text-sm font-medium">{selectedPlant.name}</span>
+            <svg
+              className="h-4 w-4"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fillRule="evenodd"
+                d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </div>
+          {showPlantDropdown && (
+            <div className="absolute mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+              {plantsData.map((plant) => (
+                <div
+                  key={plant.id}
+                  onClick={() => {
+                    setSelectedPlant(plant);
+                    setShowPlantDropdown(false);
+                  }}
+                  className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer"
+                >
+                  {plant.name}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
       <div className="h-64 w-full">
-        <canvas 
-          ref={canvasRef} 
-          width={800} 
-          height={300} 
-          className="w-full h-full border border-gray-300" 
+        <canvas
+          ref={canvasRef}
+          width={800}
+          height={300}
+          className="w-full h-full border border-gray-300"
         />
       </div>
     </div>

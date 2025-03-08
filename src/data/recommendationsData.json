@@ -1,38 +1,41 @@
 [
-    {
-      "id": 1,
-      "title": "Certify™ Scheme",
-      "overview": "The first EU-wide green hydrogen certification system ensuring transparency and credibility in hydrogen production.",
-      "details": [
-        "Guarantees of Origin (GO) for renewable hydrogen.",
-        "Tracks carbon footprint and sustainability.",
-        "Recognised in Europe for hydrogen production and trade."
-      ],
-      "certifyingEntity": "Certify",
-      "validity": "12 Months"
-    },
-    {
-      "id": 2,
-      "title": "Rheinland H2.21",
-      "overview": "A German certification system ensuring hydrogen meets sustainability and regulatory standards.",
-      "details": [
-        "Focuses on industrial hydrogen applications.",
-        "Ensures compliance with German and EU regulations.",
-        "Recognised in energy and transportation sectors."
-      ],
-      "certifyingEntity": "TÜV",
-      "validity": "12 Months"
-    },
-    {
-      "id": 3,
-      "title": "ISCC PLUS",
-      "overview": "A German certification system ensuring hydrogen meets sustainability and regulatory standards.",
-      "details": [
-        "Focuses on industrial hydrogen applications.",
-        "Ensures compliance with sustainability standards.",
-        "Recognised globally for renewable energy."
-      ],
-      "certifyingEntity": "ISCC",
-      "validity": "12 Months"
-    }
-  ]
+  {
+    "id": 1,
+    "title": "Certify™ Scheme",
+    "overview": "The first EU-wide green hydrogen certification system ensuring transparency and credibility in hydrogen production.",
+    "details": [
+      "Guarantees of Origin (GO) for renewable hydrogen.",
+      "Tracks carbon footprint and sustainability.",
+      "Recognised in Europe for hydrogen production and trade."
+    ],
+    "certifyingEntity": "Certify",
+    "validity": "12 Months",
+    "compliancePercentage": 75
+  },
+  {
+    "id": 2,
+    "title": "Rheinland H2.21",
+    "overview": "A German certification system ensuring hydrogen meets sustainability and regulatory standards.",
+    "details": [
+      "Focuses on industrial hydrogen applications.",
+      "Ensures compliance with German and EU regulations.",
+      "Recognised in energy and transportation sectors."
+    ],
+    "certifyingEntity": "TÜV",
+    "validity": "12 Months",
+    "compliancePercentage": 60
+  },
+  {
+    "id": 3,
+    "title": "ISCC PLUS",
+    "overview": "A German certification system ensuring hydrogen meets sustainability and regulatory standards.",
+    "details": [
+      "Focuses on industrial hydrogen applications.",
+      "Ensures compliance with sustainability standards.",
+      "Recognised globally for renewable energy."
+    ],
+    "certifyingEntity": "ISCC",
+    "validity": "12 Months",
+    "compliancePercentage": 90
+  }
+]

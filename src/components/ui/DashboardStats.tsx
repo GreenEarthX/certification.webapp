@@ -16,14 +16,16 @@ const DashboardStats: React.FC<StatsProps> = ({ stats }) => {
     <div className="p-4 bg-white shadow-md rounded-lg"> {/* White background, shadow for elevation */}
       <h2 className="text-xl font-bold mb-6">Certifications Status</h2> {/* Added Title */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        {/* Valid Card */}
         <StatCard
           title="Valid"
           value={stats.valid}
-          icon={<FaCheckCircle className="h-6 w-6 text-blue-600" />}
-          iconColor="blue"
-          bgColor="blue"
+          icon={<FaCheckCircle className="h-6 w-6 text-green-600" />} 
+          iconColor="green"
+          bgColor="green"
         />
         
+        {/* Pending Card */}
         <StatCard
           title="Pending"
           value={stats.pending}
@@ -32,7 +34,7 @@ const DashboardStats: React.FC<StatsProps> = ({ stats }) => {
           bgColor="yellow"
         />
 
-        {/* Updated Expiring Card with Exclamation Icon */}
+        {/* Expiring Card */}
         <StatCard
           title="Expiring"
           value={stats.expiring}

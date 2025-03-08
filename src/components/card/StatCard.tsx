@@ -8,7 +8,7 @@ interface StatCardProps {
   bgColor: string;
 }
 
-const StatCard: React.FC<StatCardProps> = ({ title, value, icon, iconColor, bgColor }) => (
+const StatCard: React.FC<StatCardProps> = ({ title, value, icon,  bgColor }) => (
   <div className="stat-card">
     <div className="flex items-center">
       <div className={`bg-${bgColor}-50 p-2 rounded-full mr-3`}>
