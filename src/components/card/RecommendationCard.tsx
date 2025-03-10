@@ -139,18 +139,6 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({ recommen
         >
           View Details
         </Button>
-        <Button
-          variant="contained"
-          sx={{
-            flex: 1,
-            borderRadius: "0 0 8px 0",
-            py: 1.5,
-            backgroundColor: "#4caf50",
-            "&:hover": { backgroundColor: "#388e3c" },
-          }}
-        >
-          Request Certification
-        </Button>
       </Box>
     </Box>
   );
