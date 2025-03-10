@@ -1,0 +1,52 @@
+"use client";
+
+import React from "react";
+
+// Components
+import DashboardStats from "@/components/ui/DashboardStats";
+import PlantsList from "@/components/ui/PlantsList";
+import Chart from "@/components/ui/Chart";
+import Alerts from "@/components/ui/Alerts";
+//import MiniCalendar from "@/components/calendar/MiniCalendar";
+
+// Data
+import plantsData from "@/data/plantsData.json";
+import chartData from "@/data/chartData.json";
+import statsData from "@/data/statsData.json";
+import alertsData from "@/data/alertsData.json";
+
+
+export default function Dashboard() {
+
+  return (
+    <div className="grid grid-cols-12 gap-6 mt-6">
+      
+      {/* Main Content - Full Width */}
+      <div className="col-span-12 space-y-6">
+        {/* Dashboard Statistics */}
+        <DashboardStats stats={statsData} />
+
+        {/* Plants Section */}
+        <section className="bg-white rounded-lg p-6 shadow-sm">
+          <h2 className="text-xl font-semibold mb-4">Plants</h2>
+          <PlantsList plants={plantsData} />
+        </section>
+      </div>
+
+      {/* Chart and Alerts Side by Side */}
+      <div className="col-span-12 grid grid-cols-12 gap-6">
+        {/* Chart Section */}
+        <section className="col-span-12 lg:col-span-8 bg-white rounded-lg p-6 shadow-sm">
+          <h2 className="text-xl font-semibold mb-4">Risk Profile</h2>
+          <Chart data={chartData} />
+        </section>
+
+        {/* Alerts Section */}
+        <section className="col-span-12 lg:col-span-4 bg-white rounded-lg p-6 shadow-sm">
+          <Alerts alerts={alertsData} />
+        </section>
+      </div>
+
+    </div>
+  );
+}

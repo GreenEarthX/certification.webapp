@@ -1,0 +1,38 @@
+[
+    {
+      "id": 1,
+      "type": "plant_added",
+      "message": "Plant added successfully!",
+      "timestamp": "2025-10-01T10:00:00Z",
+      "read": false
+    },
+    {
+      "id": 2,
+      "type": "profile_update",
+      "message": "Your profile has been updated.",
+      "timestamp": "2025-10-02T11:00:00Z",
+      "read": false
+    },
+    {
+      "id": 3,
+      "type": "risk_score_update",
+      "message": "Your risk score has been updated.",
+      "timestamp": "2025-10-03T12:00:00Z",
+      "read": false
+    },
+    {
+      "id": 4,
+      "type": "new_certification",
+      "message": "A new certification is available.",
+      "timestamp": "2025-10-04T13:00:00Z",
+      "read": false
+    },
+    {
+      "id": 5,
+      "type": "login_from_other_device",
+      "message": "Login detected from another device.",
+      "timestamp": "2025-10-05T14:00:00Z",
+      "read": false
+    }
+  ]
+  
