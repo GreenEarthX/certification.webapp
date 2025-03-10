@@ -1,0 +1,80 @@
+[
+  {
+    "id": 1,
+    "Certification": "Certifhiy™ Scheme",
+    "Plant Name": "VerdeH2 Hub",
+    "Entity": "CertifHy",
+    "Submission Date": "04 Sep 2024",
+    "Issue Date": "17/03/2026", 
+    "Type": "Regulatory",
+    "View": "View details",
+    "Status": "Accepted",
+    "imageUrl": "/certification1.jpeg",
+    "description":"This certificate guarantees that the hydrogen produced meets the CertifyHy™ criteria for Green or Low-Carbon Hydrogen. It ensures traceability, sustainability, and compliance with European market standards." 
+  },
+  {
+    "id": 2,
+    "Certification": "Rheinland H2.21",
+    "Plant Name": "NeonH2 Labs",
+    "Entity": "TÜV",
+    "Submission Date": "28 May 2024",
+    "Issue Date": "18/03/2026", 
+    "Type": "For trading",
+    "View": "View details",
+    "Status": "Pending",
+    "imageUrl": "/certification2.jpeg",
+    "description":"Description of Rheinland H2.21"
+  },
+  {
+    "id": 3,
+    "Certification": "ISCC PLUS",
+    "Plant Name": "NeonH2 Labs",
+    "Entity": "ISCC",
+    "Submission Date": "23 Nov 2024",
+    "Issue Date": "19/03/2026",
+    "Type": "Regulatory",
+    "View": "View details",
+    "Status": "Rejected",
+    "imageUrl": "/certification3.jpeg",
+    "description":"Description" 
+  },
+  {
+    "id": 4,
+    "Certification": "ISCC PLUS",
+    "Plant Name": "VerdeH2 Hub",
+    "Entity": "ISCC",
+    "Submission Date": "05 Feb 2024",
+    "Issue Date": "20/03/2026", 
+    "Type": "Voluntary",
+    "View": "View details",
+    "Status": "Accepted",
+    "imageUrl": "/certification4.jpeg",
+    "description":"Description"
+  },
+  {
+    "id": 5,
+    "Certification": "Rheinland H2.21",
+    "Plant Name": "VerdeH2 Hub",
+    "Entity": "TÜV",
+    "Submission Date": "29 Jul 2024",
+    "Issue Date": "21/03/2026", 
+    "Type": "For trading",
+    "View": "View details",
+    "Status": "Pending",
+    "imageUrl": "/certification5.jpeg",
+    "description":"Description" 
+  },
+  {
+    "id": 6,
+    "Certification": "ISO 9001",
+    "Plant Name": "VerdeH2 Hub",
+    "Entity": "DNV",
+    "Submission Date": "15 Aug 2024",
+    "Issue Date": "22/03/2026",
+    "Type": "For trading",
+    "View": "View details",
+    "Status": "Accepted",
+    "imageUrl": "/certification6.jpeg",
+    "description":"Description" 
+  }
+]
