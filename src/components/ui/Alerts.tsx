@@ -1,12 +1,7 @@
 "use client";
 
 import React from "react";
-
-interface Alert {
-  title: string;
-  severity: string;
-  timestamp: string;
-}
+import { Alert } from "@/models/alert";
 
 interface AlertsProps {
   alerts: Alert[];

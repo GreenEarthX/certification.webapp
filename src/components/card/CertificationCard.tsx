@@ -1,18 +1,8 @@
 import React from 'react';
 import Image from 'next/image';
+import { Certification } from '@/models/certification';
 
-interface CertificationCardProps {
-  imageUrl: string;
-  id: number;
-  certification: string;
-  entity: string;
-  issueDate: string;
-  status: string;
-  description: string;
-  qrCodeUrl: string; // New prop for QR code image URL
-}
-
-const CertificationCard: React.FC<CertificationCardProps> = ({
+const CertificationCard: React.FC<Certification> = ({
   imageUrl,
   id,
   certification,

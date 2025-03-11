@@ -1,21 +1,20 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
 import { useMediaQuery } from "@mui/material";
-import certificationData from "@/data/certificationsTableData.json";
 
 const columns: GridColDef[] = [
-  { field: "Certification", headerName: "Certification", flex: 1, minWidth: 70 },
-  { field: "Plant Name", headerName: "Plant Name", flex: 1, minWidth: 60 },
-  { field: "Entity", headerName: "Entity", flex: 1, minWidth: 60 },
-  { field: "Submission Date", headerName: "Submission Date", flex: 1, minWidth: 80 },
-  { field: "Type", headerName: "Type", flex: 1, minWidth: 50 },
+  { field: "Certification", headerName: "Certification", flex: 1, minWidth: 120 },
+  { field: "Plant Name", headerName: "Plant Name", flex: 1, minWidth: 120 },
+  { field: "Entity", headerName: "Entity", flex: 1, minWidth: 120 },
+  { field: "Submission Date", headerName: "Submission Date", flex: 1, minWidth: 120 },
+  { field: "Type", headerName: "Type", flex: 1, minWidth: 100 },
   {
     field: "View",
     headerName: "Details",
     flex: 1,
-    minWidth: 50,
+    minWidth: 100,
     renderCell: (params) => (
       <a href={`/certifications/${params.row.id}`} className="text-blue-600 hover:text-blue-700">
         View Details
@@ -26,18 +25,18 @@ const columns: GridColDef[] = [
     field: "Status",
     headerName: "Status",
     flex: 1,
-    minWidth: 60,
+    minWidth: 100,
     renderCell: (params) => {
       const status = params.value;
 
       // Determine the label class based on the status
       const getStatusClass = () => {
         switch (status.toLowerCase()) {
-          case "accepted":
+          case "active":
             return "bg-green-500 text-white";
-          case "pending":
+          case "expiring":
             return "bg-yellow-500 text-white";
-          case "rejected":
+          case "expired":
             return "bg-red-500 text-white";
           default:
             return "bg-gray-500 text-white";
@@ -64,6 +63,21 @@ const columns: GridColDef[] = [
 
 export default function CertificationsTable() {
   const isSmallScreen = useMediaQuery("(max-width: 600px)");
+  const [certifications, setCertifications] = useState([]);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const response = await fetch("/api/certifications");
+        const data = await response.json();
+        setCertifications(data);
+      } catch (error) {
+        console.error("Error fetching certifications:", error);
+      }
+    }
+
+    fetchData();
+  }, []);
 
   return (
     <div>
@@ -82,7 +96,7 @@ export default function CertificationsTable() {
           }}
         >
           <DataGrid
-            rows={certificationData}
+            rows={certifications}
             columns={columns}
             pageSizeOptions={[5]}
             initialState={{
