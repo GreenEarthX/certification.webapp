@@ -1,13 +1,5 @@
-// components/Notification.tsx
 import React, { useState } from 'react';
-
-interface Notification {
-  id: number;
-  type: string;
-  message: string;
-  timestamp: string;
-  read: boolean;
-}
+import { Notification } from '@/models/notification';
 
 interface NotificationProps {
   notifications: Notification[];
