@@ -11,15 +11,7 @@ import {
   Box,
 } from "@mui/material";
 
-interface Recommendation {
-  id: number;
-  title: string;
-  overview: string;
-  details: string[];
-  certifyingEntity: string;
-  validity: string;
-  compliancePercentage: number;
-}
+import { Recommendation } from "@/models/recommendation";
 
 interface RecommendationCardProps {
   recommendation: Recommendation;

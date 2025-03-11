@@ -4,19 +4,14 @@ import React, { useState, useEffect } from "react";
 import { usePathname } from "next/navigation"; 
 import Notifications from "./Notifications";
 import UserProfileDropdown from "./UserProfileDropdown";
+import { Notification } from "@/models/notification";
+
 
 interface NavbarProps {
   notifications: Notification[];
   userName: string;
 }
 
-interface Notification {
-  id: number;
-  type: string;
-  message: string;
-  timestamp: string;
-  read: boolean;
-}
 
 const Navbar: React.FC<NavbarProps> = ({ notifications, userName }) => {
   const [updatedNotifications, setUpdatedNotifications] =

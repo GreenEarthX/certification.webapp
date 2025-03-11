@@ -1,11 +1,6 @@
 import React from 'react';
 import { FaDownload } from 'react-icons/fa'; 
-
-interface Report {
-  title: string; 
-  link: string; 
-  pdfUrl: string; 
-}
+import { Report } from '@/models/report';
 
 interface CertificationReportComponentProps {
   reports: Report[]; 
