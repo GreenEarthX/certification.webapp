@@ -1,12 +1,5 @@
 import React, { memo } from 'react';
-
-interface Plant {
-  id: number;
-  name: string;
-  type: string;
-  address: string;
-  riskScore: number;
-}
+import { Plant } from '@/models/plant';
 
 interface PlantsListProps {
   plants: Plant[];

@@ -2,16 +2,8 @@
 
 import React, { useEffect, useState } from "react";
 import { RecommendationCard } from "@/components/card/RecommendationCard";
+import { Recommendation } from "@/models/recommendation";
 
-interface Recommendation {
-  id: number;
-  title: string;
-  overview: string;
-  details: string[];
-  certifyingEntity: string;
-  validity: string;
-  compliancePercentage: number;
-}
 
 export default function Recommendations() {
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);

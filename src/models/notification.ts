@@ -5,9 +5,3 @@ export interface Notification {
     timestamp: string;
     read: boolean;
   }
-  
-  export interface NavbarProps {
-    title: string;
-    notifications: Notification[];
-    userName: string;
-  }
