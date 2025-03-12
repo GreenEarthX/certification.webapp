@@ -2,19 +2,17 @@ import { NextResponse } from "next/server";
 import { Pool } from "pg";
 import dotenv from "dotenv";
 
-// Load environment variables
 dotenv.config();
 
-// PostgreSQL connection pool
 const pool = new Pool({
   user: process.env.PG_USER,
   host: process.env.PG_HOST,
   database: process.env.PG_DATABASE,
   password: process.env.PG_PASSWORD,
-  port: process.env.PG_PORT ? parseInt(process.env.PG_PORT) : 5432, // Ensure port is a number
+  port: process.env.PG_PORT ? parseInt(process.env.PG_PORT) : 5432, 
 });
 
-// API Route
+// API Route - Fetch Certifications
 export async function GET() {
   try {
     const query = `
