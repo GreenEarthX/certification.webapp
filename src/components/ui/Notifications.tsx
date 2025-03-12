@@ -1,19 +1,53 @@
-import React, { useState } from 'react';
-import { Notification } from '@/models/notification';
+import React, { useEffect, useState } from "react";
+import { Notification } from "@/models/notification";
 
-interface NotificationProps {
-  notifications: Notification[];
-  onNotificationClick: (id: number) => void;
+interface NotificationsProps {
+  onNotificationClick?: (id: number) => void; // ✅ Keep the onNotificationClick optional
 }
 
-const Notifications: React.FC<NotificationProps> = ({
-  notifications,
-  onNotificationClick,
-}) => {
+const Notifications: React.FC<NotificationsProps> = ({ onNotificationClick }) => {
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
 
-  const handleNotificationClick = (id: number) => {
-    onNotificationClick(id);
+  // ✅ Fetch notifications when component mounts
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+
+  const fetchNotifications = async () => {
+    try {
+      const response = await fetch("/api/notifications");
+      const data = await response.json();
+      setNotifications(data); // ✅ Updates state with latest notifications from DB
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+    }
+  };
+
+  const handleNotificationClick = async (id: number) => {
+    try {
+      const response = await fetch(`/api/notifications/${id}`, {
+        method: "PUT",
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to update: ${response.statusText}`);
+      }
+
+      // ✅ Update state to mark the notification as read
+      setNotifications((prev) =>
+        prev.map((notif) =>
+          notif.id === id ? { ...notif, read: true } : notif
+        )
+      );
+
+      // ✅ Notify parent (Navbar) to sync state
+      if (onNotificationClick) {
+        onNotificationClick(id);
+      }
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+    }
   };
 
   return (
@@ -38,9 +72,9 @@ const Notifications: React.FC<NotificationProps> = ({
             d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
           />
         </svg>
-        {notifications.filter(notification => !notification.read).length > 0 && (
+        {notifications.filter((n) => !n.read).length > 0 && (
           <span className="absolute top-0 right-0 px-1.5 py-0.5 text-[10px] font-bold text-red-100 bg-red-600 rounded-full">
-            {notifications.filter(notification => !notification.read).length}
+            {notifications.filter((n) => !n.read).length}
           </span>
         )}
       </button>
@@ -55,14 +89,14 @@ const Notifications: React.FC<NotificationProps> = ({
               notifications.map((notification) => (
                 <li key={notification.id}>
                   <button
-                    onClick={() => handleNotificationClick(notification.id)} // Mark as read
+                    onClick={() => handleNotificationClick(notification.id)} // ✅ Calls API & updates state
                     className={`block w-full px-4 py-2 text-sm text-gray-700 text-left hover:bg-gray-100 ${
-                      !notification.read ? 'bg-gray-50' : 'bg-gray-100'
+                      !notification.read ? "bg-gray-50" : "bg-gray-100"
                     }`}
                   >
                     <p
                       className={`font-medium ${
-                        !notification.read ? 'text-black' : 'text-gray-500'
+                        !notification.read ? "text-black" : "text-gray-500"
                       }`}
                     >
                       {notification.message}

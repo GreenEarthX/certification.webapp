@@ -1,22 +1,33 @@
-import React, { memo } from 'react';
-import { Plant } from '@/models/plant';
+import React, { useEffect, useState } from "react";
 
-interface PlantsListProps {
-  plants: Plant[];
+interface Plant {
+  name: string;
+  type: string;
+  address: string;
+  riskScore: number;
 }
 
-const PlantsList: React.FC<PlantsListProps> = ({ plants }) => {
+const PlantsList: React.FC = () => {
+  const [plants, setPlants] = useState<Plant[]>([]);
+
+  useEffect(() => {
+    fetch("/api/plants")
+      .then((res) => res.json())
+      .then((data) => setPlants(data))
+      .catch((error) => console.error("Error fetching plants data:", error));
+  }, []);
+
   const getRiskScoreColor = (score: number): string => {
-    if (score >= 70) return 'bg-red-500'; // High risk = Red
-    if (score >= 40) return 'bg-orange-500'; // Medium risk = Orange
-    return 'bg-green-500'; // Low risk = Green
+    if (score >= 70) return "bg-red-500"; 
+    if (score >= 40) return "bg-orange-500"; 
+    return "bg-green-500"; 
   };
 
   const getRiskScoreText = (score: number): string => `${score}%`;
 
   // Mock function for managing a plant
-  const handleManagePlant = (id: number) => {
-    console.log(`Manage plant with ID: ${id}`);
+  const handleManagePlant = (name: string) => {
+    console.log(`Manage plant: ${name}`);
   };
 
   return (
@@ -32,8 +43,8 @@ const PlantsList: React.FC<PlantsListProps> = ({ plants }) => {
           </tr>
         </thead>
         <tbody className="text-gray-700">
-          {plants.map(({ id, name, type, address, riskScore }) => (
-            <tr key={id} className="border-t border-gray-100">
+          {plants.map(({ name, type, address, riskScore }) => (
+            <tr key={name} className="border-t border-gray-100">
               <td className="py-4 font-medium">{name}</td>
               <td className="py-4">{type}</td>
               <td className="py-4">{address}</td>
@@ -50,7 +61,7 @@ const PlantsList: React.FC<PlantsListProps> = ({ plants }) => {
               </td>
               <td className="py-4">
                 <div
-                  onClick={() => handleManagePlant(id)}
+                  onClick={() => handleManagePlant(name)}
                   className="flex items-center space-x-2 cursor-pointer text-blue-600 hover:text-blue-700"
                 >
                   <span className="text-sm font-medium">Manage Plant</span>
@@ -64,4 +75,4 @@ const PlantsList: React.FC<PlantsListProps> = ({ plants }) => {
   );
 };
 
-export default memo(PlantsList);
+export default PlantsList;

@@ -7,9 +7,6 @@ import "./globals.css";
 import Sidebar from "@/components/ui/Sidebar";
 import Navbar from "@/components/ui/Navbar";
 
-// Data
-import notificationsData from "../data/notificationsData.json";
-
 // Font Configurations
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -39,7 +36,6 @@ export default function RootLayout({
           <Sidebar />
           <div className="flex flex-col w-full p-6">
             <Navbar
-              notifications={notificationsData}
               userName="Ramadan"
             />
             {children}

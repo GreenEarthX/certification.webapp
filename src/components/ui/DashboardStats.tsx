@@ -1,25 +1,44 @@
-import React from 'react';
-import { FaCheckCircle, FaExclamationCircle, FaClock, FaTimesCircle } from 'react-icons/fa'; // Importing icons from React Icons
-import StatCard from '../card/StatCard';
+import React, { useEffect, useState } from "react";
+import { FaCheckCircle, FaExclamationCircle, FaClock, FaTimesCircle } from "react-icons/fa"; // Importing icons from React Icons
+import StatCard from "../card/StatCard";
 
-interface StatsProps {
-  stats: {
-    valid: number;
-    pending: number;
-    expiring: number;
-    rejected: number;
-  };
+interface Stats {
+  active: number;
+  pending: number;
+  expired: number;
+  rejected: number;
 }
 
-const DashboardStats: React.FC<StatsProps> = ({ stats }) => {
+const DashboardStats: React.FC = () => {
+  const [stats, setStats] = useState<Stats>({
+    active: 0,
+    pending: 0,
+    expired: 0,
+    rejected: 0,
+  });
+
+  useEffect(() => {
+    fetch("/api/certifications/stats")
+      .then((res) => res.json())
+      .then((data) =>
+        setStats({
+          active: data.active,
+          pending: data.pending, // Always 0 from API
+          expired: data.expired,
+          rejected: data.rejected, // Always 0 from API
+        })
+      )
+      .catch((error) => console.error("Error fetching certification stats:", error));
+  }, []);
+
   return (
-    <div className="p-4 bg-white shadow-md rounded-lg"> {/* White background, shadow for elevation */}
-      <h2 className="text-xl font-bold mb-6">Certifications Status</h2> {/* Added Title */}
+    <div className="p-4 bg-white shadow-md rounded-lg"> 
+      <h2 className="text-xl font-bold mb-6">Certifications Status</h2> 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {/* Valid Card */}
+        {/* Active Card */}
         <StatCard
-          title="Valid"
-          value={stats.valid}
+          title="Active"
+          value={stats.active}
           icon={<FaCheckCircle className="h-6 w-6 text-green-600" />} 
           iconColor="green"
           bgColor="green"
@@ -34,10 +53,10 @@ const DashboardStats: React.FC<StatsProps> = ({ stats }) => {
           bgColor="yellow"
         />
 
-        {/* Expiring Card */}
+        {/* Expired Card */}
         <StatCard
-          title="Expiring"
-          value={stats.expiring}
+          title="Expired"
+          value={stats.expired}
           icon={<FaExclamationCircle className="h-6 w-6 text-orange-600" />}
           iconColor="orange"
           bgColor="orange"

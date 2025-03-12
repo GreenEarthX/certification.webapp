@@ -7,14 +7,10 @@ import DashboardStats from "@/components/ui/DashboardStats";
 import PlantsList from "@/components/ui/PlantsList";
 import Chart from "@/components/ui/Chart";
 import Alerts from "@/components/ui/Alerts";
-//import MiniCalendar from "@/components/calendar/MiniCalendar";
+
 
 // Data
-import plantsData from "@/data/plantsData.json";
 import chartData from "@/data/chartData.json";
-import statsData from "@/data/statsData.json";
-import alertsData from "@/data/alertsData.json";
-
 
 export default function Dashboard() {
 
@@ -23,13 +19,13 @@ export default function Dashboard() {
       
       {/* Main Content - Full Width */}
       <div className="col-span-12 space-y-6">
-        {/* Dashboard Statistics */}
-        <DashboardStats stats={statsData} />
+        {/* Dashboard Statistics - Now Using API */}
+        <DashboardStats/>
 
-        {/* Plants Section */}
+        {/* Plants Section - Now Using API */}
         <section className="bg-white rounded-lg p-6 shadow-sm">
           <h2 className="text-xl font-semibold mb-4">Plants</h2>
-          <PlantsList plants={plantsData} />
+          <PlantsList/>
         </section>
       </div>
 
@@ -41,9 +37,9 @@ export default function Dashboard() {
           <Chart data={chartData} />
         </section>
 
-        {/* Alerts Section */}
+        {/* Alerts Section - Now Using API*/}
         <section className="col-span-12 lg:col-span-4 bg-white rounded-lg p-6 shadow-sm">
-          <Alerts alerts={alertsData} />
+          <Alerts/>
         </section>
       </div>
 
