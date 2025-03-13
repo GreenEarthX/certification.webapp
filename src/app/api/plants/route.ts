@@ -1,16 +1,6 @@
 import { NextResponse } from "next/server";
-import { Pool } from "pg";
-import dotenv from "dotenv";
+import pool from "@/lib/db";
 
-dotenv.config();
-
-const pool = new Pool({
-  user: process.env.PG_USER,
-  host: process.env.PG_HOST,
-  database: process.env.PG_DATABASE,
-  password: process.env.PG_PASSWORD,
-  port: process.env.PG_PORT ? parseInt(process.env.PG_PORT) : 5432,
-});
 
 // API Route - Fetch plant details with type, address, and risk profile
 export async function GET() {
