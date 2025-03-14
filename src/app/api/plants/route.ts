@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
 
+
 // API Route - Fetch plant details with type, address, and risk profile
 export async function GET() {
   try {
