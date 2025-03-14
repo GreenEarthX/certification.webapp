@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import Image from "next/image";
-import { FaUser, FaCog, FaSignOutAlt } from "react-icons/fa"; // Import icons from react-icons
+import { FaUser, FaCog, FaSignOutAlt } from "react-icons/fa"; 
 
 interface UserProfileDropdownProps {
   userName: string;

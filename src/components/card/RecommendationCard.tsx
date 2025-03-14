@@ -24,6 +24,7 @@ const getComplianceColor = (percentage: number) => {
 };
 
 export const RecommendationCard: React.FC<RecommendationCardProps> = ({ recommendation }) => {
+  console.log("Props received in Card:", recommendation);
   return (
     <Box sx={{ display: "flex", flexDirection: "column" }}>
       {/* Card with Left Data and Right Compliance Bar */}
@@ -56,7 +57,7 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({ recommen
           </List>
 
           <Typography variant="body2" sx={{ mt: 2 }}>
-            <strong>Certifying Entity:</strong> {recommendation.certifyingEntity}
+            <strong>Certifying Entities:</strong> {recommendation.certifyingEntity}
           </Typography>
           <Typography variant="body2" sx={{ mb: 2 }}>
             <strong>Validity:</strong> {recommendation.validity}
@@ -78,9 +79,10 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({ recommen
             padding: "24px",
           }}
         >
-          <Typography variant="h4" sx={{ fontWeight: "bold", color: getComplianceColor(recommendation.compliancePercentage) }}>
-            {recommendation.compliancePercentage}%
+          <Typography variant="h4" sx={{ fontWeight: "bold", color: getComplianceColor(recommendation.compliancePercentage || 0) }}>
+            {recommendation.compliancePercentage !== undefined ? `${recommendation.compliancePercentage}%` : "N/A"}
           </Typography>
+
           <Typography variant="body2" sx={{ mt: 1, color: "#666" }}>
             Your compliance score
           </Typography>
