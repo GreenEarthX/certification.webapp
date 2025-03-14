@@ -1,8 +1,15 @@
-export interface Stat {
+export interface StatCardProps {
     title: string;
     value: number;
     icon: React.ReactNode;
-    iconColor?: string; // Optional, in case it's needed later
+    iconColor: string; // Optional, in case it's needed later
     bgColor: string;
   }
   
+  export interface Stats {
+    active: number;
+    expired: number;
+    expiring: number;
+    pending: number;
+    rejected: number;
+  }

@@ -1,8 +1,8 @@
 import React from 'react';
 import Image from 'next/image';
-import { Certification } from '@/models/certification';
+import { CertificationCards } from '@/models/certification';
 
-const CertificationCard: React.FC<Certification> = ({
+const CertificationCard: React.FC<CertificationCards> = ({
   imageUrl,
   id,
   certification,
