@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { FaCheckCircle, FaExclamationCircle, FaClock, FaTimesCircle } from "react-icons/fa"; // Importing icons from React Icons
-import StatCard from "../card/StatCard";
+import StatCard from "./StatCard";
 
 interface Stats {
   active: number;

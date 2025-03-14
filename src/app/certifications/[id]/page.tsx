@@ -2,8 +2,8 @@
 
 import React from 'react';
 import { useParams } from 'next/navigation';
-import CertificationCard from '@/components/card/CertificationCard';
-import CertificationReportComponent from '@/components/ui/CertificationReportComponent'; // Import the Reports Component
+import CertificationCard from '@/components/certifications/CertificationCard';
+import CertificationReportComponent from '@/components/certifications/CertificationReportComponent'; // Import the Reports Component
 
 // Data
 import certificationData from '@/data/certificationsTableData.json';

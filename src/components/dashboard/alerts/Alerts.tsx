@@ -1,28 +1,15 @@
-"use client";
-
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Alert } from "@/models/alert";
 
-const Alerts: React.FC = () => {
-  const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+interface AlertsProps {
+  alerts: Alert[];
+  loading: boolean;
+  error: string | null;
+}
 
-  useEffect(() => {
-    fetch("/api/alerts")
-      .then(async (res) => {
-        if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
-        const data = await res.json();
-        setAlerts(data);
-      })
-      .catch((error) => {
-        setError(error.message);
-      })
-      .finally(() => setLoading(false));
-  }, []);
-
+const Alerts: React.FC<AlertsProps> = ({ alerts, loading, error }) => {
   if (loading) return <p className="text-gray-500">Loading alerts...</p>;
-  if (error) return <p className="text-red-500"> {error}</p>;
+  if (error) return <p className="text-red-500">{error}</p>;
 
   return (
     <div>
