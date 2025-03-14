@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { RecommendationCard } from "@/components/card/RecommendationCard";
+import { RecommendationCard } from "@/components/recommendations/RecommendationCard";
 import { Recommendation } from "@/models/recommendation";
 
 export default function Recommendations() {
