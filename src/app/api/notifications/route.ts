@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
 
-
 // API Route - Fetch notifications
 export async function GET() {
   try {

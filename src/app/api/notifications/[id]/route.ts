@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
 
-
 // API Route - Update read status 
 export async function PUT(req: Request) {
   const url = new URL(req.url);
