@@ -4,8 +4,8 @@ import "./globals.css";
 
 
 // Components
-import Sidebar from "@/components/ui/Sidebar";
-import Navbar from "@/components/ui/Navbar";
+import Sidebar from "@/components/layout/sidebar/Sidebar";
+import Navbar from "@/components/layout/navbar/Navbar";
 
 // Font Configurations
 const geistSans = Geist({
