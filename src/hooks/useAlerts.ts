@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Alert } from "@/models/alert";
-import { fetchAlerts } from "@/services/alerts/fetchService"; // ✅ Use fetch service
+import { fetchAlerts } from "@/services/alerts/fetchService"; 
 
 export function useAlerts() {
   const [alerts, setAlerts] = useState<Alert[]>([]);
@@ -10,7 +10,7 @@ export function useAlerts() {
   useEffect(() => {
     async function loadAlerts() {
       try {
-        const data = await fetchAlerts(); // ✅ Fetch using the service
+        const data = await fetchAlerts(); 
         setAlerts(data);
       } catch (error) {
         setError((error as Error).message);

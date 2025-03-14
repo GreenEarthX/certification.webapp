@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
 import { useMediaQuery } from "@mui/material";
+import { useCertifications } from "@/hooks/useCertifications";
 
 const columns: GridColDef[] = [
   { field: "Certification", headerName: "Certification", flex: 1, minWidth: 120 },
@@ -28,8 +29,6 @@ const columns: GridColDef[] = [
     minWidth: 100,
     renderCell: (params) => {
       const status = params.value;
-
-      // Determine the label class based on the status
       const getStatusClass = () => {
         switch (status.toLowerCase()) {
           case "active":
@@ -63,21 +62,7 @@ const columns: GridColDef[] = [
 
 export default function CertificationsTable() {
   const isSmallScreen = useMediaQuery("(max-width: 600px)");
-  const [certifications, setCertifications] = useState([]);
-
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const response = await fetch("/api/certifications");
-        const data = await response.json();
-        setCertifications(data);
-      } catch (error) {
-        console.error("Error fetching certifications:", error);
-      }
-    }
-
-    fetchData();
-  }, []);
+  const { certifications, loading, error } = useCertifications();
 
   return (
     <div>
@@ -86,50 +71,56 @@ export default function CertificationsTable() {
         <h2 className="text-xl font-semibold mb-4">Certifications List</h2>
         <br />
 
-        <div
-          style={{
-            height: "100%",
-            width: "100%", // Full width
-            overflow: "hidden",
-            backgroundColor: "#fff",
-            borderRadius: "8px",
-          }}
-        >
-          <DataGrid
-            rows={certifications}
-            columns={columns}
-            pageSizeOptions={[5]}
-            initialState={{
-              pagination: {
-                paginationModel: { page: 0, pageSize: 5 },
-              },
-            }}
-            checkboxSelection={false}
-            getRowId={(row) => row.id}
-            sx={{
-              width: "100%",
-              maxWidth: "100%",
+        {loading ? (
+          <p>Loading certifications...</p>
+        ) : error ? (
+          <p className="text-red-500">{error}</p>
+        ) : (
+          <div
+            style={{
               height: "100%",
-              fontFamily: "inherit",
+              width: "100%",
+              overflow: "hidden",
               backgroundColor: "#fff",
-              "& .MuiDataGrid-virtualScroller": {
-                overflow: "auto",
-              },
-              "& .MuiDataGrid-columnHeader": {
-                fontSize: isSmallScreen ? "12px" : "13px",
-                padding: "5px 8px",
-                backgroundColor: "#fff",
-                borderBottom: "1px solid #ddd",
-              },
-              "& .MuiDataGrid-cell": {
-                fontSize: isSmallScreen ? "12px" : "13px",
-                padding: "5px 8px",
-                backgroundColor: "#fff",
-                borderBottom: "1px solid #ddd",
-              },
+              borderRadius: "8px",
             }}
-          />
-        </div>
+          >
+            <DataGrid
+              rows={certifications}
+              columns={columns}
+              pageSizeOptions={[5]}
+              initialState={{
+                pagination: {
+                  paginationModel: { page: 0, pageSize: 5 },
+                },
+              }}
+              checkboxSelection={false}
+              getRowId={(row) => row.id}
+              sx={{
+                width: "100%",
+                maxWidth: "100%",
+                height: "100%",
+                fontFamily: "inherit",
+                backgroundColor: "#fff",
+                "& .MuiDataGrid-virtualScroller": {
+                  overflow: "auto",
+                },
+                "& .MuiDataGrid-columnHeader": {
+                  fontSize: isSmallScreen ? "12px" : "13px",
+                  padding: "5px 8px",
+                  backgroundColor: "#fff",
+                  borderBottom: "1px solid #ddd",
+                },
+                "& .MuiDataGrid-cell": {
+                  fontSize: isSmallScreen ? "12px" : "13px",
+                  padding: "5px 8px",
+                  backgroundColor: "#fff",
+                  borderBottom: "1px solid #ddd",
+                },
+              }}
+            />
+          </div>
+        )}
       </section>
     </div>
   );
