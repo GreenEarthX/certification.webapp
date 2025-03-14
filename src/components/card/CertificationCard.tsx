@@ -10,7 +10,7 @@ const CertificationCard: React.FC<Certification> = ({
   issueDate,
   status,
   description,
-  qrCodeUrl, // QR code image URL
+  qrCodeUrl,
 }) => {
   // Function to determine the text color based on the status
   const getStatusColor = () => {

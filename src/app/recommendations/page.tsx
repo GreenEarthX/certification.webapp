@@ -4,14 +4,16 @@ import React, { useEffect, useState } from "react";
 import { RecommendationCard } from "@/components/card/RecommendationCard";
 import { Recommendation } from "@/models/recommendation";
 
-
 export default function Recommendations() {
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
 
   useEffect(() => {
     fetch("/api/recommendations")
       .then((res) => res.json())
-      .then(setRecommendations)
+      .then(data => {
+        console.log("API Response:", data); 
+        setRecommendations(data);
+      })
       .catch(console.error);
   }, []);
 
