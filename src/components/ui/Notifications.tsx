@@ -2,14 +2,14 @@ import React, { useEffect, useState } from "react";
 import { Notification } from "@/models/notification";
 
 interface NotificationsProps {
-  onNotificationClick?: (id: number) => void; // ✅ Keep the onNotificationClick optional
+  onNotificationClick?: (id: number) => void;
 }
 
 const Notifications: React.FC<NotificationsProps> = ({ onNotificationClick }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
 
-  // ✅ Fetch notifications when component mounts
+ 
   useEffect(() => {
     fetchNotifications();
   }, []);
@@ -18,7 +18,7 @@ const Notifications: React.FC<NotificationsProps> = ({ onNotificationClick }) =>
     try {
       const response = await fetch("/api/notifications");
       const data = await response.json();
-      setNotifications(data); // ✅ Updates state with latest notifications from DB
+      setNotifications(data); 
     } catch (error) {
       console.error("Error fetching notifications:", error);
     }

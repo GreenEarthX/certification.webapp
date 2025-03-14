@@ -22,7 +22,7 @@ const Alerts: React.FC = () => {
   }, []);
 
   if (loading) return <p className="text-gray-500">Loading alerts...</p>;
-  if (error) return <p className="text-red-500">⚠️ {error}</p>;
+  if (error) return <p className="text-red-500"> {error}</p>;
 
   return (
     <div>
