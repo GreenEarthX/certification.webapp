@@ -5,4 +5,3 @@ export interface Plant {
     address: string;
     riskScore: number;
   }
-  
