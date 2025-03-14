@@ -2,13 +2,16 @@
 
 import React, { useState, useEffect } from "react";
 import { usePathname } from "next/navigation"; 
+import { useNotifications } from "@/hooks/useNotifications";
 import Notifications from "./Notifications";
 import UserProfileDropdown from "./UserProfileDropdown";
 
 const Navbar: React.FC<{ userName: string }> = ({ userName }) => {
   const [title, setTitle] = useState("Dashboard"); 
-
   const pathname = usePathname(); 
+
+  // Fetch notifications in Navbar
+  const { notifications, loading, error, markNotificationAsRead } = useNotifications();
 
   // Update the title based on the current path
   useEffect(() => {
@@ -35,8 +38,13 @@ const Navbar: React.FC<{ userName: string }> = ({ userName }) => {
 
         {/* Right Section */}
         <div className="flex items-center space-x-4 bg-white rounded-full p-2 shadow-sm relative">
-          {/* Notifications (No props needed) */}
-          <Notifications />
+          {/* Notifications (Data now passed as props) */}
+          <Notifications 
+            notifications={notifications} 
+            loading={loading} 
+            error={error} 
+            markNotificationAsRead={markNotificationAsRead} 
+          />
 
           {/* User Profile Dropdown */}
           <UserProfileDropdown userName={userName} />

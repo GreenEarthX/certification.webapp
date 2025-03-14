@@ -1,34 +1,24 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
+import { Plant } from "@/models/plant";
+import Link from "next/link";
 
-interface Plant {
-  name: string;
-  type: string;
-  address: string;
-  riskScore: number;
+interface PlantsListProps {
+  plants: Plant[];
+  loading: boolean;
+  error: string | null;
 }
 
-const PlantsList: React.FC = () => {
-  const [plants, setPlants] = useState<Plant[]>([]);
-
-  useEffect(() => {
-    fetch("/api/plants")
-      .then((res) => res.json())
-      .then((data) => setPlants(data))
-      .catch((error) => console.error("Error fetching plants data:", error));
-  }, []);
+const PlantsList: React.FC<PlantsListProps> = ({ plants, loading, error }) => {
+  if (loading) return <p>Loading plants...</p>;
+  if (error) return <p className="text-red-500">{error}</p>;
 
   const getRiskScoreColor = (score: number): string => {
-    if (score >= 70) return "bg-red-500"; 
-    if (score >= 40) return "bg-orange-500"; 
-    return "bg-green-500"; 
+    if (score >= 70) return "bg-red-500";
+    if (score >= 40) return "bg-orange-500";
+    return "bg-green-500";
   };
 
   const getRiskScoreText = (score: number): string => `${score}%`;
-
-  // Mock function for managing a plant
-  const handleManagePlant = (name: string) => {
-    console.log(`Manage plant: ${name}`);
-  };
 
   return (
     <div className="overflow-x-auto">
@@ -39,20 +29,20 @@ const PlantsList: React.FC = () => {
             <th className="pb-3 font-medium">Type</th>
             <th className="pb-3 font-medium">Address</th>
             <th className="pb-3 font-medium">Risk Score</th>
-            <th className="pb-3 font-medium">Actions</th>
+            <th className="pb-3 font-medium">Actions</th> 
           </tr>
         </thead>
         <tbody className="text-gray-700">
-          {plants.map(({ name, type, address, riskScore }) => (
-            <tr key={name} className="border-t border-gray-100">
+          {plants.map(({ id, name, type, address, riskScore }) => (
+            <tr key={id || `${name}-${type}`} className="border-t border-gray-100">
               <td className="py-4 font-medium">{name}</td>
               <td className="py-4">{type}</td>
               <td className="py-4">{address}</td>
               <td className="py-4">
                 <div className="flex items-center">
                   <div className="w-32 bg-gray-200 rounded-full h-2 mr-3">
-                    <div 
-                      className={`${getRiskScoreColor(riskScore)} h-2 rounded-full`} 
+                    <div
+                      className={`${getRiskScoreColor(riskScore)} h-2 rounded-full`}
                       style={{ width: `${riskScore}%` }}
                     ></div>
                   </div>
@@ -60,16 +50,16 @@ const PlantsList: React.FC = () => {
                 </div>
               </td>
               <td className="py-4">
-                <div
-                  onClick={() => handleManagePlant(name)}
-                  className="flex items-center space-x-2 cursor-pointer text-blue-600 hover:text-blue-700"
-                >
-                  <span className="text-sm font-medium">Manage Plant</span>
-                </div>
+                <Link href={`/plants/${id}`}>
+                  <span className="text-sm font-medium text-blue-600 hover:text-blue-700 cursor-pointer">
+                    View Details
+                  </span>
+                </Link>
               </td>
             </tr>
           ))}
         </tbody>
+
       </table>
     </div>
   );

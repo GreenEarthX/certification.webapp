@@ -1,53 +1,18 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Notification } from "@/models/notification";
 
 interface NotificationsProps {
-  onNotificationClick?: (id: number) => void;
+  notifications: Notification[];
+  loading: boolean;
+  error: string | null;
+  markNotificationAsRead: (id: number) => void;
 }
 
-const Notifications: React.FC<NotificationsProps> = ({ onNotificationClick }) => {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+const Notifications: React.FC<NotificationsProps> = ({ notifications, loading, error, markNotificationAsRead }) => {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
 
- 
-  useEffect(() => {
-    fetchNotifications();
-  }, []);
-
-  const fetchNotifications = async () => {
-    try {
-      const response = await fetch("/api/notifications");
-      const data = await response.json();
-      setNotifications(data); 
-    } catch (error) {
-      console.error("Error fetching notifications:", error);
-    }
-  };
-
   const handleNotificationClick = async (id: number) => {
-    try {
-      const response = await fetch(`/api/notifications/${id}`, {
-        method: "PUT",
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to update: ${response.statusText}`);
-      }
-
-      // ✅ Update state to mark the notification as read
-      setNotifications((prev) =>
-        prev.map((notif) =>
-          notif.id === id ? { ...notif, read: true } : notif
-        )
-      );
-
-      // ✅ Notify parent (Navbar) to sync state
-      if (onNotificationClick) {
-        onNotificationClick(id);
-      }
-    } catch (error) {
-      console.error("Error marking notification as read:", error);
-    }
+    await markNotificationAsRead(id);
   };
 
   return (
@@ -85,20 +50,20 @@ const Notifications: React.FC<NotificationsProps> = ({ onNotificationClick }) =>
             <p className="text-sm font-medium text-gray-800">Notifications</p>
           </div>
           <ul>
-            {notifications.length > 0 ? (
+            {loading ? (
+              <li className="p-4 text-sm text-gray-500">Loading...</li>
+            ) : error ? (
+              <li className="p-4 text-sm text-red-500">{error}</li>
+            ) : notifications.length > 0 ? (
               notifications.map((notification) => (
                 <li key={notification.id}>
                   <button
-                    onClick={() => handleNotificationClick(notification.id)} // ✅ Calls API & updates state
+                    onClick={() => handleNotificationClick(notification.id)}
                     className={`block w-full px-4 py-2 text-sm text-gray-700 text-left hover:bg-gray-100 ${
                       !notification.read ? "bg-gray-50" : "bg-gray-100"
                     }`}
                   >
-                    <p
-                      className={`font-medium ${
-                        !notification.read ? "text-black" : "text-gray-500"
-                      }`}
-                    >
+                    <p className={`font-medium ${!notification.read ? "text-black" : "text-gray-500"}`}>
                       {notification.message}
                     </p>
                     <p className="text-xs text-gray-500">

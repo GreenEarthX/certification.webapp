@@ -1,25 +1,17 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { RecommendationCard } from "@/components/recommendations/RecommendationCard";
-import { Recommendation } from "@/models/recommendation";
+import { useRecommendations } from "@/hooks/useRecommendations";
 
 export default function Recommendations() {
-  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
-
-  useEffect(() => {
-    fetch("/api/recommendations")
-      .then((res) => res.json())
-      .then(data => {
-        console.log("API Response:", data); 
-        setRecommendations(data);
-      })
-      .catch(console.error);
-  }, []);
+  const { recommendations, loading, error } = useRecommendations();
 
   return (
     <div>
       <br />
+      {loading && <p>Loading recommendations...</p>}
+      {error && <p className="text-red-500">{error}</p>}
       <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
         {recommendations.map((recommendation) => (
           <RecommendationCard key={recommendation.id} recommendation={recommendation} />

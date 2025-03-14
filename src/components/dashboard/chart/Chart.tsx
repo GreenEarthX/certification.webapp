@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import plantsData from '@/data/plantsData.json'; 
-
+import { Plant } from '@/models/plant';
 interface TrendChartProps {
   data: {
     months: string[];
@@ -14,14 +14,6 @@ interface TrendChartProps {
       label: string;
     };
   };
-}
-
-interface Plant {
-  id: number;
-  name: string;
-  type: string;
-  address: string;
-  riskScore: number;
 }
 
 const Chart: React.FC<TrendChartProps> = ({ data }) => {
