@@ -21,7 +21,7 @@ import {
   FaBook
 } from 'react-icons/fa';
 
-import styles from '../../app/styles/sidebar.module.css';
+import styles from "../../../app/styles/sidebar.module.css"
 
 const Sidebar: React.FC = () => {
   const pathname = usePathname();

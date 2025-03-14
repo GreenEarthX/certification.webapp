@@ -1,18 +1,15 @@
 "use client";
 
 import React from "react";
-
-// Components
-import DashboardStats from "@/components/ui/DashboardStats";
-import PlantsList from "@/components/ui/PlantsList";
-import Chart from "@/components/ui/Chart";
-import Alerts from "@/components/ui/Alerts";
-
-
-// Data
+import DashboardStats from "@/components/dashboard/stats/DashboardStats";
+import PlantsList from "@/components/dashboard/plants/PlantsList";
+import Chart from "@/components/dashboard/chart/Chart";
+import Alerts from "@/components/dashboard/alerts/Alerts";
 import chartData from "@/data/chartData.json";
+import { useAlerts } from "@/hooks/useAlerts";
 
 export default function Dashboard() {
+  const { alerts, loading: alertsLoading, error: alertsError } = useAlerts();
 
   return (
     <div className="grid grid-cols-12 gap-6 mt-6">
@@ -37,12 +34,12 @@ export default function Dashboard() {
           <Chart data={chartData} />
         </section>
 
-        {/* Alerts Section - Now Using API*/}
+        {/* Alerts Section */}
         <section className="col-span-12 lg:col-span-4 bg-white rounded-lg p-6 shadow-sm">
-          <Alerts/>
+          <Alerts alerts={alerts} loading={alertsLoading} error={alertsError} />
         </section>
       </div>
 
     </div>
   );
-}
+} 
