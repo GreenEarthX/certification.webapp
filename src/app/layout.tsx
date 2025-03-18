@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { UserProvider } from '@auth0/nextjs-auth0/client';
+
 import "./globals.css";
 
 
@@ -38,7 +40,8 @@ export default function RootLayout({
             <Navbar
               userName="Ramadan"
             />
-            {children}
+            <UserProvider>{children}</UserProvider>
+            
             
           </div>
         </div>

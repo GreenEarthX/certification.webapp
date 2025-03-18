@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import Link from 'next/link';
 import Image from "next/image";
 import { FaUser, FaCog, FaSignOutAlt } from "react-icons/fa"; 
 
@@ -32,13 +33,13 @@ const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({ userName }) =
           <ul>
             {/* Profile */}
             <li>
-              <a
-                href="#"
+              <Link
+                href="/profile"
                 className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
               >
-                <FaUser className="mr-2" /> {/* Profile Icon */}
+                <FaUser className="mr-2" />
                 Profile
-              </a>
+              </Link>
             </li>
 
             {/* Settings */}
@@ -47,20 +48,20 @@ const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({ userName }) =
                 href="#"
                 className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
               >
-                <FaCog className="mr-2" /> {/* Settings Icon */}
+                <FaCog className="mr-2" />
                 Settings
               </a>
             </li>
 
             {/* Log Out */}
             <li>
-              <a
-                href="#"
-                className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+              <button
+                onClick={() => (window.location.href = '/api/auth/logout')}
+                className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
               >
-                <FaSignOutAlt className="mr-2" /> {/* Log Out Icon */}
+                <FaSignOutAlt className="mr-2" />
                 Log Out
-              </a>
+              </button>
             </li>
           </ul>
         </div>
