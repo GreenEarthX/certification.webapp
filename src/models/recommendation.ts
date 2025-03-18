@@ -6,4 +6,6 @@ export interface Recommendation {
   certifyingEntity: string;
   validity: string;
   compliancePercentage: number;
+  plantId: number; 
+  plantName: string; 
 }

@@ -35,7 +35,12 @@ const PlantsList: React.FC<PlantsListProps> = ({ plants, loading, error }) => {
         <tbody className="text-gray-700">
           {plants.map(({ id, name, type, address, riskScore }) => (
             <tr key={id || `${name}-${type}`} className="border-t border-gray-100">
-              <td className="py-4 font-medium">{name}</td>
+              <td className="py-4 font-medium">
+              <Link href={`/dashboard/${String(id)}/plantDashboard`}>
+                <span className="text-blue-600 hover:text-blue-700 cursor-pointer">{name}</span>
+              </Link>
+            </td>
+
               <td className="py-4">{type}</td>
               <td className="py-4">{address}</td>
               <td className="py-4">

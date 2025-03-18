@@ -12,6 +12,7 @@ export function usePlants() {
       try {
         const data = await fetchPlants();
         setPlants(data);
+        console.log("Fetched Plants:", data); // Check if 'id' is present
       } catch (error) {
         setError((error as Error).message);
       } finally {

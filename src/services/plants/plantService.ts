@@ -4,7 +4,8 @@ import { Plant } from "@/models/plant";
 export async function getPlants(): Promise<Plant[]> {
   try {
     const query = `
-      SELECT 
+      SELECT
+        p.plant_id AS "id",  
         p.plant_name AS "name",
         ft.fuel_name AS "type",
         CONCAT(a.country, ' / ', a.region) AS "address",

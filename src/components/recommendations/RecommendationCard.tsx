@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useRouter } from "next/navigation"; 
 import {
   Card,
   Typography,
@@ -24,10 +25,14 @@ const getComplianceColor = (percentage: number) => {
 };
 
 export const RecommendationCard: React.FC<RecommendationCardProps> = ({ recommendation }) => {
-  console.log("Props received in Card:", recommendation);
+  const router = useRouter(); 
+
+  const handleViewDetails = () => {
+    router.push(`/recommendations/${recommendation.id}`);
+  };
+
   return (
     <Box sx={{ display: "flex", flexDirection: "column" }}>
-      {/* Card with Left Data and Right Compliance Bar */}
       <Card
         sx={{
           width: "100%",
@@ -130,6 +135,7 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({ recommen
             backgroundColor: "#1976d2",
             "&:hover": { backgroundColor: "#1565c0" },
           }}
+          onClick={handleViewDetails} 
         >
           View Details
         </Button>

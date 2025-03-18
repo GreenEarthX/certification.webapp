@@ -15,20 +15,17 @@ const Navbar: React.FC<{ userName: string }> = ({ userName }) => {
 
   // Update the title based on the current path
   useEffect(() => {
-    switch (pathname) {
-      case "/recommendations":
-        setTitle("Recommendations");
-        break;
-      case "/certifications":
-        setTitle("Certifications");
-        break;
-      case "/certifications/1":
-        setTitle("Certification");
-        break;
-      default:
-        setTitle("Dashboard"); 
+    if (pathname.includes("/recommendations")) {
+      setTitle("Recommendations");
+    } else if (pathname.includes("/certifications")) {
+      setTitle(pathname.match(/^\/certifications\/\d+$/) ? "Certification" : "Certifications");
+    } else if (pathname.startsWith("/dashboard")) {
+      setTitle("Dashboard");
+    } else {
+      setTitle("Dashboard"); // Default
     }
   }, [pathname]);
+  
 
   return (
     <div className="sticky top-0 z-50 bg-white shadow-lg border-b border-gray-200">

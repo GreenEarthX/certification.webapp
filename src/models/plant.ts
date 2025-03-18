@@ -4,4 +4,5 @@ export interface Plant {
     type: string;
     address: string;
     riskScore: number;
+    plant: string;
   }
