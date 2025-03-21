@@ -28,7 +28,8 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({ recommen
   const router = useRouter(); 
 
   const handleViewDetails = () => {
-    router.push(`/recommendations/${recommendation.id}`);
+    // Update the route to match your folder structure
+    router.push(`/dashboards/recommendations/${recommendation.id}`);
   };
 
   return (

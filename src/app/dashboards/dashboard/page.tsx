@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 
 // components
 import DashboardStats from "@/components/dashboard/stats/DashboardStats";
@@ -25,14 +26,22 @@ export default function Dashboard() {
         <DashboardStats stats={stats} loading={statsLoading} error={statsError} />
 
         <section className="bg-white rounded-lg p-6 shadow-sm">
-          <h2 className="text-xl font-semibold mb-4">Plants</h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 style={{ color: "#17598d" }} className="text-xl font-semibold">All Plants</h2>
+            <Link href="/dashboards/plants/add">
+              <button className="bg-blue-600 text-white px-5 py-1 rounded-lg hover:bg-blue-700">
+                Add Plant
+              </button>
+            </Link>
+          </div>
           <PlantsList plants={plants} loading={plantsLoading} error={plantsError} />
         </section>
       </div>
 
       <div className="col-span-12 grid grid-cols-12 gap-6">
         <section className="col-span-12 lg:col-span-8 bg-white rounded-lg p-6 shadow-sm">
-          <h2 className="text-xl font-semibold mb-4">Risk Profile</h2>
+          <h2 style={{ color: "#17598d" }} className="text-xl font-semibold">Risk Profile</h2>
+          <br/>
           <Chart data={chartData} />
         </section>
 
