@@ -2,6 +2,7 @@
 
 import { useState, useEffect, ChangeEvent } from "react";
 import { useRouter, useParams } from "next/navigation";
+import Link from "next/link"; // Import Link for navigation
 import FacilityDropdown from "@/components/plantDashboard/FacilityDropdown";
 import RiskScore from "@/components/plantDashboard/RiskScore";
 import CertificationsSummary from "@/components/plantDashboard/CertificationsSummary";
@@ -31,7 +32,7 @@ export default function PlantDashboard() {
   const handlePlantChange = (event: ChangeEvent<HTMLSelectElement>) => {
     const newPlantId = event.target.value;
     setSelectedPlant(newPlantId);
-    router.push(`/dashboard/${newPlantId}/plantDashboard`);
+    router.push(`/dashboards/dashboard/${newPlantId}/plantDashboard`);
   };
 
   return (
@@ -55,7 +56,17 @@ export default function PlantDashboard() {
       <div className="grid grid-cols-12 gap-6">
         {/* Certification Requests - Takes 8/12 Columns */}
         <section className="col-span-12 lg:col-span-8 bg-white rounded-lg p-6 shadow-sm h-full">
-          <h2 className="text-xl font-semibold mb-4">Certification Requests</h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 style={{ color: "#17598d" }} className="text-xl font-semibold">
+              Certification Requests
+            </h2>
+            <Link href="/dashboards/certifications/add">
+              <button className="bg-blue-600 text-white px-5 py-1 rounded-lg hover:bg-blue-700">
+                Add Certification
+              </button>
+            </Link>
+          </div>
+          <br/>
           <CertificationRequests
             requests={[
               { name: "CertifyH™ Scheme", entity: "CertifyH", progress: 50 },
@@ -67,7 +78,9 @@ export default function PlantDashboard() {
 
         {/* Recommendations - Takes 4/12 Columns & Matches Height */}
         <section className="col-span-12 lg:col-span-4 bg-white rounded-lg p-6 shadow-sm h-full flex flex-col">
-          <h2 className="text-xl font-semibold mb-4">Recommendations</h2>
+          <h2 style={{ color: "#17598d" }} className="text-xl font-semibold mb-4">
+            Recommendations
+          </h2>
           <div className="flex-1">
             {loadingRecommendations ? (
               <p className="text-gray-500 text-sm">Loading recommendations...</p>
@@ -80,7 +93,10 @@ export default function PlantDashboard() {
 
       {/* Full Width Certifications Table */}
       <section className="bg-white rounded-lg p-6 shadow-sm">
-        <h2 className="text-xl font-semibold mb-4">Certifications</h2>
+        <h2 style={{ color: "#17598d" }} className="text-xl font-semibold mb-4">
+          Certifications
+        </h2>
+        <br/>
         {loadingCertifications ? (
           <p className="text-gray-500 text-sm">Loading certifications...</p>
         ) : (
