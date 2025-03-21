@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { fetchRecommendations } from "@/services/recommendations/fetchService";
+import { fetchRecommendations } from "@/services/recommendations/fetchRecommendationAPI";
 import { Recommendation } from "@/models/recommendation";
 
 export function useRecommendations() {

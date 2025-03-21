@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Plant } from "@/models/plant";
-import { fetchPlants } from "@/services/plants/fetchService";
+import { fetchAllPlants } from "@/services/plants/fetchPlantAPI";
 
 export function usePlants() {
   const [plants, setPlants] = useState<Plant[]>([]);
@@ -10,7 +10,7 @@ export function usePlants() {
   useEffect(() => {
     async function loadPlants() {
       try {
-        const data = await fetchPlants();
+        const data = await fetchAllPlants();
         setPlants(data);
         console.log("Fetched Plants:", data); // Check if 'id' is present
       } catch (error) {
