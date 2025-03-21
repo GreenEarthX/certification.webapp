@@ -1,5 +1,6 @@
+// src/hooks/useCertifications.ts
 import { useState, useEffect } from "react";
-import { fetchCertifications } from "@/services/certifications/fetchService";
+import { fetchCertifications } from "@/services/certifications/fetchCertificationsAPI";
 import { Certification } from "@/models/certification";
 
 export function useCertifications() {

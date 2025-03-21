@@ -1,14 +1,26 @@
 import pool from "@/lib/db";
+import { getSessionUser } from "@/lib/auth";
+import { NextRequest } from "next/server";
 
-export async function getPlants() {
-  try {
-    const client = await pool.connect();
-    const result = await client.query("SELECT plant_id, plant_name FROM plants;");
-    client.release();
-    
-    return result.rows;
-  } catch (error) {
-    console.error("Error fetching plants:", error);
-    throw new Error("Failed to fetch plants");
+export class PlantService {
+  static async getUserPlants(req: NextRequest) {
+    try {
+      const userSub = await getSessionUser(req);
+
+      const query = `
+        SELECT 
+          p.plant_id, 
+          p.plant_name
+        FROM users u
+        JOIN plants p ON u.user_id = p.operator_id
+        WHERE u."auth0Sub" = $1;
+      `;
+
+      const { rows } = await pool.query(query, [userSub]);
+      return rows;
+    } catch (error) {
+      console.error("Error fetching user plants:", error);
+      throw new Error("Failed to fetch user plants");
+    }
   }
 }

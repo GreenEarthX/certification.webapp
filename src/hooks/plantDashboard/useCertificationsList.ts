@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { fetchCertifications } from "@/services/plantDashboard/certifications/list/fetchService";
+import { fetchCertificationsList } from "@/services/plantDashboard/certifications/fetchCertificationAPI";
 
 interface Certification {
   name: string;
@@ -19,7 +19,7 @@ export function useCertifications(plantId?: string) {
 
     const loadCertifications = async () => {
       setLoading(true);
-      const data: Certification[] = await fetchCertifications(plantId);
+      const data: Certification[] = await fetchCertificationsList(plantId);
       console.log("Fetched Certifications in Hook:", data);
       setCertifications(data);
       setLoading(false);

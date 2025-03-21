@@ -1,16 +1,10 @@
+// ✅ api/plantDashboard/certifications/list/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { getCertifications } from "@/services/plantDashboard/certifications/list/certificationListService";
+import { CertificationsService } from "@/services/plantDashboard/certifications/certificationService";
 
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const plantId = searchParams.get("plantId");
-
-  if (!plantId) {
-    return NextResponse.json({ error: "Missing plant ID" }, { status: 400 });
-  }
-
   try {
-    const certifications = await getCertifications(plantId);
+    const certifications = await CertificationsService.getList(req);
     return NextResponse.json(certifications);
   } catch (error) {
     console.error("Error fetching certifications:", error);

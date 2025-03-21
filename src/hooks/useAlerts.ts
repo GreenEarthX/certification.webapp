@@ -1,6 +1,7 @@
+// src/hooks/useAlerts.ts
 import { useState, useEffect } from "react";
 import { Alert } from "@/models/alert";
-import { fetchAlerts } from "@/services/alerts/fetchService"; 
+import { fetchAlerts } from "@/services/alerts/fetchAlertAPI";
 
 export function useAlerts() {
   const [alerts, setAlerts] = useState<Alert[]>([]);
@@ -10,7 +11,7 @@ export function useAlerts() {
   useEffect(() => {
     async function loadAlerts() {
       try {
-        const data = await fetchAlerts(); 
+        const data = await fetchAlerts();
         setAlerts(data);
       } catch (error) {
         setError((error as Error).message);

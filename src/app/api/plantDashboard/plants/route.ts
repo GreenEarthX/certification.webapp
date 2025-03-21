@@ -1,9 +1,9 @@
-import { NextResponse } from "next/server";
-import { getPlants } from "@/services/plantDashboard/plants/plantService";
+import { NextRequest, NextResponse } from "next/server";
+import { PlantService } from "@/services/plantDashboard/plants/plantService";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const plants = await getPlants();
+    const plants = await PlantService.getUserPlants(req);
     return NextResponse.json(plants);
   } catch (error) {
     console.error("Error fetching plants:", error);
