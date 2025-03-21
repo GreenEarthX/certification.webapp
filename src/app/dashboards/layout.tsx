@@ -2,8 +2,12 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { UserProvider } from '@auth0/nextjs-auth0/client';
 
-import "./styles/globals.css";
+import "../styles/globals.css";
 
+
+// Components
+import Sidebar from "@/components/layout/sidebar/Sidebar";
+import Navbar from "@/components/layout/navbar/Navbar";
 
 // Font Configurations
 const geistSans = Geist({
@@ -29,9 +33,18 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        {/* Sidebar and Navbar */}
         <div className="flex w-full h-full bg-blue-50">
+          <Sidebar />
+          <div className="flex flex-col w-full p-6">
+            <Navbar
+              userName="Ramadan"
+            />
             <UserProvider>{children}</UserProvider>
+            
+            
           </div>
+        </div>
       </body>
     </html>
   );

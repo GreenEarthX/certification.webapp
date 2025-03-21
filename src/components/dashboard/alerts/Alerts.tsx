@@ -13,7 +13,8 @@ const Alerts: React.FC<AlertsProps> = ({ alerts, loading, error }) => {
 
   return (
     <div>
-      <h3 className="font-semibold mb-4">Alerts</h3>
+      <h3 style={{ color: "#17598d" }} className="text-xl font-semibold">Alerts</h3>
+      <br/>
       <div className="space-y-4">
         {alerts.length > 0 ? (
           alerts.map((alert, index) => (

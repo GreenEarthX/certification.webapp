@@ -172,6 +172,7 @@ const Chart: React.FC<TrendChartProps> = ({ data }) => {
 
   return (
     <div className="flex flex-col">
+      <br/>
       <div className="flex justify-between items-center mb-4">
         {/* Time Range Selector (Minimalist Design) */}
         <div className="relative">
