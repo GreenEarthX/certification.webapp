@@ -1,6 +1,7 @@
 import React from "react";
 import { Plant } from "@/models/plant";
 import Link from "next/link";
+import { FaTrash } from "react-icons/fa"; 
 
 interface PlantsListProps {
   plants: Plant[];
@@ -22,6 +23,7 @@ const PlantsList: React.FC<PlantsListProps> = ({ plants, loading, error }) => {
 
   return (
     <div className="overflow-x-auto">
+      <br/>
       <table className="min-w-full">
         <thead>
           <tr className="text-left text-gray-500 text-sm uppercase">
@@ -30,13 +32,14 @@ const PlantsList: React.FC<PlantsListProps> = ({ plants, loading, error }) => {
             <th className="pb-3 font-medium">Address</th>
             <th className="pb-3 font-medium">Risk Score</th>
             <th className="pb-3 font-medium">Actions</th> 
+            <th className="pb-3 font-medium"></th> 
           </tr>
         </thead>
         <tbody className="text-gray-700">
           {plants.map(({ id, name, type, address, riskScore }) => (
             <tr key={id || `${name}-${type}`} className="border-t border-gray-100">
               <td className="py-4 font-medium">
-              <Link href={`/dashboard/${String(id)}/plantDashboard`}>
+              <Link href={`/dashboards/dashboard/${String(id)}/plantDashboard`}>
                 <span className="text-blue-600 hover:text-blue-700 cursor-pointer">{name}</span>
               </Link>
             </td>
@@ -55,11 +58,17 @@ const PlantsList: React.FC<PlantsListProps> = ({ plants, loading, error }) => {
                 </div>
               </td>
               <td className="py-4">
-                <Link href={`/plants/${id}`}>
+                <Link href={`/dashboards/manage-plants/${id}`}>
                   <span className="text-sm font-medium text-blue-600 hover:text-blue-700 cursor-pointer">
-                    View Details
+                    Manage Plant Details
                   </span>
                 </Link>
+              </td>
+              <td className="py-4">
+                <div className="flex items-center text-red-500 hover:text-red-700 cursor-pointer">
+                  <span  className="mr-2" >Delete</span>
+                  <FaTrash/> 
+                </div>
               </td>
             </tr>
           ))}

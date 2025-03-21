@@ -79,15 +79,15 @@ const Sidebar: React.FC = () => {
       {/* Navigation Links */}
       <List sx={{ paddingTop: '16px' }}>
         {[
-          { text: 'Dashboard', icon: <FaHome />, path: '/dashboard' },
-          { text: 'Manage Plants', icon: <FaSitemap />, path: '/manage-plants' },
-          { text: 'Certifications', icon: <FaFileAlt />, path: '/certifications' },
-          { text: 'Recommendations', icon: <FaFileMedical />, path: '/recommendations' },
+          { text: 'Dashboard', icon: <FaHome />, path: '/dashboards/dashboard' }, // Add leading slash
+          { text: 'Manage Plants', icon: <FaSitemap />, path: '/dashboards/manage-plants' }, // Add leading slash
+          { text: 'Certifications', icon: <FaFileAlt />, path: '/dashboards/certifications' }, // Add leading slash
+          { text: 'Recommendations', icon: <FaFileMedical />, path: '/dashboards/recommendations' }, // Add leading slash
         ].map((item) => (
           <ListItem 
             key={item.text}
             component={Link} 
-            href={item.path}
+            href={item.path} // Use absolute paths here
             className={`${styles.listItem} ${isActive(item.path) ? styles.listItemActive : ''}`}
             sx={{ display: 'flex', justifyContent: isCollapsed ? 'center' : 'flex-start', padding: '10px 16px' }}
           >

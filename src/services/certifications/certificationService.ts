@@ -20,6 +20,7 @@ export async function getCertifications() {
       LEFT JOIN issuing_bodies ib 
           ON cs.issuing_body_id = ib.ib_id
       ORDER BY c.created_at DESC;`;
+      
 
     const result = await pool.query(query);
     // Debugging: Log the exact database result
