@@ -1,27 +1,35 @@
+// src/services/stats/statsService.ts
 import pool from "@/lib/db";
 
-export async function getStats() {
-  try {
-    const query = `
-      SELECT 
-        COALESCE(SUM(CASE WHEN status = 'Active' THEN 1 ELSE 0 END), 0) AS active,
-        COALESCE(SUM(CASE WHEN status = 'Expired' THEN 1 ELSE 0 END), 0) AS expired,
-        COALESCE(SUM(CASE WHEN status = 'Expiring' THEN 1 ELSE 0 END), 0) AS expiring
-      FROM certifications;
-    `;
+class StatsService {
+  async getStats(userSub: string) {
+    try {
+      const query = `
+        SELECT 
+          COALESCE(SUM(CASE WHEN c.status = 'Active' THEN 1 ELSE 0 END), 0) AS active,
+          COALESCE(SUM(CASE WHEN c.status = 'Expired' THEN 1 ELSE 0 END), 0) AS expired,
+          COALESCE(SUM(CASE WHEN c.status = 'Expiring' THEN 1 ELSE 0 END), 0) AS expiring
+        FROM users u
+        JOIN plants p ON u.user_id = p.operator_id
+        JOIN certifications c ON c.plant_id = p.plant_id
+        WHERE u."auth0Sub" = $1;
+      `;
 
-    const { rows } = await pool.query(query);
-    const data = rows[0];
+      const { rows } = await pool.query(query, [userSub]);
+      const stats = rows[0];
 
-    return {
-      active: data.active || 0,
-      expired: data.expired || 0,
-      expiring: data.expiring || 0,
-      pending: 0,  // Always return 0
-      rejected: 0  // Always return 0
-    };
-  } catch (error) {
-    console.error("Error fetching certification stats:", error);
-    throw new Error("Failed to fetch certification stats");
+      return {
+        active: stats.active || 0,
+        expired: stats.expired || 0,
+        expiring: stats.expiring || 0,
+        pending: 0,   // Reserved for future logic
+        rejected: 0   // Reserved for future logic
+      };
+    } catch (error) {
+      console.error("Error fetching certification stats:", error);
+      throw new Error("Failed to fetch certification stats");
+    }
   }
 }
+
+export const statsService = new StatsService();

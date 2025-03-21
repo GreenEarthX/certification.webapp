@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { fetchRiskScore } from "@/services/plantDashboard/riskScore/fetchService";
+import { fetchRiskScore } from "@/services/plantDashboard/riskScore/fetchRiskScoreAPI";
 
 export function useRiskScore(plantId?: string) {
   const [riskScore, setRiskScore] = useState<number | null>(null);

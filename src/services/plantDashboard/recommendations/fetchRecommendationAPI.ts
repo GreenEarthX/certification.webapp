@@ -6,7 +6,7 @@ export async function fetchRecommendations(plantId: string): Promise<string[]> {
       return await response.json();
     } catch (error) {
       console.error("Error fetching recommendations:", error);
-      return []; // Default to empty array if an error occurs
+      return []; 
     }
   }
   

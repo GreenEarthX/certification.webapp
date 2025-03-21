@@ -1,4 +1,3 @@
-// services/PlantService.ts
 import pool from "@/lib/db";
 import { Plant } from "@/models/plant";
 

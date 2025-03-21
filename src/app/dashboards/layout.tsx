@@ -37,9 +37,7 @@ export default function RootLayout({
         <div className="flex w-full h-full bg-blue-50">
           <Sidebar />
           <div className="flex flex-col w-full p-6">
-            <Navbar
-              userName="Ramadan"
-            />
+            <Navbar/>
             <UserProvider>{children}</UserProvider>
             
             

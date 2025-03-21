@@ -1,5 +1,6 @@
+// src/hooks/useStats.ts
 import { useState, useEffect } from "react";
-import { fetchStats } from "@/services/stats/fetchService";
+import { fetchStats } from "@/services/stats/fetchStatsAPI";
 import { Stats } from "@/models/stat";
 
 export function useStats() {
