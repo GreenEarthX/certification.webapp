@@ -66,7 +66,8 @@ export default function usePlantRegistration() {
     if (file) {
       setIsLoading(true);
       setTimeout(() => {
-        setUploadedData({
+        setUploadedData((prevData) => ({
+          ...prevData!,
           certificationName: "Certify+ Schema",
           type: "Type A",
           entity: "Certify+",
@@ -75,12 +76,13 @@ export default function usePlantRegistration() {
           validityDate: "25/04/2030",
           certificateNumber: "285933006",
           compliesWith: "REDD2",
-        });
+        }));
         setIsLoading(false);
         setCurrentStep(3);
       }, 2000);
     }
   };
+  
 
   const handleBack = () => setCurrentStep(1);
 

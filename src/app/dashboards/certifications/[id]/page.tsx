@@ -1,37 +1,42 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import CertificationCard from '@/components/certifications/CertificationCard';
-import CertificationReportComponent from '@/components/certifications/CertificationReportComponent'; // Import the Reports Component
-
-// Data
-import certificationData from '@/data/certificationsTableData.json';
+import CertificationReportComponent from '@/components/certifications/CertificationReportComponent';
 import reportsData from '@/data/reportsData.json';
+import { useCertifications } from '@/hooks/useCertifications';
 
 export default function CertificationDetails() {
-  const params = useParams();
-  const certificationId = params.id;
+  const { id: certificationId } = useParams();
+  const {
+    certification,
+    getCertificationById,
+    loading,
+    error,
+  } = useCertifications()as any;;
 
-  // Find the certification by id
-  const certification = certificationData.find(cert => cert.id.toString() === certificationId);
+  useEffect(() => {
+    if (certificationId) {
+      getCertificationById(certificationId as string);
+    }
+  }, [certificationId]);
 
-  if (!certification) {
-    return <div className="p-6">Certification not found</div>;
-  }
+  if (loading) return <div className="p-6">Loading...</div>;
+  if (error || !certification) return <div className="p-6">Certification not found</div>;
 
   return (
     <div className="p-6 space-y-6">
-      {/* Certification Card Section */}
       <CertificationCard
-        imageUrl={certification.imageUrl}
-        id={certification.id}
-        certification={certification.Certification}
-        entity={certification.Entity}
-        issueDate={certification['Issue Date']}
-        status={certification.Status}
-        description={certification.description}
-        qrCodeUrl='https://hexdocs.pm/qr_code/docs/qrcode.svg'
+        imageUrl="/certification1.jpeg"
+        id={certification.certification_id}
+        certification={certification.certification_scheme_name}
+        entity={certification.plant_name}
+        issueDate={certification.created_at}
+        status={certification.status}
+        description={certification.short_certification_overview}
+        validity={certification.validity}
+        qrCodeUrl="https://hexdocs.pm/qr_code/docs/qrcode.svg"
       />
 
       {/* Reports Section */}

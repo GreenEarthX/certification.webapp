@@ -5,7 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link"; // Import Link for navigation
 import FacilityDropdown from "@/components/plantDashboard/FacilityDropdown";
 import RiskScore from "@/components/plantDashboard/RiskScore";
-import CertificationsSummary from "@/components/plantDashboard/CertificationsSummary";
+import DashboardStats from "@/components/dashboard/stats/DashboardStats";
 import CertificationRequests from "@/components/plantDashboard/CertificationRequests";
 import CertificationsTable from "@/components/plantDashboard/CertificationsTable";
 import Recommendations from "@/components/plantDashboard/Recommendations";
@@ -13,6 +13,7 @@ import Recommendations from "@/components/plantDashboard/Recommendations";
 import { useRiskScore } from "@/hooks/plantDashboard/useRiskScore";
 import { useRecommendations } from "@/hooks/plantDashboard/useRecommendations";
 import { useCertifications } from "@/hooks/plantDashboard/useCertificationsList";
+import { useStats } from "@/hooks/useStats";
 
 export default function PlantDashboard() {
   const router = useRouter();
@@ -28,6 +29,8 @@ export default function PlantDashboard() {
   const { riskScore, loading: loadingRisk } = useRiskScore(selectedPlant);
   const { recommendations, loading: loadingRecommendations } = useRecommendations(selectedPlant);
   const { certifications, loading: loadingCertifications } = useCertifications(selectedPlant);
+  const { stats, loading: statsLoading, error: statsError } = useStats(selectedPlant);
+  
 
   const handlePlantChange = (event: ChangeEvent<HTMLSelectElement>) => {
     const newPlantId = event.target.value;
@@ -50,7 +53,7 @@ export default function PlantDashboard() {
       </div>
 
       {/* Certifications Summary */}
-      <CertificationsSummary stats={{ active: 1, pending: 1, expired: 3, rejected: 1 }} />
+      <DashboardStats stats={stats} loading={statsLoading} error={statsError} />
 
       {/* Certification Requests & Recommendations in Two Columns */}
       <div className="grid grid-cols-12 gap-6">
@@ -62,7 +65,7 @@ export default function PlantDashboard() {
             </h2>
             <Link href="/dashboards/certifications/add">
               <button className="bg-blue-600 text-white px-5 py-1 rounded-lg hover:bg-blue-700">
-                Add Certification
+                Track New Certificate
               </button>
             </Link>
           </div>
@@ -93,9 +96,17 @@ export default function PlantDashboard() {
 
       {/* Full Width Certifications Table */}
       <section className="bg-white rounded-lg p-6 shadow-sm">
+      <div className="flex justify-between items-center mb-4">
         <h2 style={{ color: "#17598d" }} className="text-xl font-semibold mb-4">
           Certifications
         </h2>
+        <Link href="/dashboards/plants/add?step=2">
+          <button className="bg-blue-600 text-white px-5 py-1 rounded-lg hover:bg-blue-700">
+            Add Certification
+          </button>
+        </Link>
+
+        </div>
         <br/>
         {loadingCertifications ? (
           <p className="text-gray-500 text-sm">Loading certifications...</p>
