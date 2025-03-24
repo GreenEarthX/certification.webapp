@@ -1,7 +1,9 @@
-// src/services/stats/fetchService.ts
-export async function fetchStats() {
+// src/services/stats/fetchStatsAPI.ts
+export async function fetchStats(plantId?: string) {
   try {
-    const response = await fetch("/api/certifications/stats");
+    const url = plantId ? `/api/certifications/stats?plantId=${plantId}` : `/api/certifications/stats`;
+    const response = await fetch(url);
+
     if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
     return await response.json();
   } catch (error) {
