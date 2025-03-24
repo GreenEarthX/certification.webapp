@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { fetchComplianceScoreAndName, fetchSchemeDetails } from "@/services/recommendations/fetchSchemeDetailsService";
+import { fetchComplianceScoreAndName, fetchSchemeDetails } from "@/services/recommendations/fetchRecommendationAPI";
 import { useParams } from "next/navigation";
 import { SchemeContent } from "@/models/overview"; // Import the interface
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { fetchPlants } from "@/services/plants/fetchService";
+import { fetchPlants } from "@/services/plantDashboard/plants/fetchPlantAPI";
 
 interface Plant {
   plant_id: string;

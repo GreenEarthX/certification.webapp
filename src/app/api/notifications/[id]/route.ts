@@ -1,22 +1,24 @@
-import { NextResponse } from "next/server";
-import { updateNotificationReadStatus } from "@/services/notifications/notificationService";
+import { NextRequest, NextResponse } from "next/server";
+import { NotificationService } from "@/services/notifications/notificationService";
 
-export async function PUT(req: Request) {
+export async function PUT(req: NextRequest) {
   const url = new URL(req.url);
-  const id = url.pathname.split("/").pop(); // Extracts last segment (ID)
+  const id = url.pathname.split("/").pop();
 
   if (!id) {
     return NextResponse.json({ error: "Notification ID is required" }, { status: 400 });
   }
 
   try {
-    const updatedNotification = await updateNotificationReadStatus(id);
-    return NextResponse.json(updatedNotification, { status: 200 });
-  } catch (error) {
+    const updated = await NotificationService.markAsRead(req, id);
+    return NextResponse.json(updated, { status: 200 });
+  } catch (error: unknown) {
     console.error("Error updating notification:", error);
-    return NextResponse.json(
-      { error: (error as Error).message || "Failed to update notification" },
-      { status: (error as Error).message === "Notification not found" ? 404 : 500 }
-    );
+
+    // ✅ Type-safe error handling
+    const message = error instanceof Error ? error.message : "Failed to update notification";
+    const status = message === "Notification not found or unauthorized" ? 404 : 500;
+
+    return NextResponse.json({ error: message }, { status });
   }
 }
