@@ -31,6 +31,23 @@ class StatsService {
       throw new Error("Failed to fetch certification stats");
     }
   }
+
+  async getStatsByPlant(userSub: string, plantId: number) {
+    const query = `
+      SELECT 
+        COALESCE(SUM(CASE WHEN c.status = 'Active' THEN 1 ELSE 0 END), 0) AS active,
+        COALESCE(SUM(CASE WHEN c.status = 'Expired' THEN 1 ELSE 0 END), 0) AS expired,
+        COALESCE(SUM(CASE WHEN c.status = 'Pending' THEN 1 ELSE 0 END), 0) AS pending,
+        COALESCE(SUM(CASE WHEN c.status = 'Rejected' THEN 1 ELSE 0 END), 0) AS rejected
+      FROM users u
+      JOIN plants p ON u.user_id = p.operator_id
+      JOIN certifications c ON c.plant_id = p.plant_id
+      WHERE u."auth0Sub" = $1 AND p.plant_id = $2;
+    `;
+    const { rows } = await pool.query(query, [userSub, plantId]);
+    const stats = rows[0];
+    return stats ?? { active: 0, expired: 0, pending: 0, rejected: 0 };
+  }
 }
 
 export const statsService = new StatsService();
