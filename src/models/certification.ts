@@ -7,6 +7,7 @@ export interface CertificationCards {
     status: string;
     description: string;
     qrCodeUrl: string; // QR code image URL
+    validity: string;
   }
   
 

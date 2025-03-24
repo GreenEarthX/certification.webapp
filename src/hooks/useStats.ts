@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { fetchStats } from "@/services/stats/fetchStatsAPI";
 import { Stats } from "@/models/stat";
 
-export function useStats() {
+export function useStats(plantId?: string) {
   const [stats, setStats] = useState<Stats>({
     active: 0,
     expired: 0,
@@ -16,8 +16,9 @@ export function useStats() {
 
   useEffect(() => {
     async function loadStats() {
+      setLoading(true);
       try {
-        const data = await fetchStats();
+        const data = await fetchStats(plantId); // pass plantId if available
         setStats(data);
       } catch (error) {
         setError((error as Error).message);
@@ -27,7 +28,7 @@ export function useStats() {
     }
 
     loadStats();
-  }, []);
+  }, [plantId]); // refetch when plantId changes
 
   return { stats, loading, error };
 }

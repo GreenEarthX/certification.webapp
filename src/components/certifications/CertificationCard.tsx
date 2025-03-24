@@ -11,6 +11,7 @@ const CertificationCard: React.FC<CertificationCards> = ({
   status,
   description,
   qrCodeUrl,
+  validity
 }) => {
   // Function to determine the text color based on the status
   const getStatusColor = () => {
@@ -59,6 +60,7 @@ const CertificationCard: React.FC<CertificationCards> = ({
                 {status}
               </span>
             </p>
+            <p><strong>Validity:</strong> {validity}</p>
           </div>
         </div>
 

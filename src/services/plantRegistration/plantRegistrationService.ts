@@ -1,6 +1,7 @@
 import pool from "@/lib/db";
 import { getSessionUser } from "@/lib/auth";
 import { NextRequest } from "next/server";
+import { CertificationRegistrationPayload } from "@/models/plantRegistration";
 
 export class PlantRegistrationService {
   // Fetch initial data: address, fuel, and plant stages
@@ -67,4 +68,54 @@ export class PlantRegistrationService {
       throw new Error("Failed to register plant");
     }
   }
+
+  static async registerCertification(body: CertificationRegistrationPayload) {
+    const {
+      plant_id,
+      certificationName,
+      certificationBody,
+      type,
+      entity,
+      issueDate,
+      validityDate,
+      certificateNumber,
+      compliesWith,
+    } = body;
+
+    try {
+      // 1. Get certification_scheme_id
+      const schemeRes = await pool.query(
+        `SELECT certification_scheme_id FROM certification_schemes WHERE certification_scheme_name = $1`,
+        [certificationName]
+      );
+
+      if (schemeRes.rowCount === 0) {
+        throw new Error("Certification scheme not found");
+      }
+
+      const certification_scheme_id = schemeRes.rows[0].certification_scheme_id;
+
+      // 2. Insert certification
+      const insertRes = await pool.query(
+        `
+        INSERT INTO certifications (
+          plant_id, certification_scheme_id, ib_id, status, created_at
+        ) VALUES (
+          $1, $2,
+          (SELECT ib_id FROM issuing_bodies WHERE ib_name = $3),
+          'Pending',
+          NOW()
+        )
+        RETURNING *
+        `,
+        [plant_id, certification_scheme_id, certificationBody]
+      );
+
+      return insertRes.rows[0];
+    } catch (error) {
+      console.error("Error registering certification:", error);
+      throw new Error("Certification registration failed");
+    }
+  }
+
 }
