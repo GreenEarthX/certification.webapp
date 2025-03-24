@@ -7,7 +7,6 @@ export function useStats() {
   const [stats, setStats] = useState<Stats>({
     active: 0,
     expired: 0,
-    expiring: 0,
     pending: 0,
     rejected: 0,
   });

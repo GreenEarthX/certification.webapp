@@ -8,7 +8,9 @@ class StatsService {
         SELECT 
           COALESCE(SUM(CASE WHEN c.status = 'Active' THEN 1 ELSE 0 END), 0) AS active,
           COALESCE(SUM(CASE WHEN c.status = 'Expired' THEN 1 ELSE 0 END), 0) AS expired,
-          COALESCE(SUM(CASE WHEN c.status = 'Expiring' THEN 1 ELSE 0 END), 0) AS expiring
+          COALESCE(SUM(CASE WHEN c.status = 'Pending' THEN 1 ELSE 0 END), 0) AS pending,
+          COALESCE(SUM(CASE WHEN c.status = 'Rejected' THEN 1 ELSE 0 END), 0) AS rejected
+
         FROM users u
         JOIN plants p ON u.user_id = p.operator_id
         JOIN certifications c ON c.plant_id = p.plant_id
@@ -20,10 +22,9 @@ class StatsService {
 
       return {
         active: stats.active || 0,
+        pending: stats.pending || 0,
         expired: stats.expired || 0,
-        expiring: stats.expiring || 0,
-        pending: 0,   // Reserved for future logic
-        rejected: 0   // Reserved for future logic
+        rejected: stats.rejected || 0,
       };
     } catch (error) {
       console.error("Error fetching certification stats:", error);
