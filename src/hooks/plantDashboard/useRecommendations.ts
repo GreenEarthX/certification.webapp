@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { fetchRecommendations } from "@/services/plantDashboard/recommendations/fetchService";
+import { fetchRecommendations } from "@/services/plantDashboard/recommendations/fetchRecommendationAPI";
 
 export function useRecommendations(plantId?: string) {
   const [recommendations, setRecommendations] = useState<string[]>([]);

@@ -1,15 +1,8 @@
-import { NextResponse } from "next/server";
-import { getSchemeDetailsByRecommendationId } from "@/services/recommendations/schemeDetailsService";
-
-// Define the type for the scheme details
-type SchemeDetails = {
-  overview: string;
-  requirements: string[];
-  process: string[];
-};
+import { NextRequest, NextResponse } from "next/server";
+import { recommendationService } from "@/services/recommendations/recommendationService";
 
 export async function GET(
-  request: Request,
+  request: NextRequest,
   context: { params: { id: string } }
 ) {
   const { id: recommendationId } = context.params;
@@ -20,10 +13,17 @@ export async function GET(
 
   const { searchParams } = new URL(request.url);
   const section = searchParams.get("section"); // "overview", "requirements", "process"
+  const type = searchParams.get("type");       // "score" | undefined
 
   try {
-    // Use the SchemeDetails type to define the return type of getSchemeDetailsByRecommendationId
-    const data: SchemeDetails = await getSchemeDetailsByRecommendationId(recommendationId);
+    // 📌 If the request is for the compliance score (same as previous score route)
+    if (type === "score") {
+      const data = await recommendationService.getComplianceScore(recommendationId);
+      return NextResponse.json(data); // { complianceScore, schemeName }
+    }
+
+    // 📌 If the request is for scheme details (optionally filtered by section)
+    const data = await recommendationService.getSchemeDetailsByRecommendationId(recommendationId);
 
     if (!data) {
       return NextResponse.json({ error: "Data not found" }, { status: 404 });
@@ -39,10 +39,15 @@ export async function GET(
       return NextResponse.json(validSections[section]);
     }
 
-    console.log("❌ Invalid section requested");
-    return NextResponse.json({ error: "Invalid section" }, { status: 400 });
+    if (section) {
+      console.log("❌ Invalid section requested:", section);
+      return NextResponse.json({ error: "Invalid section" }, { status: 400 });
+    }
+
+    // Return all scheme details (with compliance_score) if no type/section is specified
+    return NextResponse.json(data);
   } catch (error) {
     console.error("❌ API Error:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

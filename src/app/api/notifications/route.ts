@@ -1,9 +1,9 @@
-import { NextResponse } from "next/server";
-import { getNotifications } from "@/services/notifications/notificationService";
+import { NextRequest, NextResponse } from "next/server";
+import { NotificationService } from "@/services/notifications/notificationService";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const notifications = await getNotifications();
+    const notifications = await NotificationService.getUserNotifications(req);
     return NextResponse.json(notifications, { status: 200 });
   } catch (error) {
     console.error("Error fetching notifications:", error);
