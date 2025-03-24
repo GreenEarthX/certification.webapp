@@ -9,7 +9,6 @@ export interface StatCardProps {
   export interface Stats {
     active: number;
     expired: number;
-    expiring: number;
     pending: number;
     rejected: number;
   }
