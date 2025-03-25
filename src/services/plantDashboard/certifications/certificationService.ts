@@ -13,7 +13,7 @@ export class CertificationsService {
     const client = await pool.connect();
     try {
       const ownership = await client.query(
-        `SELECT 1 FROM plants p JOIN users u ON p.operator_id = u.user_id WHERE p.plant_id = $1 AND u."auth0Sub" = $2`,
+        `SELECT 1 FROM plants p JOIN users u ON p.operator_id = u.user_id WHERE p.plant_id = $1 AND u.auth0sub = $2`,
         [plantId, userSub]
       );
       if (!ownership.rowCount) throw new Error("Unauthorized");
@@ -50,7 +50,7 @@ export class CertificationsService {
 
     try {
       const ownership = await client.query(
-        `SELECT 1 FROM plants p JOIN users u ON p.operator_id = u.user_id WHERE p.plant_id = $1 AND u."auth0Sub" = $2`,
+        `SELECT 1 FROM plants p JOIN users u ON p.operator_id = u.user_id WHERE p.plant_id = $1 AND u.auth0sub = $2`,
         [plantId, userSub]
       );
       if (!ownership.rowCount) throw new Error("Unauthorized");

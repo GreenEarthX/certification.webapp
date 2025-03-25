@@ -1,24 +1,17 @@
 import { useState } from 'react';
+import { registerCertification as registerCertificationService } from '@/services/certifications/fetchCertificationsAPI';
 
 export default function useCertificationRegistration() {
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
   const registerCertification = async (uploadedData: any) => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const res = await fetch("/api/plants/registration", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(uploadedData),
-      });
-
-      if (!res.ok) throw new Error("Certification registration failed.");
-
-      const data = await res.json();
-      return data.certification;
+      const certification = await registerCertificationService(uploadedData);
+      return certification;
     } catch (error: any) {
       setError(error.message);
       return null;

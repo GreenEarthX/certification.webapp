@@ -36,6 +36,7 @@ const Sidebar: React.FC = () => {
   };
 
   return (
+
     <Drawer
       variant="permanent"
       className={`${styles.sidebar} ${isCollapsed ? styles.collapsed : ''}`}

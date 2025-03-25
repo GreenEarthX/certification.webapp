@@ -3,7 +3,7 @@ import pool from "@/lib/db";
 export class UserService {
   static async getUserBySub(auth0Sub: string) {
     const result = await pool.query(
-      `SELECT user_id, first_name, last_name, email FROM users WHERE "auth0Sub" = $1`,
+      `SELECT user_id, first_name, last_name, email FROM users WHERE auth0sub = $1`,
       [auth0Sub]
     );
 
@@ -17,7 +17,7 @@ export class UserService {
     auth0Sub: string;
   }) {
     const result = await pool.query(
-      `INSERT INTO users (first_name, last_name, email, "auth0Sub")
+      `INSERT INTO users (first_name, last_name, email, auth0sub)
        VALUES ($1, $2, $3, $4)
        RETURNING *`,
       [firstName, lastName, email, auth0Sub]

@@ -20,7 +20,7 @@ export class RiskProfileService {
         `SELECT 1
          FROM plants p
          JOIN users u ON p.operator_id = u.user_id
-         WHERE p.plant_id = $1 AND u."auth0Sub" = $2`,
+         WHERE p.plant_id = $1 AND u.auth0sub = $2`,
         [plantId, userSub]
       );
 

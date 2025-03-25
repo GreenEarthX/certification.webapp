@@ -10,7 +10,7 @@ export class NotificationService {
       SELECT n.*
       FROM notifications n
       JOIN users u ON n.recipient_id = u.user_id
-      WHERE u."auth0Sub" = $1
+      WHERE u.auth0sub = $1
       ORDER BY n.timestamp DESC;
     `;
 
@@ -25,7 +25,7 @@ export class NotificationService {
       SELECT n.id
       FROM notifications n
       JOIN users u ON n.recipient_id = u.user_id
-      WHERE n.id = $1 AND u."auth0Sub" = $2;
+      WHERE n.id = $1 AND u.auth0sub = $2;
     `;
     const checkResult = await pool.query(checkQuery, [id, userSub]);
 

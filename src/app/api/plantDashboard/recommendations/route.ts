@@ -1,4 +1,3 @@
-// ✅ api/plantDashboard/recommendations/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { RecommendationService } from "@/services/plantDashboard/recommendations/recommendationService";
 

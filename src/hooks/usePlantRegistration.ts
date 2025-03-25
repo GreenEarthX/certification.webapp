@@ -12,7 +12,7 @@ interface FormData {
   certification: boolean;
 }
 
-export default function usePlantRegistration() {
+export default function usePlantRegistration(stepParam?: string, router?: any) {
   const [formData, setFormData] = useState<FormData>({
     role: "",
     plantName: "",
@@ -39,6 +39,13 @@ export default function usePlantRegistration() {
     loadData();
   }, []);
 
+  useEffect(() => {
+    const stepNum = parseInt(stepParam || "1", 10);
+    if (!isNaN(stepNum) && stepNum >= 1 && stepNum <= 4) {
+      setCurrentStep(stepNum);
+    }
+  }, [stepParam]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     if (name === "country" || name === "region") {
@@ -57,9 +64,37 @@ export default function usePlantRegistration() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await submitPlantRegistration(formData);
-    setCurrentStep(2);
+    setIsLoading(true);
+  
+    try {
+      const formattedData = {
+        ...formData,
+        address: `${formData.address.country}, ${formData.address.region}`,
+      };
+  
+      const { plant } = await submitPlantRegistration(formattedData);
+  
+      const data: UploadedData = {
+        plant_id: plant.plant_id,
+        operator_id: plant.operator_id,
+      };
+  
+      setUploadedData(data);
+  
+      if (formData.certification) {
+        setCurrentStep(2);
+        router?.push("?step=2");
+      } else {
+        setCurrentStep(4);
+        router?.push("?step=4");
+      }
+    } catch (error) {
+      console.error("Submission error:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
+  
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -82,7 +117,6 @@ export default function usePlantRegistration() {
       }, 2000);
     }
   };
-  
 
   const handleBack = () => setCurrentStep(1);
 
