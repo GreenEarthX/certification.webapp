@@ -1,4 +1,3 @@
-// ✅ api/plantDashboard/certifications/summary/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { CertificationsService } from "@/services/plantDashboard/certifications/certificationService";
 

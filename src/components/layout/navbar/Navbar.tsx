@@ -19,24 +19,43 @@ const Navbar: React.FC = () => {
 
   useEffect(() => {
     if (pathname.includes("/recommendations")) {
-      setTitle("Recommendations");
+      setTitle(
+        pathname.match(/^\/dashboards\/recommendations\/\d+\/tracking$/)
+          ? "Tracking Recommendation"
+          : pathname.match(/^\/dashboards\/recommendations\/\d+$/)
+          ? "Recommendation"
+          : "Recommendations"
+      );
     } else if (pathname.includes("/certifications")) {
-      setTitle(pathname.match(/^\/certifications\/\d+$/) ? "Certification" : "Certifications");
-    } else if (pathname.startsWith("/dashboard")) {
-      setTitle("Dashboard");
+      setTitle(
+        pathname.match(/^\/dashboards\/certifications\/\d+$/)
+          ? "Certification"
+          : "Certifications"
+      );
+    } else if (pathname.startsWith("/dashboards/plants/add")) {
+      setTitle("Add Plant");
+    } else if (pathname.startsWith("/dashboards/dashboard")) {
+      setTitle(
+        pathname.match(/^\/dashboards\/dashboard\/\d+\/plantDashboard$/)
+          ? "Plant Dashboard"
+          : "Dashboard"
+      );
+    } else if (pathname.startsWith("/profile")) {
+      setTitle("Profile");
     } else {
       setTitle("Dashboard");
     }
   }, [pathname]);
+  
 
   return (
-    <div className="sticky top-0 z-50 bg-white shadow-lg border-b border-gray-200">
+    <div className="sticky top-0 z-50 bg-blue-100/30 backdrop-blur-md shadow-lg border-b border-blue-200">
       <div className="flex justify-between items-center max-w-7xl mx-auto px-4 py-2">
         {/* Left Section */}
-        <h1 className="text-2xl font-bold text-gray-800">{title}</h1>
+        <h1 className="text-2xl font-bold text-blue-700">{title}</h1>
 
         {/* Right Section */}
-        <div className="flex items-center space-x-4 bg-white rounded-full p-2 shadow-sm relative">
+        <div className="flex items-center space-x-4 rounded-full p-2 shadow-sm relative">
           {/* Notifications */}
           <Notifications
             notifications={notifications}

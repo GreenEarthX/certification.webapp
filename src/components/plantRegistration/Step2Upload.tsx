@@ -6,7 +6,7 @@ interface Step2UploadProps {
   handleBack: () => void;
 }
 
-const Step2Upload: React.FC<Step2UploadProps> = ({ handleFileUpload, isLoading, handleBack }) => (
+const Step2Upload: React.FC<Step2UploadProps> = ({ handleFileUpload, isLoading }) => (
   <div>
     <h2 className="text-xl font-bold mb-6 text-center">Upload Certification</h2>
     <div className="border-2 border-dashed border-gray-300 rounded-lg p-10 text-center">

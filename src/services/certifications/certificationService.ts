@@ -17,9 +17,9 @@ class CertificationService {
         JOIN certifications c ON c.plant_id = p.plant_id
         JOIN certification_schemes cs ON c.certification_scheme_id = cs.certification_scheme_id
         LEFT JOIN issuing_bodies ib ON cs.issuing_body_id = ib.ib_id
-        WHERE u."auth0Sub" = $1
+        WHERE u.auth0sub = $1
         ORDER BY c.created_at DESC;
-      `;
+      `; 
 
       const result = await pool.query(query, [userSub]);
       return result.rows;

@@ -18,10 +18,12 @@ interface CertificationsTableProps {
 const CertificationsTable: React.FC<CertificationsTableProps> = ({ certifications }) => {
   const getStatusClass = (status: string) => {
     switch (status.toLowerCase()) {
-      case "accepted":
+      case "active":
         return "bg-green-200 text-green-700";
       case "pending":
         return "bg-yellow-200 text-yellow-700";
+      case "expired":
+        return "bg-orange-200 text-orange-700";  
       case "rejected":
         return "bg-red-200 text-red-700";
       default:

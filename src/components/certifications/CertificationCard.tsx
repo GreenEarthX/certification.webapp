@@ -16,12 +16,14 @@ const CertificationCard: React.FC<CertificationCards> = ({
   // Function to determine the text color based on the status
   const getStatusColor = () => {
     switch (status.toLowerCase()) {
-      case 'accepted':
+      case 'active':
         return 'text-green-500';
       case 'pending':
         return 'text-yellow-500';
       case 'rejected':
         return 'text-red-500';
+      case 'expired':
+        return 'text-orange-500';  
       default:
         return 'text-gray-500';
     }
