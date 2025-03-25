@@ -10,3 +10,17 @@ export const fetchCertificationById = async (certificationId: string) => {
   if (!res.ok) throw new Error("Failed to fetch certification");
   return res.json();
 };
+
+
+export const registerCertification = async (uploadedData: any) => {
+  const res = await fetch("/api/plants/registration", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(uploadedData),
+  });
+
+  if (!res.ok) throw new Error("Certification registration failed.");
+
+  const data = await res.json();
+  return data.certification;
+};

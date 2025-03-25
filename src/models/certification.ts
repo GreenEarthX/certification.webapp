@@ -21,3 +21,22 @@ export interface CertificationCards {
     Status: string;
     id: number;
   }
+
+
+  // For the detailed view
+export interface CertificationDetail {
+  certification_id: number;
+  status: string;
+  created_at: string;
+  certification_scheme_name: string;
+  framework: string;
+  certificate_type: string;
+  geographic_coverage: string;
+  validity: string;
+  short_certification_overview: string;
+  issuing_body: string;
+  plant_id: number;
+  operator_id: number;
+  plant_name: string;
+  plant_email: string;
+}

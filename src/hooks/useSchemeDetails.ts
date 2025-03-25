@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { fetchComplianceScoreAndName, fetchSchemeDetails } from "@/services/recommendations/fetchRecommendationAPI";
 import { useParams } from "next/navigation";
-import { SchemeContent } from "@/models/overview"; // Import the interface
+import { SchemeContent } from "@/models/overview"; 
 
 interface SchemeDetails {
   complianceScore: number;
   schemeName: string;
-  content: SchemeContent | null; // Use the specific type here
+  content: SchemeContent | null; 
   loading: boolean;
   error: string | null;
   activeTab: string;
@@ -15,10 +15,10 @@ interface SchemeDetails {
 
 export const useServiceDetails = (): SchemeDetails => {
   const { id } = useParams();
-  const schemeId = Array.isArray(id) ? id[0] : id; // Ensure id is a string
+  const schemeId = Array.isArray(id) ? id[0] : id; 
 
   const [activeTab, setActiveTab] = useState("overview");
-  const [content, setContent] = useState<SchemeContent | null>(null); // Use the specific type here
+  const [content, setContent] = useState<SchemeContent | null>(null); 
   const [loading, setLoading] = useState(false);
   const [complianceScore, setComplianceScore] = useState(0);
   const [schemeName, setSchemeName] = useState("CertifHy™ Scheme");
@@ -36,7 +36,7 @@ export const useServiceDetails = (): SchemeDetails => {
       console.error("❌ Error fetching compliance score:", error);
       setError("Error fetching compliance score");
     }
-  }, [schemeId]); // Add schemeId as a dependency
+  }, [schemeId]); 
 
   // Fetch scheme details
   const fetchSchemeDetailsHandler = useCallback(async () => {
@@ -45,7 +45,7 @@ export const useServiceDetails = (): SchemeDetails => {
     setLoading(true);
     try {
       const data = await fetchSchemeDetails(schemeId, activeTab);
-      setContent(data as SchemeContent); // Cast the data to the specific type
+      setContent(data as SchemeContent);
     } catch (error) {
       console.error("❌ Error fetching scheme details:", error);
       setError("Error fetching scheme details");

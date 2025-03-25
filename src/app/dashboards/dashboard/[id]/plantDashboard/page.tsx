@@ -2,7 +2,9 @@
 
 import { useState, useEffect, ChangeEvent } from "react";
 import { useRouter, useParams } from "next/navigation";
-import Link from "next/link"; // Import Link for navigation
+import Link from "next/link"; 
+
+// Components
 import FacilityDropdown from "@/components/plantDashboard/FacilityDropdown";
 import RiskScore from "@/components/plantDashboard/RiskScore";
 import DashboardStats from "@/components/dashboard/stats/DashboardStats";
@@ -10,6 +12,7 @@ import CertificationRequests from "@/components/plantDashboard/CertificationRequ
 import CertificationsTable from "@/components/plantDashboard/CertificationsTable";
 import Recommendations from "@/components/plantDashboard/Recommendations";
 
+// Hooks
 import { useRiskScore } from "@/hooks/plantDashboard/useRiskScore";
 import { useRecommendations } from "@/hooks/plantDashboard/useRecommendations";
 import { useCertifications } from "@/hooks/plantDashboard/useCertificationsList";

@@ -13,7 +13,7 @@ export class PlantService {
           p.plant_name
         FROM users u
         JOIN plants p ON u.user_id = p.operator_id
-        WHERE u."auth0Sub" = $1;
+        WHERE u.auth0sub = $1;
       `;
 
       const { rows } = await pool.query(query, [userSub]);

@@ -40,7 +40,6 @@ export async function GET(
     }
 
     if (section) {
-      console.log("❌ Invalid section requested:", section);
       return NextResponse.json({ error: "Invalid section" }, { status: 400 });
     }
 

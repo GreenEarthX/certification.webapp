@@ -11,7 +11,9 @@ export const fetchFormData = async () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(formData),
     });
+    
     if (!res.ok) throw new Error("Failed to submit plant data");
-    return res.json();
+  
+    return res.json(); // returns { plant }
   };
   

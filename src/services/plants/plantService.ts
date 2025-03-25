@@ -27,7 +27,22 @@ class PlantService {
     }
   }
 
-  // 🧩 You can add more methods later like:
+  async deletePlantById(userSub: string, plantId: number): Promise<void> {
+    try {
+      const query = `
+        DELETE FROM plants
+        WHERE plant_id = $1 AND operator_id = (
+          SELECT user_id FROM users WHERE auth0sub = $2
+        )
+      `;
+      await pool.query(query, [plantId, userSub]);
+    } catch (error) {
+      console.error("Error deleting plant:", error);
+      throw new Error("Failed to delete plant");
+    }
+  }
+  
+
   // async getPlantById(id: string) { ... }
   // async registerPlant(data: PlantInput) { ... }
 }
