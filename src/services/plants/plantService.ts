@@ -16,7 +16,7 @@ class PlantService {
         LEFT JOIN fuel_types ft ON p.fuel_id = ft.fuel_id
         LEFT JOIN address a ON p.address_id = a.address_id
         LEFT JOIN risk_profiles rp ON p.plant_id = rp.plant_id
-        WHERE u."auth0Sub" = $1;
+        WHERE u.auth0sub = $1;
       `;
 
       const { rows } = await pool.query(query, [userSub]);

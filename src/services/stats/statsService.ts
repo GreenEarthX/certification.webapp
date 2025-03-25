@@ -14,7 +14,7 @@ class StatsService {
         FROM users u
         JOIN plants p ON u.user_id = p.operator_id
         JOIN certifications c ON c.plant_id = p.plant_id
-        WHERE u."auth0Sub" = $1;
+        WHERE u.auth0sub = $1;
       `;
 
       const { rows } = await pool.query(query, [userSub]);
