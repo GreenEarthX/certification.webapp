@@ -5,3 +5,10 @@ export const fetchAllPlants = async () => {
 };
 
   
+export const deletePlant = async (plantId: number): Promise<void> => {
+  const res = await fetch(`/api/plants/${plantId}`, {
+    method: "DELETE",
+  });
+
+  if (!res.ok) throw new Error("Failed to delete plant.");
+};

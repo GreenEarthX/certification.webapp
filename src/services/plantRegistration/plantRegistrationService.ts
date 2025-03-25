@@ -31,55 +31,60 @@ export class PlantRegistrationService {
   }
 
   // Register a new plant with associated operator from session
-  static async registerPlant(req: NextRequest, body: any) {
-    const userSub = await getSessionUser(req);
-
-    // Get user ID from sub
-    const userResult = await pool.query(
-      `SELECT user_id FROM users WHERE "auth0Sub" = $1`,
-      [userSub]
+  static async registerPlant(req: NextRequest): Promise<any> {
+    const auth0Sub = await getSessionUser(req);
+    const { plantName, fuelType, address, plantStage } = await req.json();
+  
+    console.log("🔵 Received Data:", { plantName, fuelType, address, plantStage });
+  
+    // Get user ID
+    const userRes = await pool.query(
+      `SELECT user_id FROM users WHERE auth0sub = $1`,
+      [auth0Sub]
     );
-
-    if (userResult.rowCount === 0) {
+  
+    if (userRes.rowCount === 0) {
       throw new Error("User not found");
     }
-
-    const operatorId = userResult.rows[0].user_id;
-
-    const {
-      plantName,
-      fuelType,
-      address,
-      plantStage,
-      certification,
-    } = body;
-
-    try {
-      const insertResult = await pool.query(
-        `INSERT INTO plants (plant_name, fuel_type, address_id, stage_id, operator_id, has_certification)
-         VALUES ($1, $2, (SELECT address_id FROM address WHERE region = $3), $4, $5, $6)
-         RETURNING *`,
-        [plantName, fuelType, address, plantStage, operatorId, certification]
-      );
-
-      return insertResult.rows[0];
-    } catch (error) {
-      console.error("Error inserting plant:", error);
-      throw new Error("Failed to register plant");
+  
+    const operatorId = userRes.rows[0].user_id;
+  
+    // Parse address
+    const [country, region] = address.split(",").map((item: string) => item.trim());
+  
+    const addressRes = await pool.query(
+      `SELECT address_id FROM address WHERE country = $1 AND region = $2`,
+      [country, region]
+    );
+  
+    if (addressRes.rowCount === 0) {
+      throw new Error("Address not found");
     }
+  
+    const addressId = addressRes.rows[0].address_id;
+  
+    // Insert plant
+    const insertPlantRes = await pool.query(
+      `INSERT INTO plants (plant_name, operator_id, address_id, fuel_id, stage_id) 
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [plantName, operatorId, addressId, parseInt(fuelType), parseInt(plantStage)]
+    );
+  
+    return insertPlantRes.rows[0];
   }
+  
 
   static async registerCertification(body: CertificationRegistrationPayload) {
     const {
       plant_id,
       certificationName,
       certificationBody,
-      type,
-      entity,
-      issueDate,
-      validityDate,
-      certificateNumber,
-      compliesWith,
+      //type,
+      //entity,
+      //issueDate,
+      //validityDate,
+      //certificateNumber,
+      //compliesWith,
     } = body;
 
     try {

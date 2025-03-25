@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useParams } from 'next/navigation';
 import CertificationCard from '@/components/certifications/CertificationCard';
 import CertificationReportComponent from '@/components/certifications/CertificationReportComponent';
@@ -11,16 +11,9 @@ export default function CertificationDetails() {
   const { id: certificationId } = useParams();
   const {
     certification,
-    getCertificationById,
     loading,
     error,
-  } = useCertifications()as any;;
-
-  useEffect(() => {
-    if (certificationId) {
-      getCertificationById(certificationId as string);
-    }
-  }, [certificationId]);
+  } = useCertifications(certificationId as string);
 
   if (loading) return <div className="p-6">Loading...</div>;
   if (error || !certification) return <div className="p-6">Certification not found</div>;
@@ -31,7 +24,7 @@ export default function CertificationDetails() {
         imageUrl="/certification1.jpeg"
         id={certification.certification_id}
         certification={certification.certification_scheme_name}
-        entity={certification.plant_name}
+        entity={certification.issuing_body}
         issueDate={certification.created_at}
         status={certification.status}
         description={certification.short_certification_overview}

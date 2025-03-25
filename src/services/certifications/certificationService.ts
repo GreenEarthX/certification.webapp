@@ -19,7 +19,7 @@ class CertificationService {
         LEFT JOIN issuing_bodies ib ON cs.issuing_body_id = ib.ib_id
         WHERE u.auth0sub = $1
         ORDER BY c.created_at DESC;
-      `;
+      `; 
 
       const result = await pool.query(query, [userSub]);
       return result.rows;

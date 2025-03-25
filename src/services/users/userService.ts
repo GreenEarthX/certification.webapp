@@ -36,7 +36,7 @@ export class UserService {
     auth0Sub: string;
   }) {
     const result = await pool.query(
-      `INSERT INTO users (first_name, last_name, email, "auth0Sub")
+      `INSERT INTO users (first_name, last_name, email, auth0sub)
        VALUES ($1, $2, $3, $4)
        RETURNING *`,
       [firstName, lastName, email, auth0Sub]

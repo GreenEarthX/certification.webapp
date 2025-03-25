@@ -3,9 +3,9 @@ import { certificationService } from '@/services/certifications/certificationSer
 
 export async function GET(
   request: NextRequest,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } }
 ) {
-  const { id } = context.params;
+  const id = params?.id;
 
   if (!id) {
     return NextResponse.json(
@@ -27,3 +27,4 @@ export async function GET(
     return NextResponse.json({ error: 'Something went wrong' }, { status: 500 });
   }
 }
+
