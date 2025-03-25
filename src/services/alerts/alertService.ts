@@ -12,7 +12,7 @@ class AlertService {
         FROM users u
         JOIN alert_recipients ar ON ar.user_id = u.user_id
         JOIN alerts a ON a.alert_id = ar.alert_id
-        WHERE u."auth0Sub" = $1
+        WHERE u.auth0sub = $1
         ORDER BY a.timestamp DESC;
       `;
 
