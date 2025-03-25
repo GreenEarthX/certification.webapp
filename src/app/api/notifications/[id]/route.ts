@@ -15,7 +15,6 @@ export async function PUT(req: NextRequest) {
   } catch (error: unknown) {
     console.error("Error updating notification:", error);
 
-    // ✅ Type-safe error handling
     const message = error instanceof Error ? error.message : "Failed to update notification";
     const status = message === "Notification not found or unauthorized" ? 404 : 500;
 

@@ -22,7 +22,7 @@ class RecommendationService {
         JOIN certification_schemes cs ON r.certification_scheme_id = cs.certification_scheme_id
         JOIN certification_schemes_certification_bodies cscb ON cs.certification_scheme_id = cscb.certification_scheme_id
         JOIN certification_bodies cb ON cscb.cb_id = cb.cb_id
-        WHERE u."auth0Sub" = $1
+        WHERE u.auth0sub = $1
         GROUP BY r.recommendation_id, cs.certification_scheme_name, cs.overview, cs.validity, r.compliance_score, p.plant_id, p.plant_name;
         `,
         [userSub]
