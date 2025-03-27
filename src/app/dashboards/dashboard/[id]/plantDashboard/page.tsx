@@ -103,7 +103,7 @@ export default function PlantDashboard() {
         <h2 style={{ color: "#17598d" }} className="text-xl font-semibold mb-4">
           Certifications
         </h2>
-        <Link href="/dashboards/plants/add?step=2">
+        <Link href={`/dashboards/plants/add?step=2&plant_id=${selectedPlant}`}>
           <button className="bg-blue-600 text-white px-5 py-1 rounded-lg hover:bg-blue-700">
             Add Certification
           </button>

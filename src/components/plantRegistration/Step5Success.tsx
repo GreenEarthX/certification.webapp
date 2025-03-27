@@ -8,13 +8,15 @@ interface Step4SuccessProps {
   onGoToDashboard: () => void;
 }
 
-const Step4Success: React.FC<Step4SuccessProps> = ({ uploadedData, onGoToDashboard }) => {
+const Step5Success: React.FC<Step4SuccessProps> = ({ onGoToDashboard }) => {
   return (
     <div className="text-center p-6">
-      <h2 className="text-xl font-bold mb-4">Plant Registered Successfully!</h2>
-      <p>
-        Plant with ID <strong>{uploadedData.plant_id}</strong> added successfully by plant operator <strong>{uploadedData.operator_id}</strong>.
+      <h2 className="text-xl font-bold mb-4 text-green-700">Success!</h2>
+
+      <p className="text-gray-700">
+        The process has been completed successfully.
       </p>
+
       <button
         onClick={onGoToDashboard}
         className="mt-6 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition"
@@ -25,4 +27,4 @@ const Step4Success: React.FC<Step4SuccessProps> = ({ uploadedData, onGoToDashboa
   );
 };
 
-export default Step4Success;
+export default Step5Success;

@@ -1,16 +1,11 @@
-// src/hooks/usePlantRegistration.ts
 import { useState, useEffect } from "react";
-import { fetchFormData, submitPlantRegistration } from "@/services/plantRegistration/fetchPlantAPI";
-import { UploadedData } from "@/models/CertificationUploadedData";
 
-interface FormData {
-  role: string;
-  plantName: string;
-  fuelType: string;
-  address: { country: string; region: string };
-  plantStage: string;
-  certification: boolean;
-}
+// Services
+import { fetchFormData, submitPlantRegistration } from "@/services/plantRegistration/fetchPlantAPI";
+
+// Models
+import { UploadedData } from "@/models/certificationUploadedData";
+import { FormData } from "@/models/plantRegistration";
 
 export default function usePlantRegistration(stepParam?: string, router?: any) {
   const [formData, setFormData] = useState<FormData>({
@@ -62,10 +57,8 @@ export default function usePlantRegistration(stepParam?: string, router?: any) {
     setFormData((prev) => ({ ...prev, certification: e.target.value === "yes" }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const registerPlant = async () => {
     setIsLoading(true);
-  
     try {
       const formattedData = {
         ...formData,
@@ -80,20 +73,36 @@ export default function usePlantRegistration(stepParam?: string, router?: any) {
       };
   
       setUploadedData(data);
-  
-      if (formData.certification) {
-        setCurrentStep(2);
-        router?.push("?step=2");
-      } else {
-        setCurrentStep(4);
-        router?.push("?step=4");
-      }
+      return data;
     } catch (error) {
-      console.error("Submission error:", error);
+      console.error("Registration error:", error);
+      throw error;
     } finally {
       setIsLoading(false);
     }
   };
+  
+  const handleNext = async () => {
+    if (!formData.certification) return;
+  
+    const data = await registerPlant();
+    setCurrentStep(2);
+    router?.push("?step=2");
+  };
+  
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const data = await registerPlant();
+  
+    if (formData.certification) {
+      setCurrentStep(2);
+      router?.push("?step=2");
+    } else {
+      setCurrentStep(4);
+      router?.push("?step=4");
+    }
+  };
+  
   
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -135,5 +144,7 @@ export default function usePlantRegistration(stepParam?: string, router?: any) {
     handleBack,
     setCurrentStep,
     setUploadedData,
+    handleNext,
   };
+  
 }
