@@ -1,4 +1,3 @@
-// src/services/plantRegistration/fetchPlantAPI.ts
 export const fetchFormData = async () => {
     const res = await fetch("/api/plants/registration");
     if (!res.ok) throw new Error("Failed to fetch form data");
@@ -14,6 +13,6 @@ export const fetchFormData = async () => {
     
     if (!res.ok) throw new Error("Failed to submit plant data");
   
-    return res.json(); // returns { plant }
+    return res.json(); 
   };
   

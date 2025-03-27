@@ -17,6 +17,7 @@ interface Step1FormProps {
   handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
   handleCertificationChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleSubmit: (e: React.FormEvent) => void;
+  handleNext: () => void;
   setCurrentStep: (step: number) => void;
 }
 
@@ -28,31 +29,21 @@ const Step1Form: React.FC<Step1FormProps> = ({
   handleChange,
   handleCertificationChange,
   handleSubmit,
-  setCurrentStep,
+  handleNext,
 }) => {
 
   const isFormComplete =
-    formData.role.trim() !== "" &&
     formData.plantName.trim() !== "" &&
     formData.fuelType !== "" &&
     formData.address.country !== "" &&
     formData.address.region !== "" &&
-    formData.plantStage !== "";
+    formData.plantStage !== "";  
 
   return (
     <form onSubmit={handleSubmit}>
       <h2 className="text-xl font-bold mb-6 text-center">Plant Registration</h2>
 
       <div className="flex gap-4 mb-4">
-        <FormInput
-          label="Role"
-          type="text"
-          id="role"
-          name="role"
-          value={formData.role}
-          onChange={handleChange}
-          placeholder="Role"
-        />
         <FormInput
           label="Plant Name"
           type="text"
@@ -138,18 +129,23 @@ const Step1Form: React.FC<Step1FormProps> = ({
       </div>
 
       <div className="flex justify-end gap-4">
-        <button
-          type="button"
-          className={`px-4 py-2 rounded-md focus:outline-none ${
-            formData.certification && isFormComplete
-              ? "bg-gray-300 text-gray-700 hover:bg-gray-400 focus:ring-2 focus:ring-gray-500"
-              : "bg-gray-200 text-gray-400 cursor-not-allowed"
-          }`}
-          onClick={() => formData.certification && isFormComplete && setCurrentStep(2)}
-          disabled={!formData.certification || !isFormComplete}
-        >
-          Next
-        </button>
+      <button
+        type="button"
+        className={`px-4 py-2 rounded-md focus:outline-none ${
+          formData.certification && isFormComplete
+            ? "bg-gray-300 text-gray-700 hover:bg-gray-400 focus:ring-2 focus:ring-gray-500"
+            : "bg-gray-200 text-gray-400 cursor-not-allowed"
+        }`}
+        onClick={() => {
+          if (formData.certification && isFormComplete) {
+            handleNext(); // ⬅️ Now does DB registration + step change
+          }
+        }}
+        disabled={!formData.certification || !isFormComplete}
+      >
+        Next
+      </button>
+
 
         <button
           type="submit"
