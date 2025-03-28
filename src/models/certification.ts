@@ -50,4 +50,5 @@ export interface CertificationOption {
   validity: string;
   certification_bodies: string[];
   complies_with: string[];
+  owners: string[];
 }

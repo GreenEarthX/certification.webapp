@@ -8,6 +8,7 @@ export interface CertificationRegistrationPayload {
   validityDate?: string;
   certificateNumber?: string;
   compliesWith?: string; // comma-separated string
+  owner?: string; // comma-separated string
 }
 
 export interface FormData {
