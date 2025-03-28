@@ -7,7 +7,7 @@ import Image from "next/image";
 import Step1Form from "@/components/plantRegistration/Step1Form";
 import Step2Upload from "@/components/plantRegistration/Step2Upload";
 import Step3Confirmation from "@/components/plantRegistration/Step3Confirmation";
-import Step4Success from "@/components/plantRegistration/Step4Success"; 
+import Step4Success from "@/components/plantRegistration/Step4Success";
 import Step5Success from "@/components/plantRegistration/Step5Success";
 
 // Hooks
@@ -18,10 +18,8 @@ const PlantRegistrationForm = () => {
   const router = useRouter();
   const stepParam = searchParams.get("step");
 
-  
   const {
     formData,
-    addressOptions,
     plantStages,
     fuelTypes,
     currentStep,
@@ -37,7 +35,6 @@ const PlantRegistrationForm = () => {
     setUploadedData,
   } = usePlantRegistration(stepParam as string, router);
 
-  
   return (
     <div className="max-w-2xl mx-auto p-6 bg-white shadow-md rounded-lg mt-10">
       <div className="flex justify-center mb-6">
@@ -48,14 +45,13 @@ const PlantRegistrationForm = () => {
         {currentStep === 1 && (
           <Step1Form
             formData={formData}
-            addressOptions={addressOptions}
             plantStages={plantStages}
             fuelTypes={fuelTypes}
             handleChange={handleChange}
             handleCertificationChange={handleCertificationChange}
             handleSubmit={handleSubmit}
             setCurrentStep={setCurrentStep}
-            handleNext={handleNext} // ✅ NEW
+            handleNext={handleNext}
           />
         )}
 
