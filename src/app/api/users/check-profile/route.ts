@@ -1,22 +1,16 @@
-import {  NextRequest, NextResponse } from "next/server";
-import pool from "@/lib/db";
+import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth";
+import { UserService } from "@/services/users/userService";
 
 export async function GET(req: NextRequest) {
   try {
-    const auth0sub = await getSessionUser(req);
-    console.log("auth0sub:", auth0sub);
+    const auth0Sub = await getSessionUser(req);
 
-    if (!auth0sub) {
+    if (!auth0Sub) {
       return NextResponse.json({ needsCompletion: false });
     }
 
-    const result = await pool.query(
-      'SELECT first_name FROM users WHERE auth0sub = $1',
-      [auth0sub]
-    );
-
-    const needsCompletion = !result.rows[0]?.first_name;
+    const needsCompletion = await UserService.needsProfileCompletion(auth0Sub);
     return NextResponse.json({ needsCompletion });
   } catch (err) {
     console.error("check-profile error:", err);
