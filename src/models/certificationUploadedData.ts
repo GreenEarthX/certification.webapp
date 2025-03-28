@@ -9,4 +9,5 @@ export interface UploadedData {
   validityDate?: string;
   certificateNumber?: string;
   compliesWith?: string;
+  owner?: string;
 }

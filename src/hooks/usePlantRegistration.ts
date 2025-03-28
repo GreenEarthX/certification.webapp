@@ -81,6 +81,7 @@ export default function usePlantRegistration(stepParam?: string, router?: any) {
   const handleNext = async () => {
     if (!formData.certification) return;
     const data = await registerPlant();
+    resetForm();
     setCurrentStep(2);
     router?.push("?step=2");
   };
@@ -88,7 +89,7 @@ export default function usePlantRegistration(stepParam?: string, router?: any) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const data = await registerPlant();
-
+  
     if (formData.certification) {
       setCurrentStep(2);
       router?.push("?step=2");
@@ -97,6 +98,7 @@ export default function usePlantRegistration(stepParam?: string, router?: any) {
       router?.push("?step=4");
     }
   };
+  
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -105,14 +107,15 @@ export default function usePlantRegistration(stepParam?: string, router?: any) {
       setTimeout(() => {
         setUploadedData((prevData) => ({
           ...prevData!,
-          certificationName: "Certify+ Schema",
-          type: "Type A",
-          entity: "Certify+",
-          certificationBody: "Certify",
+          certificationName: "",
+          owner: "",
+          type: "",
+          entity: "",
+          certificationBody: "",
           issueDate: "25/04/2026",
           validityDate: "25/04/2030",
-          certificateNumber: "285933006",
-          compliesWith: "REDD2",
+          certificateNumber: "",
+          compliesWith: "",
         }));
         setIsLoading(false);
         setCurrentStep(3);
@@ -121,6 +124,25 @@ export default function usePlantRegistration(stepParam?: string, router?: any) {
   };
 
   const handleBack = () => setCurrentStep(1);
+
+
+  const resetForm = () => {
+    setFormData({
+      role: "",
+      plantName: "",
+      fuelType: "",
+      address: {
+        street: "",
+        city: "",
+        state: "",
+        postalCode: "",
+        country: "",
+      },
+      plantStage: "",
+      certification: false,
+    });
+  };
+  
 
   return {
     formData,
@@ -137,5 +159,6 @@ export default function usePlantRegistration(stepParam?: string, router?: any) {
     setCurrentStep,
     setUploadedData,
     handleNext,
+    resetForm,
   };
 }

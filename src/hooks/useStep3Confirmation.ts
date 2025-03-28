@@ -1,32 +1,44 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 
-// Hooks
-import useCertificationRegistration from "@/hooks/useCertificationRegistration";
-
 // Models
-import { UploadedData} from "@/models/certificationUploadedData";
+import { UploadedData } from "@/models/certificationUploadedData";
 import { CertificationOption } from "@/models/certification";
 
 // Services
 import {
-    fetchCertificationOptions,
-    fetchOperatorId,
-    registerCertification,
-  } from "@/services/certifications/fetchCertificationsAPI";
-  
-
+  fetchCertificationOptions,
+  fetchOperatorId,
+  registerCertification as registerCertificationService,
+} from "@/services/certifications/fetchCertificationsAPI";
 
 export default function useStep3Confirmation(
   uploadedData: UploadedData,
   setUploadedData: React.Dispatch<React.SetStateAction<UploadedData>>
 ) {
-  const { registerCertification, isLoading, error } = useCertificationRegistration();
   const [certificationOptions, setCertificationOptions] = useState<CertificationOption[]>([]);
   const [loadingOptions, setLoadingOptions] = useState(true);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const urlPlantId = searchParams.get("plant_id");
+
+  // Register certification logic moved here
+  const registerCertification = async (uploadedData: any) => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const certification = await registerCertificationService(uploadedData);
+      return certification;
+    } catch (error: any) {
+      setError(error.message);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     const loadOperatorId = async () => {
@@ -41,12 +53,11 @@ export default function useStep3Confirmation(
         console.error("Failed to fetch operator ID", err);
       }
     };
-  
+
     if ((!uploadedData?.plant_id || uploadedData.plant_id === 0) && urlPlantId) {
       loadOperatorId();
     }
   }, [urlPlantId, uploadedData?.plant_id]);
-  
 
   useEffect(() => {
     const loadOptions = async () => {
@@ -61,7 +72,6 @@ export default function useStep3Confirmation(
     };
     loadOptions();
   }, []);
-  
 
   useEffect(() => {
     const selected = certificationOptions.find(
@@ -75,6 +85,7 @@ export default function useStep3Confirmation(
         validityDate: selected.validity,
         certificationBody: selected.certification_bodies.join(", "),
         compliesWith: selected.complies_with.join(", "),
+        owner: selected.owners?.[0] ?? "",
       }));
     }
   }, [uploadedData.certificationName, certificationOptions]);
@@ -89,7 +100,6 @@ export default function useStep3Confirmation(
       alert(error?.message || "Error during certification registration");
     }
   };
-  
 
   return {
     certificationOptions,
@@ -98,5 +108,6 @@ export default function useStep3Confirmation(
     setShowSuccessModal,
     handleSaveCertificate,
     isLoading,
+    error,
   };
 }

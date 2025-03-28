@@ -82,20 +82,29 @@ const Step3Confirmation: React.FC<Step3ConfirmationProps> = ({
       }
     }
 
+      //  Make plant_id and operator_id read-only
+    const isReadOnly = key === "plant_id" || key === "operator_id";
+
     return (
       <input
         type="text"
         value={value || ""}
+        disabled={isReadOnly}
         onChange={(e) =>
           setUploadedData((prev) => ({
             ...prev,
             [key]: e.target.value,
           }))
         }
-        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+        className={`mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm ${
+          isReadOnly ? "bg-gray-100 text-gray-600 cursor-not-allowed" : ""
+        }`}
       />
     );
   };
+
+
+    
 
   if (loadingOptions) {
     return <div className="text-center py-8">Loading certification options...</div>;
@@ -104,16 +113,28 @@ const Step3Confirmation: React.FC<Step3ConfirmationProps> = ({
   return (
     <div>
       <h3 className="text-xl font-bold mb-6 text-center">Certification Uploaded</h3>
-      <div className="grid grid-cols-2 gap-4 mb-6">
-        {Object.entries(uploadedData).map(([key, value]) => (
-          <div key={key}>
-            <label className="block text-sm font-medium text-gray-700">
-              {key.replace(/([A-Z])/g, " $1").trim()}
-            </label>
-            {renderInput(key, value)}
-          </div>
-        ))}
+      {/* certificationName full width */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Certification Name
+        </label>
+        {renderInput("certificationName", uploadedData.certificationName)}
       </div>
+
+      {/* Rest of the fields two per row */}
+      <div className="grid grid-cols-2 gap-4 mb-6">
+        {Object.entries(uploadedData)
+          .filter(([key]) => key !== "certificationName")
+          .map(([key, value]) => (
+            <div key={key}>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {key.replace(/([A-Z])/g, " $1").trim()}
+              </label>
+              {renderInput(key, value)}
+            </div>
+          ))}
+      </div>
+
 
       <div className="mb-4">
         <button

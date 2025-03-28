@@ -1,6 +1,7 @@
 import React from "react";
 import FormInput from "./FormInput";
 import FormSelect from "./FormSelect";
+import CountryInput from "./CountryInput";
 
 interface Step1FormProps {
   formData: {
@@ -133,15 +134,14 @@ const Step1Form: React.FC<Step1FormProps> = ({
       />
     </div>
     <div className="w-1/2">
-      <FormInput
-        label="Country"
-        type="text"
-        id="country"
-        name="country"
-        value={formData.address.country}
-        onChange={handleChange}
-        placeholder="Country"
-      />
+    <CountryInput
+      value={country}
+      onChange={(val) =>
+        handleChange({
+          target: { name: "country", value: val },
+        } as React.ChangeEvent<HTMLInputElement>)
+      }
+    />
     </div>
   </div>
 
