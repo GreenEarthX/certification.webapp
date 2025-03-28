@@ -10,73 +10,72 @@ function formatDate(dateStr: string): string {
   return `${year}-${month}-${day}`;
 }
 export class PlantRegistrationService {
-  // Fetch initial data: address, fuel, and plant stages
+  // Fetch initial data: fuel, and plant stages
   static async fetchFormData() {
-    const queries = {
-      address: "SELECT country, region FROM address;",
-      fuel: "SELECT fuel_id, fuel_name FROM fuel_types;",
-      stage: "SELECT stage_id, stage_name FROM plant_stages;",
+    const [fuelResult, stageResult] = await Promise.all([
+      pool.query("SELECT fuel_id, fuel_name FROM fuel_types;"),
+      pool.query("SELECT stage_id, stage_name FROM plant_stages;"),
+    ]);
+
+    return {
+      fuel: fuelResult.rows,
+      stage: stageResult.rows,
     };
-
-    try {
-      const [addressResult, fuelResult, stageResult] = await Promise.all([
-        pool.query(queries.address),
-        pool.query(queries.fuel),
-        pool.query(queries.stage),
-      ]);
-
-      return {
-        address: addressResult.rows,
-        fuel: fuelResult.rows,
-        stage: stageResult.rows,
-      };
-    } catch (error) {
-      console.error("Database error:", error);
-      throw new Error("Database query failed");
-    }
   }
 
-  // Register a new plant with associated operator from session
   static async registerPlant(req: NextRequest): Promise<any> {
     const auth0Sub = await getSessionUser(req);
     const { plantName, fuelType, address, plantStage } = await req.json();
-  
+
     console.log("🔵 Received Data:", { plantName, fuelType, address, plantStage });
-  
-    // Get user ID
+
+    // Get operator_id
     const userRes = await pool.query(
       `SELECT user_id FROM users WHERE auth0sub = $1`,
       [auth0Sub]
     );
-  
+
     if (userRes.rowCount === 0) {
       throw new Error("User not found");
     }
-  
+
     const operatorId = userRes.rows[0].user_id;
-  
-    // Parse address
-    const [country, region] = address.split(",").map((item: string) => item.trim());
-  
-    const addressRes = await pool.query(
-      `SELECT address_id FROM address WHERE country = $1 AND region = $2`,
-      [country, region]
+
+    // 🆕 Insert full address
+    const addressInsert = await pool.query(
+      `
+      INSERT INTO address (street, city, state, postal_code, country)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING address_id
+    `,
+      [
+        address.street,
+        address.city,
+        address.state,
+        address.postalCode,
+        address.country,
+      ]
     );
-  
-    if (addressRes.rowCount === 0) {
-      throw new Error("Address not found");
-    }
-  
-    const addressId = addressRes.rows[0].address_id;
-  
-    // Insert plant
-    const insertPlantRes = await pool.query(
-      `INSERT INTO plants (plant_name, operator_id, address_id, fuel_id, stage_id) 
-       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [plantName, operatorId, addressId, parseInt(fuelType), parseInt(plantStage)]
+
+    const addressId = addressInsert.rows[0].address_id;
+
+    // 🌱 Insert plant with that address_id
+    const plantInsert = await pool.query(
+      `
+      INSERT INTO plants (plant_name, operator_id, address_id, fuel_id, stage_id)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *
+    `,
+      [
+        plantName,
+        operatorId,
+        addressId,
+        parseInt(fuelType),
+        parseInt(plantStage),
+      ]
     );
-  
-    return insertPlantRes.rows[0];
+
+    return plantInsert.rows[0];
   }
 
 

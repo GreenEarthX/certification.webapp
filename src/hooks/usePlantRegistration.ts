@@ -1,9 +1,5 @@
 import { useState, useEffect } from "react";
-
-// Services
 import { fetchFormData, submitPlantRegistration } from "@/services/plantRegistration/fetchPlantAPI";
-
-// Models
 import { UploadedData } from "@/models/certificationUploadedData";
 import { FormData } from "@/models/plantRegistration";
 
@@ -12,12 +8,17 @@ export default function usePlantRegistration(stepParam?: string, router?: any) {
     role: "",
     plantName: "",
     fuelType: "",
-    address: { country: "", region: "" },
+    address: {
+      street: "",
+      city: "",
+      state: "",
+      postalCode: "",
+      country: "",
+    },
     plantStage: "",
     certification: false,
   });
 
-  const [addressOptions, setAddressOptions] = useState([]);
   const [plantStages, setPlantStages] = useState([]);
   const [fuelTypes, setFuelTypes] = useState([]);
   const [currentStep, setCurrentStep] = useState(1);
@@ -27,7 +28,6 @@ export default function usePlantRegistration(stepParam?: string, router?: any) {
   useEffect(() => {
     const loadData = async () => {
       const data = await fetchFormData();
-      setAddressOptions(data.address);
       setPlantStages(data.stage);
       setFuelTypes(data.fuel);
     };
@@ -43,7 +43,8 @@ export default function usePlantRegistration(stepParam?: string, router?: any) {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    if (name === "country" || name === "region") {
+    
+    if (["street", "city", "state", "postalCode", "country"].includes(name)) {
       setFormData((prev) => ({
         ...prev,
         address: { ...prev.address, [name]: value },
@@ -60,18 +61,13 @@ export default function usePlantRegistration(stepParam?: string, router?: any) {
   const registerPlant = async () => {
     setIsLoading(true);
     try {
-      const formattedData = {
-        ...formData,
-        address: `${formData.address.country}, ${formData.address.region}`,
-      };
-  
-      const { plant } = await submitPlantRegistration(formattedData);
-  
+      const { plant } = await submitPlantRegistration(formData);
+
       const data: UploadedData = {
         plant_id: plant.plant_id,
         operator_id: plant.operator_id,
       };
-  
+
       setUploadedData(data);
       return data;
     } catch (error) {
@@ -81,19 +77,18 @@ export default function usePlantRegistration(stepParam?: string, router?: any) {
       setIsLoading(false);
     }
   };
-  
+
   const handleNext = async () => {
     if (!formData.certification) return;
-  
     const data = await registerPlant();
     setCurrentStep(2);
     router?.push("?step=2");
   };
-  
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const data = await registerPlant();
-  
+
     if (formData.certification) {
       setCurrentStep(2);
       router?.push("?step=2");
@@ -102,8 +97,6 @@ export default function usePlantRegistration(stepParam?: string, router?: any) {
       router?.push("?step=4");
     }
   };
-  
-  
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -131,7 +124,6 @@ export default function usePlantRegistration(stepParam?: string, router?: any) {
 
   return {
     formData,
-    addressOptions,
     plantStages,
     fuelTypes,
     currentStep,
@@ -146,5 +138,4 @@ export default function usePlantRegistration(stepParam?: string, router?: any) {
     setUploadedData,
     handleNext,
   };
-  
 }
