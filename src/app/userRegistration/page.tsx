@@ -127,6 +127,20 @@ const UserRegistrationPage = () => {
   } = useUserForm();
   const router = useRouter();
 
+  const isFormComplete =
+  formData.firstName &&
+  formData.lastName &&
+  formData.company &&
+  formData.position &&
+  formData.email &&
+  formData.phoneNumber &&
+  formData.address &&
+  formData.country &&
+  formData.state &&
+  formData.city &&
+  formData.postalCode;
+
+
   return (
     <Container maxWidth="md" sx={{ py: 4, px: { xs: 2, sm: 4, md: 6 } }}>
       <Paper elevation={3} sx={{ p: 3, backgroundColor: '#fcfcf9' }}>
@@ -278,20 +292,22 @@ const UserRegistrationPage = () => {
           </Grid>
 
           <Box sx={{ mt: 4, display: 'flex', justifyContent: 'space-between' }}>
-            <Button
-              variant="contained"
-              color="primary"
-              type="submit"
-              sx={{
-                borderRadius: '30px',
-                paddingX: 2,
-                paddingY: 0.5,
-                fontSize: '1rem',
-                minWidth: '100px',
-              }}
-            >
-              Save
-            </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            type="submit"
+            disabled={!isFormComplete}
+            sx={{
+              borderRadius: '30px',
+              paddingX: 2,
+              paddingY: 0.5,
+              fontSize: '1rem',
+              minWidth: '100px',
+            }}
+          >
+            Save
+          </Button>
+
             <Button
               variant="contained"
               onClick={() => router.push('/dashboards/dashboard')}
