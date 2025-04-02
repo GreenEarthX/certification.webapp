@@ -42,6 +42,8 @@ const Navbar: React.FC = () => {
       );
     } else if (pathname.startsWith("/profile")) {
       setTitle("Profile");
+    } else if (pathname.includes("/manage-plants")) {
+      setTitle("Manage Plants Details");  
     } else {
       setTitle("Dashboard");
     }
