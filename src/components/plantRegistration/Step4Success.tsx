@@ -17,7 +17,7 @@ const Step4Success: React.FC<Step4SuccessProps> = ({ uploadedData, onGoToDashboa
       </p>
       <button
         onClick={onGoToDashboard}
-        className="mt-6 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition"
+        className="mt-6 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
       >
         Go to Dashboard
       </button>

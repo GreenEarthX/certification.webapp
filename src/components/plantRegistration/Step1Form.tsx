@@ -84,7 +84,7 @@ const Step1Form: React.FC<Step1FormProps> = ({
   {/* 🔹 Row 2: Street Address (full width) */}
   <div className="mb-4">
     <FormInput
-      label="Street Address"
+      label="Address"
       type="text"
       id="street"
       name="street"
@@ -96,6 +96,16 @@ const Step1Form: React.FC<Step1FormProps> = ({
 
   {/* 🔹 Row 3: City + State */}
   <div className="mb-4 flex gap-4">
+  <div className="w-1/2">
+    <CountryInput
+      value={country}
+      onChange={(val) =>
+        handleChange({
+          target: { name: "country", value: val },
+        } as React.ChangeEvent<HTMLInputElement>)
+      }
+    />
+    </div>
     <div className="w-1/2">
       <FormInput
         label="City"
@@ -107,7 +117,12 @@ const Step1Form: React.FC<Step1FormProps> = ({
         placeholder="City"
       />
     </div>
-    <div className="w-1/2">
+    
+  </div>
+
+  {/* 🔹 Row 4: Postal Code + Country */}
+  <div className="mb-4 flex gap-4">
+  <div className="w-1/2">
       <FormInput
         label="State"
         type="text"
@@ -118,10 +133,6 @@ const Step1Form: React.FC<Step1FormProps> = ({
         placeholder="State"
       />
     </div>
-  </div>
-
-  {/* 🔹 Row 4: Postal Code + Country */}
-  <div className="mb-4 flex gap-4">
     <div className="w-1/2">
       <FormInput
         label="Postal Code"
@@ -133,16 +144,7 @@ const Step1Form: React.FC<Step1FormProps> = ({
         placeholder="Postal Code"
       />
     </div>
-    <div className="w-1/2">
-    <CountryInput
-      value={country}
-      onChange={(val) =>
-        handleChange({
-          target: { name: "country", value: val },
-        } as React.ChangeEvent<HTMLInputElement>)
-      }
-    />
-    </div>
+    
   </div>
 
   {/* 🔹 Row 5: Plant Stage (can add another field later) */}
@@ -177,7 +179,7 @@ const Step1Form: React.FC<Step1FormProps> = ({
           value="yes"
           checked={formData.certification === true}
           onChange={handleCertificationChange}
-          className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
         />
         <span className="ml-2">Yes</span>
       </label>
@@ -188,7 +190,7 @@ const Step1Form: React.FC<Step1FormProps> = ({
           value="no"
           checked={formData.certification === false}
           onChange={handleCertificationChange}
-          className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
         />
         <span className="ml-2">No</span>
       </label>
@@ -218,8 +220,8 @@ const Step1Form: React.FC<Step1FormProps> = ({
       type="submit"
       className={`px-4 py-2 rounded-md focus:outline-none ${
         isFormComplete
-          ? "bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500"
-          : "bg-indigo-200 text-indigo-400 cursor-not-allowed"
+          ? "bg-blue-600 text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-700"
+          : "bg-blue-200 text-blue-400 cursor-not-allowed"
       }`}
       disabled={!isFormComplete}
     >
