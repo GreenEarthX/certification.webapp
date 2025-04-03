@@ -3,11 +3,14 @@ import React from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Image from "next/image";
 
+// Components
 import Step1Form from "@/components/plantRegistration/Step1Form";
 import Step2Upload from "@/components/plantRegistration/Step2Upload";
 import Step3Confirmation from "@/components/plantRegistration/Step3Confirmation";
-import Step4Success from "@/components/plantRegistration/Step4Success"; 
+import Step4Success from "@/components/plantRegistration/Step4Success";
+import Step5Success from "@/components/plantRegistration/Step5Success";
 
+// Hooks
 import usePlantRegistration from "@/hooks/usePlantRegistration";
 
 const PlantRegistrationForm = () => {
@@ -17,7 +20,6 @@ const PlantRegistrationForm = () => {
 
   const {
     formData,
-    addressOptions,
     plantStages,
     fuelTypes,
     currentStep,
@@ -26,6 +28,7 @@ const PlantRegistrationForm = () => {
     handleChange,
     handleCertificationChange,
     handleSubmit,
+    handleNext,
     handleFileUpload,
     handleBack,
     setCurrentStep,
@@ -42,13 +45,13 @@ const PlantRegistrationForm = () => {
         {currentStep === 1 && (
           <Step1Form
             formData={formData}
-            addressOptions={addressOptions}
             plantStages={plantStages}
             fuelTypes={fuelTypes}
             handleChange={handleChange}
             handleCertificationChange={handleCertificationChange}
             handleSubmit={handleSubmit}
             setCurrentStep={setCurrentStep}
+            handleNext={handleNext}
           />
         )}
 
@@ -70,6 +73,13 @@ const PlantRegistrationForm = () => {
 
         {currentStep === 4 && uploadedData && (
           <Step4Success
+            uploadedData={uploadedData}
+            onGoToDashboard={() => router.push("/dashboards/dashboard")}
+          />
+        )}
+
+        {currentStep === 5 && uploadedData && (
+          <Step5Success
             uploadedData={uploadedData}
             onGoToDashboard={() => router.push("/dashboards/dashboard")}
           />

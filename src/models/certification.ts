@@ -40,3 +40,15 @@ export interface CertificationDetail {
   plant_name: string;
   plant_email: string;
 }
+
+
+export interface CertificationOption {
+  certification_scheme_id: number;
+  certification_scheme_name: string;
+  certificate_type: string;
+  entity: string;
+  validity: string;
+  certification_bodies: string[];
+  complies_with: string[];
+  owners: string[];
+}
