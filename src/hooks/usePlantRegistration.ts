@@ -1,28 +1,24 @@
-// src/hooks/usePlantRegistration.ts
 import { useState, useEffect } from "react";
 import { fetchFormData, submitPlantRegistration } from "@/services/plantRegistration/fetchPlantAPI";
-import { UploadedData } from "@/models/CertificationUploadedData";
-
-interface FormData {
-  role: string;
-  plantName: string;
-  fuelType: string;
-  address: { country: string; region: string };
-  plantStage: string;
-  certification: boolean;
-}
+import { UploadedData } from "@/models/certificationUploadedData";
+import { FormData } from "@/models/plantRegistration";
 
 export default function usePlantRegistration(stepParam?: string, router?: any) {
   const [formData, setFormData] = useState<FormData>({
     role: "",
     plantName: "",
     fuelType: "",
-    address: { country: "", region: "" },
+    address: {
+      street: "",
+      city: "",
+      state: "",
+      postalCode: "",
+      country: "",
+    },
     plantStage: "",
     certification: false,
   });
 
-  const [addressOptions, setAddressOptions] = useState([]);
   const [plantStages, setPlantStages] = useState([]);
   const [fuelTypes, setFuelTypes] = useState([]);
   const [currentStep, setCurrentStep] = useState(1);
@@ -32,7 +28,6 @@ export default function usePlantRegistration(stepParam?: string, router?: any) {
   useEffect(() => {
     const loadData = async () => {
       const data = await fetchFormData();
-      setAddressOptions(data.address);
       setPlantStages(data.stage);
       setFuelTypes(data.fuel);
     };
@@ -48,7 +43,8 @@ export default function usePlantRegistration(stepParam?: string, router?: any) {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    if (name === "country" || name === "region") {
+    
+    if (["street", "city", "state", "postalCode", "country"].includes(name)) {
       setFormData((prev) => ({
         ...prev,
         address: { ...prev.address, [name]: value },
@@ -62,36 +58,44 @@ export default function usePlantRegistration(stepParam?: string, router?: any) {
     setFormData((prev) => ({ ...prev, certification: e.target.value === "yes" }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const registerPlant = async () => {
     setIsLoading(true);
-  
     try {
-      const formattedData = {
-        ...formData,
-        address: `${formData.address.country}, ${formData.address.region}`,
-      };
-  
-      const { plant } = await submitPlantRegistration(formattedData);
-  
+      const { plant } = await submitPlantRegistration(formData);
+
       const data: UploadedData = {
         plant_id: plant.plant_id,
         operator_id: plant.operator_id,
       };
-  
+
       setUploadedData(data);
-  
-      if (formData.certification) {
-        setCurrentStep(2);
-        router?.push("?step=2");
-      } else {
-        setCurrentStep(4);
-        router?.push("?step=4");
-      }
+      return data;
     } catch (error) {
-      console.error("Submission error:", error);
+      console.error("Registration error:", error);
+      throw error;
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleNext = async () => {
+    if (!formData.certification) return;
+    const data = await registerPlant();
+    resetForm();
+    setCurrentStep(2);
+    router?.push("?step=2");
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const data = await registerPlant();
+  
+    if (formData.certification) {
+      setCurrentStep(2);
+      router?.push("?step=2");
+    } else {
+      setCurrentStep(4);
+      router?.push("?step=4");
     }
   };
   
@@ -103,14 +107,15 @@ export default function usePlantRegistration(stepParam?: string, router?: any) {
       setTimeout(() => {
         setUploadedData((prevData) => ({
           ...prevData!,
-          certificationName: "Certify+ Schema",
-          type: "Type A",
-          entity: "Certify+",
-          certificationBody: "Certify",
+          certificationName: "",
+          owner: "",
+          type: "",
+          entity: "",
+          certificationBody: "",
           issueDate: "25/04/2026",
           validityDate: "25/04/2030",
-          certificateNumber: "285933006",
-          compliesWith: "REDD2",
+          certificateNumber: "",
+          compliesWith: "",
         }));
         setIsLoading(false);
         setCurrentStep(3);
@@ -120,9 +125,27 @@ export default function usePlantRegistration(stepParam?: string, router?: any) {
 
   const handleBack = () => setCurrentStep(1);
 
+
+  const resetForm = () => {
+    setFormData({
+      role: "",
+      plantName: "",
+      fuelType: "",
+      address: {
+        street: "",
+        city: "",
+        state: "",
+        postalCode: "",
+        country: "",
+      },
+      plantStage: "",
+      certification: false,
+    });
+  };
+  
+
   return {
     formData,
-    addressOptions,
     plantStages,
     fuelTypes,
     currentStep,
@@ -135,5 +158,7 @@ export default function usePlantRegistration(stepParam?: string, router?: any) {
     handleBack,
     setCurrentStep,
     setUploadedData,
+    handleNext,
+    resetForm,
   };
 }

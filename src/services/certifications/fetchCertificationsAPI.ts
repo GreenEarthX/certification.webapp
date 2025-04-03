@@ -13,7 +13,7 @@ export const fetchCertificationById = async (certificationId: string) => {
 
 
 export const registerCertification = async (uploadedData: any) => {
-  const res = await fetch("/api/plants/registration", {
+  const res = await fetch("/api/certifications/registration", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(uploadedData),
@@ -23,4 +23,18 @@ export const registerCertification = async (uploadedData: any) => {
 
   const data = await res.json();
   return data.certification;
+};
+
+
+export const fetchCertificationOptions = async () => {
+  const res = await fetch("/api/certifications/certification-options");
+  if (!res.ok) throw new Error("Failed to fetch certification options");
+  return res.json();
+};
+
+export const fetchOperatorId = async (plantId: string | number) => {
+  const res = await fetch(`/api/plants/${plantId}/operator`);
+  if (!res.ok) throw new Error("Failed to fetch operator ID");
+  const data = await res.json();
+  return data.operator_id;
 };
