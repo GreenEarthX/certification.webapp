@@ -26,12 +26,12 @@ const BiofuelFields: React.FC = () => {
     <>
       {/* Main generation type */}
       <div className="mb-4">
-        <label className="block text-sm text-blue-900 mb-2 font-medium">
+        <label className="flex items-center gap-2 mr-4 accent-blue-600 whitespace-nowrap">
           Are you producing:
         </label>
 
         {generationTypes?.options.map((gen) => (
-          <div key={gen} className="ml-2 mb-2">
+          <div key={gen} className="ml-20 mb-2">
             <label className="flex items-center gap-2">
               <input
                 type="radio"
@@ -45,7 +45,7 @@ const BiofuelFields: React.FC = () => {
 
             {/* Sub-generation options */}
             {selectedMain === gen && getSubOptions(gen).length > 0 && (
-              <div className="ml-6 mt-2 flex flex-col gap-1">
+              <div className="ml-16 mt-2 flex flex-col gap-1">
                 {getSubOptions(gen).map((child, i) => (
                   <label key={i} className="flex items-center gap-2">
                     <input

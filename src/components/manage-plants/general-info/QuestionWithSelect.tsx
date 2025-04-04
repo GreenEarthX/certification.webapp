@@ -15,7 +15,7 @@ const QuestionWithSelect: React.FC<QuestionProps> = ({ question, value, onChange
 
   return (
     <div className="flex items-center mb-4">
-      <label className="block accent-blue-600 mr-4 whitespace-nowrap">{label}</label>
+      <label className="block accent-blue-600 mr-4 font-medium whitespace-nowrap">{label}</label>
       <select
         className="border rounded-md px-3 py-1.5 outline-none bg-white shadow-sm text-sm flex-1"
         value={value}

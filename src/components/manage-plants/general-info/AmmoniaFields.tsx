@@ -33,6 +33,7 @@ const AmmoniaFields: React.FC = () => {
 
       {/* 2. CCUS if yes */}
       {usesHaberBosch === true && (
+        <div className="ml-20">
         <QuestionWithRadioAndInput
           label="Do you use Carbon Capture Storage Utilization ?"
           checked={usesCCUS}
@@ -40,6 +41,7 @@ const AmmoniaFields: React.FC = () => {
           onCheck={setUsesCCUS}
           onPercentageChange={setCcusPercentage}
         />
+        </div>
       )}
 
       {/* 3. Input method if Hober-Bosch not used */}

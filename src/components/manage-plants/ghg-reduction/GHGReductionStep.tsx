@@ -38,23 +38,26 @@ const GHGReductionStep: React.FC = () => {
           'Default values from regulatory frameworks (RED II, EU ETS, CBAM)',
           'No formal calculation method yet',
         ].map((method) => (
-          <label key={method} className="block mb-1">
-            <input
-              type="checkbox"
-              checked={methods.includes(method)}
-              onChange={() => handleMethodChange(method)}
-              className="mr-2 accent-blue-600"
-            />
-            {method}
-          </label>
+          <div key={method} className="ml-8">
+            <label className="block mb-1">
+              <input
+                type="checkbox"
+                checked={methods.includes(method)}
+                onChange={() => handleMethodChange(method)}
+                className="mr-2 accent-blue-600"
+              />
+              {method}
+            </label>
+          </div>
         ))}
+
       </div>
 
       {/* 2. GHG reduction target */}
       <div>
         <p className="font-medium mb-2">What is your current GHG reduction target?</p>
         {['50%', '70%', 'Net Zero by 2050', 'Other'].map((option) => (
-          <div key={option} className="flex items-center mb-1">
+          <div key={option} className="flex ml-8 items-center mb-1">
             <input
               type="radio"
               name="reductionTarget"
@@ -82,7 +85,7 @@ const GHGReductionStep: React.FC = () => {
         <p className="font-medium mb-2">
           Have you verified your product Carbon Footprint (PCF) calculations with a third-party auditor?
         </p>
-        <div className="flex gap-4">
+        <div className="flex ml-60 gap-4">
           <label className="flex items-center">
             <input
               type="radio"
@@ -108,7 +111,7 @@ const GHGReductionStep: React.FC = () => {
 
       {/* 4. Scope options if verified */}
       {auditorVerified === true && (
-        <div>
+        <div className='ml-40'>
           <p className="font-medium mb-2">Which emissions accounting methodology do you follow?</p>
           {['Scope 1', 'Scope 2', 'Scope 3'].map((scope) => (
             <label key={scope} className="block mb-1">
@@ -116,7 +119,7 @@ const GHGReductionStep: React.FC = () => {
                 type="checkbox"
                 checked={scopes.includes(scope)}
                 onChange={() => handleScopeChange(scope)}
-                className="mr-2 accent-blue-600"
+                className="mr-2 ml-24 accent-blue-600"
               />
               {scope}
             </label>

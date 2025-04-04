@@ -1,5 +1,6 @@
 'use client';
 import React, { useState } from 'react';
+import QuestionWithRadio from '../general-info/QuestionWithRadio';
 
 const OffTakersStep: React.FC = () => {
   const [offTakers, setOffTakers] = useState<string[]>([]);
@@ -35,7 +36,7 @@ const OffTakersStep: React.FC = () => {
           Who are your primary Off-Takers? <span className="text-sm text-gray-500">(select all that apply)</span>
         </p>
         {offTakerOptions.map((option) => (
-          <label key={option} className="block mb-1">
+          <label key={option} className="block ml-8 mb-1">
             <input
               type="checkbox"
               className="mr-2 accent-blue-600"
@@ -48,37 +49,17 @@ const OffTakersStep: React.FC = () => {
       </div>
 
       {/* Require Sustainability Labels */}
-      <div>
-        <p className="font-medium mb-2">Do your Off-Takers require specific sustainability labels?</p>
-        <div className="flex gap-6">
-          <label className="flex items-center">
-            <input
-              type="radio"
-              name="requiresLabels"
-              className="mr-2 accent-blue-600"
-              checked={requiresLabels === true}
-              onChange={() => setRequiresLabels(true)}
-            />
-            Yes
-          </label>
-          <label className="flex items-center">
-            <input
-              type="radio"
-              name="requiresLabels"
-              className="mr-2 accent-blue-600"
-              checked={requiresLabels === false}
-              onChange={() => setRequiresLabels(false)}
-            />
-            No
-          </label>
-        </div>
-      </div>
+      <QuestionWithRadio
+        label="Do your Off-Takers require specific sustainability labels?"
+        checked={requiresLabels}
+        onCheck={setRequiresLabels}
+      />
 
       {/* Marketing Claims as Radio */}
       <div>
         <p className="font-medium mb-2">Are you marketing your fuel as:</p>
         {marketingOptions.map((option) => (
-          <div key={option} className="flex items-center mb-2">
+          <div key={option} className="flex ml-8 items-center mb-2">
             <input
               type="radio"
               name="marketingClaim"
