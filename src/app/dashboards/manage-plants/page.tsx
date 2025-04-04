@@ -61,7 +61,7 @@ export default function PlantDetailsPage() {
       {currentStep === 0 && (
         <StepContainer title={steps[0]}>
           <div className="flex items-center mb-4">
-            <label className="block accent-blue-600 mr-4 whitespace-nowrap">
+            <label className="block accent-blue-600 mr-4 font-medium whitespace-nowrap">
               What type of fuel does your plant produce?
             </label>
             <select

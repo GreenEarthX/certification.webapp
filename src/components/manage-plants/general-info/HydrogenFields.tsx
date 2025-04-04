@@ -48,14 +48,17 @@ const HydrogenFields = () => {
       ))}
 
       {showElectrolysis && (
+        <div className="ml-20">
         <QuestionWithSelect
           question={{ label: 'Electrolysis', options: ['PEM', 'Alkaline', 'SOEC'] }}
           value={electrolysis}
           onChange={setElectrolysis}
         />
+        </div>
       )}
 
       {showCCUS && (
+        <div className="ml-20">
         <QuestionWithRadioAndInput
           label="Do you use Carbon Capture Storage Utilization?"
           checked={ccusUsed}
@@ -63,6 +66,7 @@ const HydrogenFields = () => {
           onCheck={setCcusUsed}
           onPercentageChange={setCcusPercentage}
         />
+        </div>
       )}
 
       {feedstockQuestion && (

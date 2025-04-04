@@ -27,6 +27,7 @@ const ElectricityStep: React.FC = () => {
         <p className="font-medium mb-2 text-black-900">
           How do you provide electricity for plant?
         </p>
+        <div className="ml-8">
         {sources.map((source) => (
           <div key={source} className="mb-2">
             <label className="flex items-center gap-2">
@@ -40,6 +41,8 @@ const ElectricityStep: React.FC = () => {
               {source}
             </label>
 
+            <div className="ml-4">
+              
             {selectedSource === 'PPA' && source === 'PPA' && (
               <div className="ml-6 mt-2 space-y-2">
                 <FileUpload label="Submit" onChange={setPpaFile} />
@@ -76,8 +79,10 @@ const ElectricityStep: React.FC = () => {
                 <ContractDifferenceDetails />
               </div>
             )}
+          </div>  
           </div>
         ))}
+        </div>
       </div>
     </div>
   );

@@ -1,25 +1,52 @@
 'use client';
 import React, { useState } from 'react';
+import QuestionWithRadio from '../general-info/QuestionWithRadio';
+import SelectWithTags from './SelectWithTags'; 
 
 const CertificationStep: React.FC = () => {
   const [selectedSchemes, setSelectedSchemes] = useState<string[]>([]);
-  const [hasPreferences, setHasPreferences] = useState<boolean | null>(null);
   const [primaryReason, setPrimaryReason] = useState<string>('');
-  const [labelingType, setLabelingType] = useState<string>('');
+  const [labeling, setLabeling] = useState<string[]>([]);
+  const [certificationReason, setCertificationReason] = useState('');
   const [hasBodyCriteria, setHasBodyCriteria] = useState<boolean | null>(null);
+  const [bodyCriteriaText, setBodyCriteriaText] = useState('');
+  const [hasPreferences, setHasPreferences] = useState<boolean | null>(null);
+  const [preferencesText, setPreferencesText] = useState('');
+
+  const [requirementText, setRequirementText] = useState('');
 
   const schemeOptions = [
-    'ISCC EU, ISCC CORSIA (PLUS), ISCC PLUS',
-    'CertifHy – National Green Certificate (NGC), CertifHy – RFNBO',
-    'REDcert-EU, 2BSvs, RSB, HVO Certification, RFNBO Certification',
-    'EU ETS, French Low Carbon Label, UK RTFO, EKOenergy Label',
-    'Guarantee of Origin (GO), CORSIA, GHG Protocol Certification',
-    'All EBCS, Better Biomass, Bonsucro EU, BBP, SURE, KZR INiG, UDB',
-    'PosHYdon, Rhineland H2.21, German CertifHy Equivalent (H2Global)',
+    'ISCC EU',
+    'ISCC CORSIA (PLUS)',
+    'ISCC PLUS',
+    'CertifHy – National Green Certificate (NGC)',
+    'CertifHy – RFNBO',
+    'REDcert-EU',
+    '2BSvs',
+    'RSB',
+    'HVO Certification',
+    'RFNBO Certification',
+    'EU ETS',
+    'French Low Carbon Label',
+    'UK RTFO',
+    'EKOenergy Label',
+    'Guarantee of Origin (GO)',
+    'CORSIA',
+    'GHG Protocol Certification',
+    'All EBCS',
+    'Better Biomass',
+    'Bonsucro EU',
+    'BBP',
+    'SURE',
+    'KZR INiG',
+    'UDB',
+    'PosHYdon',
+    'Rhineland H2.21',
+    'German CertifHy Equivalent (H2Global)',
   ];
+  
 
   const reasons = ['Regulatory Compliance', 'Market Access', 'Carbon Credits', 'Corporate Sustainability'];
-  const labelingOptions = ['Voluntary labeling', 'Mandatory compliance'];
 
   const toggleScheme = (scheme: string) => {
     setSelectedSchemes((prev) =>
@@ -27,59 +54,29 @@ const CertificationStep: React.FC = () => {
     );
   };
 
+  const toggleLabeling = (option: string) => {
+    setLabeling((prev) =>
+      prev.includes(option) ? prev.filter((l) => l !== option) : [...prev, option]
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Certification Schemes */}
-      <div>
-        <p className="font-medium mb-2">Which certification schemes are you currently considering? <span className="text-sm text-gray-500">(select all that apply)</span></p>
-        {schemeOptions.map((scheme) => (
-          <label key={scheme} className="block mb-1">
-            <input
-              type="checkbox"
-              className="mr-2 accent-blue-600"
-              checked={selectedSchemes.includes(scheme)}
-              onChange={() => toggleScheme(scheme)}
-            />
-            {scheme}
-          </label>
-        ))}
-      </div>
-
-      {/* Preferences */}
-      <div>
-        <p className="font-medium mb-2">Do you have any additional preferences we should consider?</p>
-        <div className="flex gap-6">
-          <label className="flex items-center">
-            <input
-              type="radio"
-              name="preferences"
-              className="mr-2 accent-blue-600"
-              checked={hasPreferences === true}
-              onChange={() => setHasPreferences(true)}
-            />
-            Yes
-          </label>
-          <label className="flex items-center">
-            <input
-              type="radio"
-              name="preferences"
-              className="mr-2 accent-blue-600"
-              checked={hasPreferences === false}
-              onChange={() => setHasPreferences(false)}
-            />
-            No
-          </label>
-        </div>
-      </div>
+      <SelectWithTags
+        label="Which certification schemes are you currently considering?"
+        options={schemeOptions}
+        selected={selectedSchemes}
+        onChange={setSelectedSchemes}
+      />
 
       {/* Primary Reason */}
       <div>
-        <p className="font-medium mb-2">What is your primary reason for seeking certification?</p>
+        <p className="font-medium mb-2">What is you primary reason for seeking certification?</p>
         {reasons.map((reason) => (
-          <label key={reason} className="block mb-1">
+          <label key={reason} className="block ml-8 mb-1">
             <input
-              type="radio"
-              name="primaryReason"
+              type="checkbox"
               className="mr-2 accent-blue-600"
               checked={primaryReason === reason}
               onChange={() => setPrimaryReason(reason)}
@@ -89,49 +86,57 @@ const CertificationStep: React.FC = () => {
         ))}
       </div>
 
-      {/* Labeling Type */}
+      {/* Certification for */}
       <div>
         <p className="font-medium mb-2">Do you require certification for:</p>
-        {labelingOptions.map((type) => (
-          <label key={type} className="block mb-1">
+        {['Voluntary labeling', 'Mandatory compliance'].map((option) => (
+          <label key={option} className="block ml-8 mb-1">
             <input
-              type="radio"
-              name="labelingType"
+              type="checkbox"
               className="mr-2 accent-blue-600"
-              checked={labelingType === type}
-              onChange={() => setLabelingType(type)}
+              checked={labeling.includes(option)}
+              onChange={() => toggleLabeling(option)}
             />
-            {type}
+            {option}
           </label>
         ))}
+        {labeling.length > 0 && (
+          <textarea
+            placeholder=""
+            className="ml-8 mt-2 border w-1/2 px-2 py-1 rounded-md"
+            value={requirementText}
+            onChange={(e) => setRequirementText(e.target.value)}
+          />
+        )}
       </div>
 
       {/* Specific Body Criteria */}
-      <div>
-        <p className="font-medium mb-2">Do you have specific certification body selection criteria?</p>
-        <div className="flex gap-6">
-          <label className="flex items-center">
-            <input
-              type="radio"
-              name="bodyCriteria"
-              className="mr-2 accent-blue-600"
-              checked={hasBodyCriteria === true}
-              onChange={() => setHasBodyCriteria(true)}
-            />
-            Yes
-          </label>
-          <label className="flex items-center">
-            <input
-              type="radio"
-              name="bodyCriteria"
-              className="mr-2 accent-blue-600"
-              checked={hasBodyCriteria === false}
-              onChange={() => setHasBodyCriteria(false)}
-            />
-            No
-          </label>
-        </div>
-      </div>
+      <QuestionWithRadio
+        label="Do you have specific certification body selection criteria?"
+        checked={hasBodyCriteria}
+        onCheck={setHasBodyCriteria}
+      />
+      {hasBodyCriteria && (
+        <textarea
+          className="ml-8 border w-1/2 px-2 py-1 rounded-md"
+          value={bodyCriteriaText}
+          onChange={(e) => setBodyCriteriaText(e.target.value)}
+        />
+      )}
+
+      {/* Additional Preferences */}
+      <QuestionWithRadio
+        label="Do you have any additional preferences we should consider?"
+        checked={hasPreferences}
+        onCheck={setHasPreferences}
+      />
+      {hasPreferences && (
+        <textarea
+          className="ml-8 border w-1/2 px-2 py-1 rounded-md"
+          value={preferencesText}
+          onChange={(e) => setPreferencesText(e.target.value)}
+        />
+      )}
     </div>
   );
 };

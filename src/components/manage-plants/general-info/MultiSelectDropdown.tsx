@@ -37,7 +37,7 @@ const QuestionWithMultiSelect: React.FC<Props> = ({ label, options, selected, on
     <div className="mb-4" ref={containerRef}>
       {/* Label and Dropdown in one line */}
       <div className="flex items-center gap-4">
-        <label className="block accent-blue-600 mr-4 whitespace-nowrap">
+        <label className="block accent-blue-600 mr-4 font-medium whitespace-nowrap">
           {label}
         </label>
         <div

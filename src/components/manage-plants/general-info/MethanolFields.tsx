@@ -18,11 +18,11 @@ const MethanolFields: React.FC = () => {
     <>
       {/* Main question */}
       <div className="mb-4">
-        <label className="block text-sm text-blue-900 mb-2 font-medium">
+        <label className="flex items-center gap-2 mr-4 accent-blue-600 whitespace-nowrap">
           Are you producing:
         </label>
 
-        <div className="ml-2 mb-2 flex flex-col gap-2">
+        <div className="ml-16 mb-2 flex flex-col gap-2">
           <label className="flex items-center gap-2">
             <input
               type="radio"

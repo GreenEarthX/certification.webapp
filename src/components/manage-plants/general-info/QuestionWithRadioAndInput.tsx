@@ -19,7 +19,7 @@ const QuestionWithRadioAndInput: React.FC<Props> = ({
   return (
     <>
       <div className="flex items-center mb-2">
-        <label className="block text-sm text-blue-900 mr-4 whitespace-nowrap">{label}</label>
+        <label className="flex items-center gap-2 mr-4 accent-blue-600 whitespace-nowrap">{label}</label>
         <div className="flex gap-4">
           <label className="flex items-center gap-1">
             <input type="radio" name={label} checked={checked} onChange={() => onCheck(true)} className="accent-blue-600"/>
@@ -32,8 +32,8 @@ const QuestionWithRadioAndInput: React.FC<Props> = ({
         </div>
       </div>
       {checked && (
-        <div className="flex items-center mb-4 ml-4">
-          <label className="text-sm text-blue-900 mr-2">Fill</label>
+        <div className="flex items-center mb-4 ml-28">
+          <label className="flex items-center gap-2 mr-4 accent-blue-600 whitespace-nowrap">Fill</label>
           <input
             type="number"
             className="border rounded-md px-3 py-1 w-24"

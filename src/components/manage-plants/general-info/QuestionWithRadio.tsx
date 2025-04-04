@@ -9,7 +9,7 @@ interface Props {
 
 const QuestionWithRadio: React.FC<Props> = ({ label, checked, onCheck }) => (
   <div className="flex items-center mb-4">
-    <label className="flex items-center gap-2 mr-4 accent-blue-600 whitespace-nowrap">{label}</label>
+    <label className="flex items-center gap-2 mr-4 font-medium accent-blue-600 whitespace-nowrap">{label}</label>
     <div className="flex gap-4">
       <label className="flex items-center gap-1">
         <input type="radio" name={label} checked={checked === true} onChange={() => onCheck(true)} className="accent-blue-600"/>

@@ -1,5 +1,6 @@
 'use client';
 import React, { useState } from 'react';
+import QuestionWithRadio from '../general-info/QuestionWithRadio';
 
 const TraceabilityStep: React.FC = () => {
   const [chainOfCustody, setChainOfCustody] = useState('');
@@ -20,17 +21,19 @@ const TraceabilityStep: React.FC = () => {
           'Physical Segregation',
           'No formal model yet',
         ].map((option) => (
-          <label key={option} className="block mb-1">
-            <input
-              type="radio"
-              name="chainOfCustody"
-              value={option}
-              checked={chainOfCustody === option}
-              onChange={() => setChainOfCustody(option)}
-              className="mr-2 accent-blue-600"
-            />
-            {option}
-          </label>
+          <div key={option} className="ml-8">
+            <label className="block mb-1">
+              <input
+                type="radio"
+                name="chainOfCustody"
+                value={option}
+                checked={chainOfCustody === option}
+                onChange={() => setChainOfCustody(option)}
+                className="mr-2 accent-blue-600"
+              />
+              {option}
+            </label>
+          </div>
         ))}
       </div>
 
@@ -39,6 +42,7 @@ const TraceabilityStep: React.FC = () => {
         <p className="font-medium mb-2">What level of traceability is required by your customers?</p>
         {['Batch-level', 'Real-time', 'Blockchain-based', 'ERP system', 'Other'].map((option) => (
           <div key={option} className="flex items-center mb-1">
+            <div className="ml-8">
             <input
               type="radio"
               name="traceabilityLevel"
@@ -58,35 +62,16 @@ const TraceabilityStep: React.FC = () => {
               />
             )}
           </div>
+          </div>
         ))}
       </div>
 
       {/* 3. Digital platform tracking */}
-      <div>
-        <p className="font-medium mb-2">Are you using digital platforms for certification tracking?</p>
-        <div className="flex gap-6">
-          <label className="flex items-center">
-            <input
-              type="radio"
-              name="digitalTracking"
-              checked={usesDigitalPlatform === true}
-              onChange={() => setUsesDigitalPlatform(true)}
-              className="accent-blue-600 mr-2"
-            />
-            Yes
-          </label>
-          <label className="flex items-center">
-            <input
-              type="radio"
-              name="digitalTracking"
-              checked={usesDigitalPlatform === false}
-              onChange={() => setUsesDigitalPlatform(false)}
-              className="accent-blue-600 mr-2"
-            />
-            No
-          </label>
-        </div>
-      </div>
+      <QuestionWithRadio
+        label="Are you using digital platforms for certification tracking?"
+        checked={usesDigitalPlatform}
+        onCheck={setUsesDigitalPlatform}
+      />
 
     </div>
   );
