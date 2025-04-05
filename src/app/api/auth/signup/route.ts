@@ -11,7 +11,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing email or auth0Sub" }, { status: 400 });
     }
 
-    // Ensure the user doesn't exist before creating
     const existingUser = await UserService.getUserBySub(auth0Sub);
     if (existingUser) {
       return NextResponse.json({ message: "User already exists" }, { status: 200 });
