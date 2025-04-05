@@ -8,13 +8,20 @@ export interface CertificationRegistrationPayload {
   validityDate?: string;
   certificateNumber?: string;
   compliesWith?: string; // comma-separated string
+  owner?: string; // comma-separated string
 }
 
 export interface FormData {
   role: string;
   plantName: string;
   fuelType: string;
-  address: { country: string; region: string };
+  address: {
+    street: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    country: string;
+  }
   plantStage: string;
   certification: boolean;
 }
