@@ -53,7 +53,7 @@ export const useServiceDetails = (): SchemeDetails => {
     } finally {
       setLoading(false);
     }
-  }, [schemeId, activeTab]); // Add schemeId and activeTab as dependencies
+  }, [schemeId, activeTab]); 
 
   // Fetch data when the component mounts or when schemeId/activeTab changes
   useEffect(() => {
@@ -61,7 +61,7 @@ export const useServiceDetails = (): SchemeDetails => {
       fetchComplianceScoreAndNameHandler();
       fetchSchemeDetailsHandler();
     }
-  }, [schemeId, activeTab, fetchComplianceScoreAndNameHandler, fetchSchemeDetailsHandler]); // Add the handlers as dependencies
+  }, [schemeId, activeTab, fetchComplianceScoreAndNameHandler, fetchSchemeDetailsHandler]); 
 
   return {
     complianceScore,
