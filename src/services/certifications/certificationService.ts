@@ -3,7 +3,6 @@ import { CertificationRegistrationPayload } from "@/models/plantRegistration";
 
 
 function formatDate(dateStr: string): string {
-  // Converts "25/03/2025" → "2025-03-25"
   const [day, month, year] = dateStr.split("/");
   return `${year}-${month}-${day}`;
 }
@@ -216,6 +215,16 @@ class CertificationService {
     }
   }
 
+  async uploadFileToExtractAPI(file: Blob) {
+    const form = new FormData();
+    form.append('file', file);
+    const response = await fetch("http://localhost:8000/extract/", {
+      method: "POST",
+      body: form,
+    });
+    if (!response.ok) throw new Error("Failed to extract data from the file");
+    return response.json();
+  }
   
 }
 
