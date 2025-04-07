@@ -57,6 +57,9 @@ const PlantRegistrationForm = () => {
 
         {currentStep === 2 && (
           <Step2Upload
+            handleFileUpload={handleFileUpload}
+            isLoading={isLoading}
+            handleBack={handleBack}
           />
         )}
 

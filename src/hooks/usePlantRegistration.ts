@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import { fetchFormData, submitPlantRegistration } from "@/services/plantRegistration/fetchPlantAPI";
 import { UploadedData } from "@/models/certificationUploadedData";
-import { FormData } from "@/models/plantRegistration";
+import { PlantFormData } from "@/models/plantRegistration";
 
 export default function usePlantRegistration(stepParam?: string, router?: any) {
-  const [formData, setFormData] = useState<FormData>({
+  const [formData, setFormData] = useState<PlantFormData>({
     role: "",
     plantName: "",
     fuelType: "",
@@ -100,28 +100,49 @@ export default function usePlantRegistration(stepParam?: string, router?: any) {
   };
   
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setIsLoading(true);
-      setTimeout(() => {
-        setUploadedData((prevData) => ({
-          ...prevData!,
-          certificationName: "",
-          owner: "",
-          type: "",
-          entity: "",
-          certificationBody: "",
-          issueDate: "25/04/2026",
-          validityDate: "25/04/2030",
-          certificateNumber: "",
-          compliesWith: "",
-        }));
-        setIsLoading(false);
-        setCurrentStep(3);
-      }, 2000);
+    if (!file) return;
+  
+    setIsLoading(true);
+  
+    try {
+      const form = new FormData();
+      form.append("file", file);
+  
+      const response = await fetch("/api/certifications/uploadcertification", {
+        method: "POST",
+        body: form,
+      });
+  
+      if (!response.ok) throw new Error("Upload failed");
+  
+      const aiData = await response.json();
+  
+      // Merge AI data into existing uploadedData without changing plant_id & operator_id
+      setUploadedData((prevData) => ({
+        ...prevData!,
+        certificationName: aiData.Certification_name || "",
+        owner: "", // optional, can be filled later
+        type: aiData.Type || "",
+        entity: aiData.Entity || "",
+        certificationBody: aiData.Certification_Body || "",
+        issueDate: aiData.Issue_Date || "",
+        validityDate: aiData.Validity_Date || "",
+        certificateNumber: aiData.Certificate_Number || "",
+        compliesWith: aiData.Complies_with || "",
+      }));
+  
+      setCurrentStep(3);
+      router?.push("?step=3");
+    } catch (error) {
+      console.error("❌ Error during AI file upload:", error);
+      // Optional: show toast or UI error
+    } finally {
+      setIsLoading(false);
     }
   };
+  
 
   const handleBack = () => setCurrentStep(1);
 
