@@ -11,7 +11,7 @@ export interface CertificationRegistrationPayload {
   owner?: string; // comma-separated string
 }
 
-export interface FormData {
+export interface PlantFormData {
   role: string;
   plantName: string;
   fuelType: string;
