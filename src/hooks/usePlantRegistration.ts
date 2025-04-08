@@ -118,20 +118,24 @@ export default function usePlantRegistration(stepParam?: string, router?: any) {
       if (!response.ok) throw new Error("Upload failed");
   
       const aiData = await response.json();
-  
-      // Merge AI data into existing uploadedData without changing plant_id & operator_id
-      setUploadedData((prevData) => ({
-        ...prevData!,
-        certificationName: aiData.Certification_name || "",
-        owner: "", // optional, can be filled later
-        type: aiData.Type || "",
-        entity: aiData.Entity || "",
-        certificationBody: aiData.Certification_Body || "",
-        issueDate: aiData.Issue_Date || "",
-        validityDate: aiData.Validity_Date || "",
-        certificateNumber: aiData.Certificate_Number || "",
-        compliesWith: aiData.Complies_with || "",
-      }));
+
+if (aiData.fallback) {
+  console.warn("⚠️ Using fallback example data (AI API was down)");
+}
+
+setUploadedData((prevData) => ({
+  ...prevData!,
+  certificationName: aiData.Certification_name || "",
+  owner: "",
+  type: aiData.Type || "",
+  entity: aiData.Entity || "",
+  certificationBody: aiData.Certification_Body || "",
+  issueDate: aiData.Issue_Date || "",
+  validityDate: aiData.Validity_Date || "",
+  certificateNumber: aiData.Certificate_Number || "",
+  compliesWith: aiData.Complies_with || "",
+}));
+
   
       setCurrentStep(3);
       router?.push("?step=3");
