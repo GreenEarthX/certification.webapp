@@ -6,6 +6,7 @@ import SelectWithTags from './SelectWithTags';
 const CertificationStep: React.FC = () => {
   const [selectedSchemes, setSelectedSchemes] = useState<string[]>([]);
   const [primaryReason, setPrimaryReason] = useState<string>('');
+  const [certificationRequirement, setCertificationRequirement] = useState<string>(''); // 'Voluntary labeling' or 'Mandatory compliance'
   const [labeling, setLabeling] = useState<string[]>([]);
   const [certificationReason, setCertificationReason] = useState('');
   const [hasBodyCriteria, setHasBodyCriteria] = useState<boolean | null>(null);
@@ -61,22 +62,25 @@ const CertificationStep: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 bg-transparent ">
       {/* Certification Schemes */}
+      <div className="bg-white p-6 rounded-lg shadow-sm border">
       <SelectWithTags
         label="Which certification schemes are you currently considering?"
         options={schemeOptions}
         selected={selectedSchemes}
         onChange={setSelectedSchemes}
       />
-
+      </div>
+      <div className="bg-white p-6 rounded-lg shadow-sm border space-y-4">
       {/* Primary Reason */}
       <div>
         <p className="font-medium mb-2">What is you primary reason for seeking certification?</p>
         {reasons.map((reason) => (
           <label key={reason} className="block ml-8 mb-1">
             <input
-              type="checkbox"
+              type="radio"
+              name="primaryReason"
               className="mr-2 accent-blue-600"
               checked={primaryReason === reason}
               onChange={() => setPrimaryReason(reason)}
@@ -88,19 +92,21 @@ const CertificationStep: React.FC = () => {
 
       {/* Certification for */}
       <div>
-        <p className="font-medium mb-2">Do you require certification for:</p>
+      <p className="font-medium mb-2">Do you require certification for:</p>
         {['Voluntary labeling', 'Mandatory compliance'].map((option) => (
           <label key={option} className="block ml-8 mb-1">
             <input
-              type="checkbox"
+              type="radio"
+              name="certificationRequirement"
               className="mr-2 accent-blue-600"
-              checked={labeling.includes(option)}
-              onChange={() => toggleLabeling(option)}
+              checked={certificationRequirement === option}
+              onChange={() => setCertificationRequirement(option)}
             />
             {option}
           </label>
         ))}
-        {labeling.length > 0 && (
+
+        {certificationRequirement === 'Mandatory compliance' && (
           <textarea
             placeholder=""
             className="ml-8 mt-2 border w-1/2 px-2 py-1 rounded-md"
@@ -137,6 +143,7 @@ const CertificationStep: React.FC = () => {
           onChange={(e) => setPreferencesText(e.target.value)}
         />
       )}
+    </div>
     </div>
   );
 };
