@@ -44,6 +44,13 @@ export default function PlantDetailsPage() {
     </div>
   );
 
+  const StepContainersplited: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
+    <div>
+      <h2 className="text-lg font-semibold text-blue-900 mb-2">{title}</h2>
+      {children}
+    </div>
+  );
+
   return (
     <div className="w-full p-8  min-h-screen">
       {/* Steps navigation */}
@@ -112,9 +119,9 @@ export default function PlantDetailsPage() {
       )}
 
       {currentStep === 5 && (
-        <StepContainer title={steps[5]}>
+        <StepContainersplited title={steps[5]}>
           <CertificationStep />
-        </StepContainer>
+        </StepContainersplited>
       )}
 
       {/* Navigation Buttons */}
