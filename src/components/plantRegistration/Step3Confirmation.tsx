@@ -1,9 +1,11 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Modal from "@/components/common/Modal";
 import useStep3Confirmation from "@/hooks/useStep3Confirmation";
 import { UploadedData, fieldLabels } from "@/models/certificationUploadedData";
+
+
 
 interface Step3ConfirmationProps {
   uploadedData: UploadedData;
@@ -28,8 +30,47 @@ const Step3Confirmation: React.FC<Step3ConfirmationProps> = ({
     isLoading,
   } = useStep3Confirmation(uploadedData, setUploadedData);
 
+
+  useEffect(() => {
+    if (!uploadedData.certificationName || !certificationOptions.length) return;
+  
+    const exactMatch = certificationOptions.find(
+      (opt) =>
+        opt.certification_scheme_name.trim().toLowerCase() ===
+        uploadedData.certificationName?.trim().toLowerCase()
+    );
+  
+    if (exactMatch) {
+      setUploadedData((prev) => ({
+        ...prev,
+        certificationName: exactMatch.certification_scheme_name, // set the actual DB string
+      }));
+    }
+  }, [certificationOptions, uploadedData.certificationName]);
+
+
   const renderInput = (key: string, value: any) => {
     if (key === "certificationName") {
+      const hasExactMatch = certificationOptions.some(
+        (opt) =>
+          opt.certification_scheme_name.trim().toLowerCase() ===
+          (value || "").trim().toLowerCase()
+      );
+    
+      if (hasExactMatch && value) {
+        // ✅ Show readonly input
+        return (
+          <input
+            type="text"
+            value={value}
+            readOnly
+            disabled
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed"
+          />
+        );
+      }
+    
+      // ❗ No match, show dropdown to select
       return (
         <select
           value={value || ""}
@@ -50,6 +91,7 @@ const Step3Confirmation: React.FC<Step3ConfirmationProps> = ({
         </select>
       );
     }
+    
 
     if (["certificationBody", "compliesWith"].includes(key)) {
       const values = value?.split(",").map((v: string) => v.trim()) || [];
