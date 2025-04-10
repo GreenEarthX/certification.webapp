@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import GoOQuestion from './GoOQuestion';
 import FileUpload from './FileUpload';
-import QuestionWithRadio from '../general-info/QuestionWithRadio';
+import QuestionWithRadio from '../common/QuestionWithRadio';
 
 const DirectGridDetails: React.FC = () => {
   const [hasGoO, setHasGoO] = useState<boolean | null>(null);

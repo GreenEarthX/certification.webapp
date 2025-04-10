@@ -1,7 +1,7 @@
 'use client';
 import React, { useState } from 'react';
-import QuestionWithRadio from '../general-info/QuestionWithRadio';
-import SelectWithTags from './SelectWithTags'; 
+import QuestionWithRadio from '../common/QuestionWithRadio';
+import SelectWithTags from '../common/SelectWithTags'; 
 
 const CertificationStep: React.FC = () => {
   const [selectedSchemes, setSelectedSchemes] = useState<string[]>([]);
@@ -108,7 +108,7 @@ const CertificationStep: React.FC = () => {
 
         {certificationRequirement === 'Mandatory compliance' && (
           <textarea
-            placeholder=""
+            placeholder="Please describe which regulations or directives you need to comply with..."
             className="ml-8 mt-2 border w-1/2 px-2 py-1 rounded-md"
             value={requirementText}
             onChange={(e) => setRequirementText(e.target.value)}
@@ -124,6 +124,7 @@ const CertificationStep: React.FC = () => {
       />
       {hasBodyCriteria && (
         <textarea
+          placeholder="Please describe your selection criteria..."
           className="ml-8 border w-1/2 px-2 py-1 rounded-md"
           value={bodyCriteriaText}
           onChange={(e) => setBodyCriteriaText(e.target.value)}
@@ -138,6 +139,7 @@ const CertificationStep: React.FC = () => {
       />
       {hasPreferences && (
         <textarea
+          placeholder="Add any specific preferences..."
           className="ml-8 border w-1/2 px-2 py-1 rounded-md"
           value={preferencesText}
           onChange={(e) => setPreferencesText(e.target.value)}

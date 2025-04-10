@@ -1,7 +1,7 @@
 'use client';
 import React, { useState } from 'react';
 import FileUpload from './FileUpload';
-import QuestionWithRadio from '../general-info/QuestionWithRadio';
+import QuestionWithRadio from '../common/QuestionWithRadio';
 
 const GreenTariffsDetails: React.FC = () => {
   const [hasContract, setHasContract] = useState<boolean | null>(null);

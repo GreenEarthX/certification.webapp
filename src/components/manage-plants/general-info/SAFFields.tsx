@@ -1,9 +1,9 @@
 'use client';
 import React, { useState } from 'react';
 import { fuelConfigurations } from '@/utils/fuelConfigurations';
-import QuestionWithSelect from './QuestionWithSelect';
-import QuestionWithRadio from './QuestionWithRadio';
-import QuestionWithMultiSelect from './MultiSelectDropdown';
+import QuestionWithSelect from '../common/QuestionWithSelect';
+import QuestionWithRadio from '../common/QuestionWithRadio';
+import QuestionWithMultiSelect from '../common/MultiSelectDropdown';
 
 const SAFFields = () => {
   const questions = fuelConfigurations.saf;

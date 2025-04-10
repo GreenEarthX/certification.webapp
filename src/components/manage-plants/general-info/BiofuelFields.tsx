@@ -1,6 +1,6 @@
 'use client';
 import React, { useState } from 'react';
-import QuestionWithMultiSelect from './MultiSelectDropdown';
+import QuestionWithMultiSelect from '../common/MultiSelectDropdown';
 import { fuelConfigurations } from '@/utils/fuelConfigurations';
 
 const BiofuelFields: React.FC = () => {

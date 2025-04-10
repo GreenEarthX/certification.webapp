@@ -1,9 +1,9 @@
 'use client';
 import React, { useState } from 'react';
-import QuestionWithRadio from './QuestionWithRadio';
-import QuestionWithRadioAndInput from './QuestionWithRadioAndInput';
-import QuestionWithInput from './QuestionWithInput';
-import QuestionWithMultiSelect from './MultiSelectDropdown';
+import QuestionWithRadio from '../common/QuestionWithRadio';
+import QuestionWithRadioAndInput from '../common/QuestionWithRadioAndInput';
+import QuestionWithInput from '../common/QuestionWithInput';
+import QuestionWithMultiSelect from '../common/MultiSelectDropdown';
 import { fuelConfigurations } from '@/utils/fuelConfigurations';
 
 const AmmoniaFields: React.FC = () => {
