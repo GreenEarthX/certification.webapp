@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 import FileUpload from './FileUpload';
-import QuestionWithRadio from '../general-info/QuestionWithRadio';
+import QuestionWithRadio from '../common/QuestionWithRadio';
 
 interface Props {
   checked: boolean | null;

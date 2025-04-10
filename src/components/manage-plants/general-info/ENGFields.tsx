@@ -1,8 +1,8 @@
 'use client';
 import React, { useState } from 'react';
 import { fuelConfigurations } from '@/utils/fuelConfigurations';
-import QuestionWithSelect from './QuestionWithSelect';
-import QuestionWithMultiSelect from './MultiSelectDropdown';
+import QuestionWithSelect from '../common/QuestionWithSelect';
+import QuestionWithMultiSelect from '../common/MultiSelectDropdown';
 
 const ENGFields: React.FC = () => {
   const questions = fuelConfigurations.eng;

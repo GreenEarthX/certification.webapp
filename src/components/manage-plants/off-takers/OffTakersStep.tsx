@@ -1,52 +1,66 @@
 'use client';
 import React, { useState } from 'react';
-import QuestionWithRadio from '../general-info/QuestionWithRadio';
+import QuestionWithRadio from '../common/QuestionWithRadio';
+import SelectWithCheckboxTags from '../common/SelectWithTags';
 
 const OffTakersStep: React.FC = () => {
   const [offTakers, setOffTakers] = useState<string[]>([]);
   const [requiresLabels, setRequiresLabels] = useState<boolean | null>(null);
-  const [selectedMarketing, setSelectedMarketing] = useState<string>('');
-  const [customMarketing, setCustomMarketing] = useState('');
+  const [labelsText, setLabelsText] = useState<string>('');
+
 
   const offTakerOptions = [
-    'Industrial buyers',
-    'Aviation sector (SAF compliance)',
-    'Energy utilities (Power-to-Gas applications)',
-    'Transport companies (Hydrogen fuel cell vehicles)',
-    'Voluntary buyers (Carbon-neutral initiatives)',
+    'Refineries',
+    'Chemical Manufacturers',
+    'Steel Industry',
+    'Glass Industry',
+    'Electronics and Semiconductor Industry',
+    'Heavy Duty Transport',
+    'Aviation',
+    'Automotive Industry',
+    'Power Plants',
+    'Energy Storage and Grid Balancing',
+    'Natural Gas Infrastructure',
+    'Public Sector Infrastructure',
+    'Fertilizer Producers',
+    'Agricultural Industry',
+    'Shipping Industry',
+    'Methanol Producers',
+    'Petrochemical Industry',
+    'Pharmaceuticals and Cosmetics',
+    'Marine Shipping',
+    'Cogeneration Plants',
+    'Fuel Retailers',
+    'Regulatory Bodies',
+    'Government and Municipal Offtakers',
+    'Public Sector Fleets',
+    'Power Generation',
+    'Gas Utilities',
+    'Industrial Heat Applications',
+    'Maritime Shipping',
+    'Gas Suppliers and Retailers',
+    'Energy Utilities',
+    'Private Jet Operators',
+    'Cargo Airlines',
+    'Airport Operators',
+    'Aviation Fuel Suppliers',
+    'Methanol-Based Fuel Cell Developers',
+    'E-fuel Production Companies',
+    'Heavy Duty Transport Manufacturers',
+    'International Shipping Organizations',
+    'Renewable Energy'
   ];
-
-  const marketingOptions = ['Carbon Neutral', 'Low-Carbon', 'Other'];
-
-  const toggleCheckbox = (
-    value: string,
-    list: string[],
-    setList: React.Dispatch<React.SetStateAction<string[]>>
-  ) => {
-    setList((prev) =>
-      prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value]
-    );
-  };
+  
 
   return (
     <div className="space-y-6">
       {/* Primary Off-Takers */}
-      <div>
-        <p className="font-medium mb-2">
-          Who are your primary Off-Takers? <span className="text-sm text-gray-500">(select all that apply)</span>
-        </p>
-        {offTakerOptions.map((option) => (
-          <label key={option} className="block ml-8 mb-1">
-            <input
-              type="checkbox"
-              className="mr-2 accent-blue-600"
-              checked={offTakers.includes(option)}
-              onChange={() => toggleCheckbox(option, offTakers, setOffTakers)}
-            />
-            {option}
-          </label>
-        ))}
-      </div>
+      <SelectWithCheckboxTags
+        label="Who are your primary Off-Takers?"
+        options={offTakerOptions}
+        selected={offTakers}
+        onChange={setOffTakers}
+      />
 
       {/* Require Sustainability Labels */}
       <QuestionWithRadio
@@ -54,32 +68,15 @@ const OffTakersStep: React.FC = () => {
         checked={requiresLabels}
         onCheck={setRequiresLabels}
       />
-
-      {/* Marketing Claims as Radio */}
-      <div>
-        <p className="font-medium mb-2">Are you marketing your fuel as:</p>
-        {marketingOptions.map((option) => (
-          <div key={option} className="flex ml-8 items-center mb-2">
-            <input
-              type="radio"
-              name="marketingClaim"
-              className="mr-2 accent-blue-600"
-              checked={selectedMarketing === option}
-              onChange={() => setSelectedMarketing(option)}
-            />
-            <label>{option}</label>
-            {option === 'Other' && selectedMarketing === 'Other' && (
-              <input
-                type="text"
-                placeholder=""
-                value={customMarketing}
-                onChange={(e) => setCustomMarketing(e.target.value)}
-                className="ml-2 border px-2 py-1 text-sm rounded-md w-48"
-              />
-            )}
-          </div>
-        ))}
-      </div>
+      {requiresLabels && (
+        <textarea
+          className="ml-8 border w-1/2 px-2 py-1 rounded-md"
+          placeholder="Please describe which labels are required..."
+          value={labelsText}
+          onChange={(e) => setLabelsText(e.target.value)}
+        />
+      )}
+      
     </div>
   );
 };

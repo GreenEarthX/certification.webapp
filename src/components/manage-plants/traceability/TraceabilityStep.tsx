@@ -1,6 +1,6 @@
 'use client';
 import React, { useState } from 'react';
-import QuestionWithRadio from '../general-info/QuestionWithRadio';
+import QuestionWithRadio from '../common/QuestionWithRadio';
 
 const TraceabilityStep: React.FC = () => {
   const [chainOfCustody, setChainOfCustody] = useState('');

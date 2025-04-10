@@ -1,9 +1,9 @@
 'use client';
 import React, { useState } from 'react';
 import { fuelConfigurations } from '@/utils/fuelConfigurations';
-import QuestionWithSelect from './QuestionWithSelect';
-import QuestionWithRadioAndInput from './QuestionWithRadioAndInput';
-import QuestionWithMultiSelect from './MultiSelectDropdown';
+import QuestionWithSelect from '../common/QuestionWithSelect';
+import QuestionWithRadioAndInput from '../common/QuestionWithRadioAndInput';
+import QuestionWithMultiSelect from '../common/MultiSelectDropdown';
 
 const HydrogenFields = () => {
   const questions = fuelConfigurations.hydrogen;

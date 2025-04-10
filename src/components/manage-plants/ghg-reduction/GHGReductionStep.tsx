@@ -1,33 +1,30 @@
 'use client';
 import React, { useState } from 'react';
+import SelectWithCheckboxTags from '../common/SelectWithTags';
+import QuestionWithPercentageInput from '../common/QuestionWithPercentageInput';
+import QuestionWithRadio from '../common/QuestionWithRadio';
 
 const GHGReductionStep: React.FC = () => {
   const [methods, setMethods] = useState<string[]>([]);
   const [reductionTarget, setReductionTarget] = useState<string>('');
-  const [customTarget, setCustomTarget] = useState('');
   const [auditorVerified, setAuditorVerified] = useState<boolean | null>(null);
   const [scopes, setScopes] = useState<string[]>([]);
+  const [regulations, setRegulations] = useState<string[]>([]);
+  const [isRFNBO, setIsRFNBO] = useState<boolean | null>(null);
+  const [wishRFNBO, setWishRFNBO] = useState<boolean | null>(null);
 
-  const handleMethodChange = (method: string) => {
-    setMethods(prev =>
-      prev.includes(method)
-        ? prev.filter(m => m !== method)
-        : [...prev, method]
-    );
-  };
-
-  const handleScopeChange = (scope: string) => {
-    setScopes(prev =>
-      prev.includes(scope)
-        ? prev.filter(s => s !== scope)
-        : [...prev, scope]
-    );
+  const toggleFromArray = (
+    current: string[],
+    setFn: (val: string[]) => void,
+    value: string
+  ) => {
+    setFn(current.includes(value) ? current.filter(v => v !== value) : [...current, value]);
   };
 
   return (
     <div className="space-y-6">
 
-      {/* 1. GHG calculation methods */}
+      {/* 1. Carbon footprint methods */}
       <div>
         <p className="font-medium mb-2">
           How do you measure your product's carbon footprint? <span className="text-xs">(select all that apply)</span>
@@ -37,95 +34,76 @@ const GHGReductionStep: React.FC = () => {
           'GHG Protocol Corporate Standard',
           'Default values from regulatory frameworks (RED II, EU ETS, CBAM)',
           'No formal calculation method yet',
-        ].map((method) => (
+        ].map(method => (
           <div key={method} className="ml-8">
             <label className="block mb-1">
               <input
                 type="checkbox"
                 checked={methods.includes(method)}
-                onChange={() => handleMethodChange(method)}
+                onChange={() => toggleFromArray(methods, setMethods, method)}
                 className="mr-2 accent-blue-600"
               />
               {method}
             </label>
           </div>
         ))}
-
       </div>
 
-      {/* 2. GHG reduction target */}
-      <div>
-        <p className="font-medium mb-2">What is your current GHG reduction target?</p>
-        {['50%', '70%', 'Net Zero by 2050', 'Other'].map((option) => (
-          <div key={option} className="flex ml-8 items-center mb-1">
-            <input
-              type="radio"
-              name="reductionTarget"
-              value={option}
-              checked={reductionTarget === option}
-              onChange={(e) => setReductionTarget(e.target.value)}
-              className="mr-2 accent-blue-600"
-            />
-            <label>{option}</label>
-            {option === 'Other' && reductionTarget === 'Other' && (
-              <input
-                type="text"
-                className="ml-2 border px-2 py-1 text-sm rounded-md w-24"
-                placeholder="%"
-                value={customTarget}
-                onChange={(e) => setCustomTarget(e.target.value)}
-              />
-            )}
-          </div>
-        ))}
-      </div>
+      {/* 2. GHG reduction target (custom component) */}
+      <QuestionWithPercentageInput
+        label="What is your current GHG reduction target?"
+        value={reductionTarget}
+        onChange={setReductionTarget}
+      />
 
-      {/* 3. Third-party audit */}
-      <div>
-        <p className="font-medium mb-2">
-          Have you verified your product Carbon Footprint (PCF) calculations with a third-party auditor?
-        </p>
-        <div className="flex ml-60 gap-4">
-          <label className="flex items-center">
-            <input
-              type="radio"
-              name="auditor"
-              checked={auditorVerified === true}
-              onChange={() => setAuditorVerified(true)}
-              className="mr-2 accent-blue-600"
-            />
-            Yes
-          </label>
-          <label className="flex items-center">
-            <input
-              type="radio"
-              name="auditor"
-              checked={auditorVerified === false}
-              onChange={() => setAuditorVerified(false)}
-              className="mr-2 accent-blue-600"
-            />
-            No
-          </label>
-        </div>
-      </div>
+      {/* 3. Audit verified? (custom radio) */}
+      <QuestionWithRadio
+        label="Have you verified your product Carbon Footprint (PCF) calculations with a third-party auditor?"
+        checked={auditorVerified}
+        onCheck={setAuditorVerified}
+      />
 
-      {/* 4. Scope options if verified */}
-      {auditorVerified === true && (
-        <div className='ml-40'>
+      {/* 4. Emissions scopes */}
+      {auditorVerified && (
+        <div className="ml-28">
           <p className="font-medium mb-2">Which emissions accounting methodology do you follow?</p>
-          {['Scope 1', 'Scope 2', 'Scope 3'].map((scope) => (
-            <label key={scope} className="block mb-1">
-              <input
-                type="checkbox"
-                checked={scopes.includes(scope)}
-                onChange={() => handleScopeChange(scope)}
-                className="mr-2 ml-24 accent-blue-600"
-              />
-              {scope}
-            </label>
-          ))}
+          <div className="ml-36"> 
+            {['Scope 1', 'Scope 2', 'Scope 3'].map(scope => (
+              <label key={scope} className="block mb-1">
+                <input
+                  type="checkbox"
+                  checked={scopes.includes(scope)}
+                  onChange={() => toggleFromArray(scopes, setScopes, scope)}
+                  className="mr-2 accent-blue-600"
+                />
+                {scope}
+              </label>
+            ))}
+          </div>
         </div>
       )}
+
+
+      {/* 5. Multi-select regulations (custom component) */}
+      <SelectWithCheckboxTags
+        label="What are the regulations/directives that you follow or plan to follow for GHG reporting and accounting:"
+        options={['RED II', 'RED III', 'CBAM', 'Fuel quality Directive', 'EU ETS', 'EU taxonomy', 'PEF', 'ESRS', 'CRSD']}
+        selected={regulations}
+        onChange={setRegulations}
+      />
+
+      {/* 6. RFNBO questions (custom radios) */}
+      <QuestionWithRadio
+        label="Is your fuel classified as RFNBO?"
+        checked={isRFNBO}
+        onCheck={setIsRFNBO}
+      />
+
+      <QuestionWithRadio
+        label="Do you wish to classify your fuel as RFNBO?"
+        checked={wishRFNBO}
+        onCheck={setWishRFNBO}
+      />
     </div>
   );
 };

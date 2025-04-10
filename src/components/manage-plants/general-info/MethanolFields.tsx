@@ -1,8 +1,8 @@
 'use client';
 import React, { useState } from 'react';
 import { fuelConfigurations } from '@/utils/fuelConfigurations';
-import QuestionWithRadioAndInput from './QuestionWithRadioAndInput';
-import QuestionWithMultiSelect from './MultiSelectDropdown';
+import QuestionWithRadioAndInput from '../common/QuestionWithRadioAndInput';
+import QuestionWithMultiSelect from '../common/MultiSelectDropdown';
 
 const MethanolFields: React.FC = () => {
   const [mainChoice, setMainChoice] = useState<'fossil' | 'renewable' | null>(null);

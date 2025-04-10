@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useEffect,useState } from 'react';
 import HydrogenFields from '@/components/manage-plants/general-info/HydrogenFields';
 import AmmoniaFields from '@/components/manage-plants/general-info/AmmoniaFields';
 import ENGFields from '@/components/manage-plants/general-info/ENGFields';
@@ -11,12 +11,22 @@ import GHGReductionStep from '@/components/manage-plants/ghg-reduction/GHGReduct
 import TraceabilityStep from '@/components/manage-plants/traceability/TraceabilityStep';
 import OffTakersStep from '@/components/manage-plants/off-takers/OffTakersStep';
 import CertificationStep from '@/components/manage-plants/certification-preferences/CertificationStep';
+import StepNotice from '@/components/manage-plants/common/StepNotice';
+import FacilityDropdown from '@/components/plantDashboard/FacilityDropdown';
+
+interface Plant {
+  id: string;
+  name: string;
+  type: string;
+  address: string;
+  riskScore: number;
+}
 
 const steps = [
   'General informations',
   'Electricity Generation',
   'GHG Reduction & Carbon Footprint (PCF)',
-  'Traceability &Chain Custody',
+  'Traceability & Chain Custody',
   'Off-Takers & Market Positioning',
   'Certification Preferences'
 ];
@@ -24,6 +34,29 @@ const steps = [
 export default function PlantDetailsPage() {
   const [currentStep, setCurrentStep] = useState(0);
   const [fuelType, setFuelType] = useState('');
+  const [plants, setPlants] = useState<Plant[]>([]);
+  const [selectedPlantId, setSelectedPlantId] = useState<string>('');
+
+  const selectedPlant = plants.find((p) => p.id === selectedPlantId);
+
+  // Fetch plants on mount
+  useEffect(() => {
+    const fetchPlants = async () => {
+      try {
+        const res = await fetch('/api/plants');
+        const data = await res.json();
+        setPlants(data);
+        if (data.length > 0) {
+          setSelectedPlantId(data[0].id); // default to first plant
+        }
+      } catch (err) {
+        console.error('Failed to fetch plants:', err);
+      }
+    };
+
+    fetchPlants();
+  }, []);
+
 
   const handleStepClick = (index: number) => {
     setCurrentStep(index);
@@ -39,6 +72,7 @@ export default function PlantDetailsPage() {
 
   const StepContainer: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
     <div>
+      <StepNotice />
       <h2 className="text-lg font-semibold text-blue-900 mb-2">{title}</h2>
       <div className="bg-white shadow rounded-lg p-6">{children}</div>
     </div>
@@ -46,6 +80,7 @@ export default function PlantDetailsPage() {
 
   const StepContainersplited: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
     <div>
+      <StepNotice />
       <h2 className="text-lg font-semibold text-blue-900 mb-2">{title}</h2>
       {children}
     </div>
@@ -53,8 +88,13 @@ export default function PlantDetailsPage() {
 
   return (
     <div className="w-full p-8  min-h-screen">
+      {/* Plant selection header */}
+      <div className="flex justify-between items-center p-4 rounded-lg">
+        <FacilityDropdown selectedPlant={selectedPlantId} onChange={(e) => setSelectedPlantId(e.target.value)} />
+      </div>
+      <br/>
       {/* Steps navigation */}
-      <div className="flex justify-between items-center border-b-2 pb-4 mb-8 relative">
+      <div className="flex justify-between items-center  pb-4 mb-8 relative">
         <div className="absolute top-[5px] left-[6%] right-[7%] h-[1px] bg-gray-400 z-0"></div>
         {steps.map((step, index) => (
           <div key={step} className="flex flex-col items-center cursor-pointer z-10" onClick={() => handleStepClick(index)}>
