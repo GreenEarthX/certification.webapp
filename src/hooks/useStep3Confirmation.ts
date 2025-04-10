@@ -74,12 +74,45 @@ export default function useStep3Confirmation(
   }, []);
 
   useEffect(() => {
-    const selected = certificationOptions.find(
+    // If the certificationName doesn't match any fetched options, fix it
+    const hasMatch = certificationOptions.some(
       (opt) => opt.certification_scheme_name === uploadedData.certificationName
     );
+
+    if (
+      uploadedData.certificationName &&
+      !hasMatch &&
+      certificationOptions.length > 0
+    ) {
+      const closest = certificationOptions.find((opt) =>
+        opt.certification_scheme_name.toLowerCase().includes(
+          uploadedData.certificationName?.toLowerCase() || ""
+        )
+      );
+
+      if (closest) {
+        setUploadedData((prev) => ({
+          ...prev,
+          certificationName: closest.certification_scheme_name,
+        }));
+      }
+    }
+  }, [certificationOptions, uploadedData.certificationName]);
+
+
+  useEffect(() => {
+    const selected = certificationOptions.find(
+      (opt) =>
+        opt.certification_scheme_name === uploadedData.certificationName ||
+        opt.certification_scheme_name.toLowerCase().includes(
+          uploadedData.certificationName?.toLowerCase() || ""
+        )
+    );
+  
     if (selected) {
       setUploadedData((prev) => ({
         ...prev,
+        certificationName: selected.certification_scheme_name, // 👈 add this line
         type: selected.certificate_type,
         entity: selected.entity,
         validityDate: selected.validity,
@@ -89,6 +122,7 @@ export default function useStep3Confirmation(
       }));
     }
   }, [uploadedData.certificationName, certificationOptions]);
+  
 
   const handleSaveCertificate = async () => {
     try {
