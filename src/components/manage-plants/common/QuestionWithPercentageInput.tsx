@@ -1,0 +1,25 @@
+'use client';
+import React from 'react';
+
+interface Props {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}
+
+const QuestionWithPercentageInput: React.FC<Props> = ({ label, value, onChange }) => (
+  <div className="flex items-center mb-4">
+    <label className="flex items-center gap-2 mr-4 font-medium whitespace-nowrap">
+      {label}
+    </label>
+    <input
+      type="number"
+      className="border rounded-md px-3 py-1 w-24"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+    />
+    <span className="ml-2">%</span>
+  </div>
+);
+
+export default QuestionWithPercentageInput;
