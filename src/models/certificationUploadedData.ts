@@ -11,3 +11,16 @@ export interface UploadedData {
   compliesWith?: string;
   owner?: string;
 }
+
+
+export const fieldLabels: Record<string, string> = {
+  owner: "Scheme Owner",
+  issueDate: "Issue Date",
+  validityDate: "Validity Date",
+  certificationBody: "Certification Body",
+  compliesWith: "Complies With",
+  certificateNumber: "Certificate Number",
+  type: "Type",
+  entity: "Entity",
+  certificationName: "Certification Name",
+};

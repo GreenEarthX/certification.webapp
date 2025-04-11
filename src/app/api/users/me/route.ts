@@ -8,6 +8,7 @@ export async function GET(req: NextRequest) {
     if (!auth0User) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    console.log("Auth0 User:", auth0User);
     const user = await UserService.getUserBySub(auth0User);
     return user 
       ? NextResponse.json(user, { status: 200 })
