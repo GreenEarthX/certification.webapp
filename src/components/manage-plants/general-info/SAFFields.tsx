@@ -16,6 +16,7 @@ const SAFFields = () => {
 
   const [isGasInjected, setIsGasInjected] = useState<boolean | null>(null);
   const [isSAFBlended, setIsSAFBlended] = useState<boolean | null>(null);
+  const [isRFNBO, setIsRFNBO] = useState<boolean | null>(null);
 
   const handleChange = (index: number, value: string) => {
     const updated = [...answers];
@@ -53,6 +54,12 @@ const SAFFields = () => {
         label="Is the SAF blended with fossil jet fuel?"
         checked={isSAFBlended}
         onCheck={setIsSAFBlended}
+      />
+
+      <QuestionWithRadio
+              label="Is your fuel classified as RFNBO?"
+              checked={isRFNBO}
+              onCheck={setIsRFNBO}
       />
     </>
   );

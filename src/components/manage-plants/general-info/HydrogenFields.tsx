@@ -4,6 +4,7 @@ import { fuelConfigurations } from '@/utils/fuelConfigurations';
 import QuestionWithSelect from '../common/QuestionWithSelect';
 import QuestionWithRadioAndInput from '../common/QuestionWithRadioAndInput';
 import QuestionWithMultiSelect from '../common/MultiSelectDropdown';
+import QuestionWithRadio from '../common/QuestionWithRadio';
 
 const HydrogenFields = () => {
   const questions = fuelConfigurations.hydrogen;
@@ -18,6 +19,8 @@ const HydrogenFields = () => {
   const [ccusUsed, setCcusUsed] = useState(false);
   const [ccusPercentage, setCcusPercentage] = useState('');
   const [feedstock, setFeedstock] = useState<string[]>([]);
+  const [isRFNBO, setIsRFNBO] = useState<boolean | null>(null);
+
 
   const handleChange = (index: number, value: string) => {
     const updated = [...answers];
@@ -77,6 +80,12 @@ const HydrogenFields = () => {
           onChange={setFeedstock}
         />
       )}
+      
+      <QuestionWithRadio
+              label="Is your fuel classified as RFNBO?"
+              checked={isRFNBO}
+              onCheck={setIsRFNBO}
+      />
     </>
   );
 };

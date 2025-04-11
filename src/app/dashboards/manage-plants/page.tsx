@@ -7,6 +7,7 @@ import SAFFields from '@/components/manage-plants/general-info/SAFFields';
 import BiofuelFields from '@/components/manage-plants/general-info/BiofuelFields';
 import MethanolFields from '@/components/manage-plants/general-info/MethanolFields';
 import ElectricityStep from '@/components/manage-plants/electricity-generation/ElectricityStep';
+import WaterStep from '@/components/manage-plants/electricity-generation/WaterStep';
 import GHGReductionStep from '@/components/manage-plants/ghg-reduction/GHGReductionStep';
 import TraceabilityStep from '@/components/manage-plants/traceability/TraceabilityStep';
 import OffTakersStep from '@/components/manage-plants/off-takers/OffTakersStep';
@@ -24,7 +25,7 @@ interface Plant {
 
 const steps = [
   'General informations',
-  'Electricity Generation',
+  'Electricity Generation & Water Consumption',
   'GHG Reduction & Carbon Footprint (PCF)',
   'Traceability & Chain Custody',
   'Off-Takers & Market Positioning',
@@ -37,7 +38,8 @@ export default function PlantDetailsPage() {
   const [plants, setPlants] = useState<Plant[]>([]);
   const [selectedPlantId, setSelectedPlantId] = useState<string>('');
 
-  const selectedPlant = plants.find((p) => p.id === selectedPlantId);
+
+  //const selectedPlant = plants.find((p) => p.id === selectedPlantId);
 
   // Fetch plants on mount
   useEffect(() => {
@@ -73,6 +75,13 @@ export default function PlantDetailsPage() {
   const StepContainer: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
     <div>
       <StepNotice />
+      <h2 className="text-lg font-semibold text-blue-900 mb-2">{title}</h2>
+      <div className="bg-white shadow rounded-lg p-6">{children}</div>
+    </div>
+  );
+
+  const StepContainerNoNotice: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
+    <div>
       <h2 className="text-lg font-semibold text-blue-900 mb-2">{title}</h2>
       <div className="bg-white shadow rounded-lg p-6">{children}</div>
     </div>
@@ -125,7 +134,7 @@ export default function PlantDetailsPage() {
               <option value="biofuels">Biofuels</option>
             </select>
           </div>
-          {fuelType === 'hydrogen' && <HydrogenFields />}
+          {fuelType === 'hydrogen' && <HydrogenFields /> }
           {fuelType === 'ammonia' && <AmmoniaFields />}
           {fuelType === 'eng' && <ENGFields />}
           {fuelType === 'saf' && <SAFFields />}
@@ -135,9 +144,15 @@ export default function PlantDetailsPage() {
       )}
 
       {currentStep === 1 && (
+        <div>
         <StepContainer title={steps[1]}>
           <ElectricityStep />
         </StepContainer>
+        <br/>
+        <StepContainerNoNotice title={"Water Consumption"}>
+        <WaterStep />
+      </StepContainerNoNotice>
+      </div>
       )}
 
       {currentStep === 2 && (
