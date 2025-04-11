@@ -34,6 +34,8 @@ const Navbar: React.FC = () => {
       );
     } else if (pathname.startsWith("/dashboards/plants/add")) {
       setTitle("Add Plant");
+    } else if (pathname.includes("/dashboards/manage-plants")) {
+      setTitle("Manage Plant Details");  
     } else if (pathname.startsWith("/dashboards/dashboard")) {
       setTitle(
         pathname.match(/^\/dashboards\/dashboard\/\d+\/plantDashboard$/)
