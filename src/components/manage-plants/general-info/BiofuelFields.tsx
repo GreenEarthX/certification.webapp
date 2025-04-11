@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import QuestionWithMultiSelect from '../common/MultiSelectDropdown';
 import { fuelConfigurations } from '@/utils/fuelConfigurations';
+import QuestionWithRadio from '../common/QuestionWithRadio';
 
 const BiofuelFields: React.FC = () => {
   const config = fuelConfigurations.biofuels;
@@ -12,6 +13,7 @@ const BiofuelFields: React.FC = () => {
   const [selectedMain, setSelectedMain] = useState<string | null>(null);
   const [selectedSub, setSelectedSub] = useState<string | null>(null);
   const [feedstock, setFeedstock] = useState<string[]>([]);
+    const [isRFNBO, setIsRFNBO] = useState<boolean | null>(null);
 
   const handleMainChange = (value: string) => {
     setSelectedMain(value);
@@ -73,6 +75,12 @@ const BiofuelFields: React.FC = () => {
           onChange={setFeedstock}
         />
       )}
+
+      <QuestionWithRadio
+              label="Is your fuel classified as RFNBO?"
+              checked={isRFNBO}
+              onCheck={setIsRFNBO}
+      />
     </>
   );
 };

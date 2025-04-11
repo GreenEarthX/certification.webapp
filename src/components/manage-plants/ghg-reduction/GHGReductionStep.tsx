@@ -10,8 +10,6 @@ const GHGReductionStep: React.FC = () => {
   const [auditorVerified, setAuditorVerified] = useState<boolean | null>(null);
   const [scopes, setScopes] = useState<string[]>([]);
   const [regulations, setRegulations] = useState<string[]>([]);
-  const [isRFNBO, setIsRFNBO] = useState<boolean | null>(null);
-  const [wishRFNBO, setWishRFNBO] = useState<boolean | null>(null);
 
   const toggleFromArray = (
     current: string[],
@@ -27,7 +25,7 @@ const GHGReductionStep: React.FC = () => {
       {/* 1. Carbon footprint methods */}
       <div>
         <p className="font-medium mb-2">
-          How do you measure your product's carbon footprint? <span className="text-xs">(select all that apply)</span>
+          How do you measure your product&apos;s carbon footprint? <span className="text-xs">(select all that apply)</span>
         </p>
         {[
           'Life Cycle Assessment (LCA) using ISO 14067',
@@ -90,19 +88,6 @@ const GHGReductionStep: React.FC = () => {
         options={['RED II', 'RED III', 'CBAM', 'Fuel quality Directive', 'EU ETS', 'EU taxonomy', 'PEF', 'ESRS', 'CRSD']}
         selected={regulations}
         onChange={setRegulations}
-      />
-
-      {/* 6. RFNBO questions (custom radios) */}
-      <QuestionWithRadio
-        label="Is your fuel classified as RFNBO?"
-        checked={isRFNBO}
-        onCheck={setIsRFNBO}
-      />
-
-      <QuestionWithRadio
-        label="Do you wish to classify your fuel as RFNBO?"
-        checked={wishRFNBO}
-        onCheck={setWishRFNBO}
       />
     </div>
   );

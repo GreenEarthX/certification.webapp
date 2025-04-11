@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { fuelConfigurations } from '@/utils/fuelConfigurations';
 import QuestionWithRadioAndInput from '../common/QuestionWithRadioAndInput';
 import QuestionWithMultiSelect from '../common/MultiSelectDropdown';
+import QuestionWithRadio from '../common/QuestionWithRadio';
 
 const MethanolFields: React.FC = () => {
   const [mainChoice, setMainChoice] = useState<'fossil' | 'renewable' | null>(null);
@@ -10,6 +11,7 @@ const MethanolFields: React.FC = () => {
   const [ccusPercentage, setCcusPercentage] = useState('');
   const [renewableType, setRenewableType] = useState<string>('');
   const [feedstock, setFeedstock] = useState<string[]>([]);
+    const [isRFNBO, setIsRFNBO] = useState<boolean | null>(null);
 
   const feedstockQuestion = fuelConfigurations.methanol.find(q => q.label === 'What is the feedstock used?');
   const subtypeOptions = fuelConfigurations.methanol_subtypes?.[0]?.options || [];
@@ -92,6 +94,12 @@ const MethanolFields: React.FC = () => {
           onChange={setFeedstock}
         />
       )}
+
+      <QuestionWithRadio
+              label="Is your fuel classified as RFNBO?"
+              checked={isRFNBO}
+              onCheck={setIsRFNBO}
+      />
     </>
   );
 };

@@ -8,7 +8,6 @@ const CertificationStep: React.FC = () => {
   const [primaryReason, setPrimaryReason] = useState<string>('');
   const [certificationRequirement, setCertificationRequirement] = useState<string>(''); // 'Voluntary labeling' or 'Mandatory compliance'
   const [labeling, setLabeling] = useState<string[]>([]);
-  const [certificationReason, setCertificationReason] = useState('');
   const [hasBodyCriteria, setHasBodyCriteria] = useState<boolean | null>(null);
   const [bodyCriteriaText, setBodyCriteriaText] = useState('');
   const [hasPreferences, setHasPreferences] = useState<boolean | null>(null);
@@ -49,7 +48,7 @@ const CertificationStep: React.FC = () => {
 
   const reasons = ['Regulatory Compliance', 'Market Access', 'Carbon Credits', 'Corporate Sustainability'];
 
-  const toggleScheme = (scheme: string) => {
+  /*const toggleScheme = (scheme: string) => {
     setSelectedSchemes((prev) =>
       prev.includes(scheme) ? prev.filter((s) => s !== scheme) : [...prev, scheme]
     );
@@ -59,7 +58,7 @@ const CertificationStep: React.FC = () => {
     setLabeling((prev) =>
       prev.includes(option) ? prev.filter((l) => l !== option) : [...prev, option]
     );
-  };
+  };*/
 
   return (
     <div className="space-y-6 bg-transparent ">

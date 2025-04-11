@@ -12,6 +12,7 @@ const AmmoniaFields: React.FC = () => {
   const [ccusPercentage, setCcusPercentage] = useState('');
   const [otherMethod, setOtherMethod] = useState('');
   const [feedstock, setFeedstock] = useState<string[]>([]);
+    const [isRFNBO, setIsRFNBO] = useState<boolean | null>(null);
 
   const ammoniaQuestions = fuelConfigurations.ammonia;
   const feedstockQuestion = ammoniaQuestions.find(q => q.label === 'What is the feedstock used?');
@@ -62,6 +63,12 @@ const AmmoniaFields: React.FC = () => {
           onChange={setFeedstock}
         />
       )}
+
+      <QuestionWithRadio
+              label="Is your fuel classified as RFNBO?"
+              checked={isRFNBO}
+              onCheck={setIsRFNBO}
+      />
     </>
   );
 };
