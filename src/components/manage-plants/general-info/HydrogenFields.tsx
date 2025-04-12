@@ -53,7 +53,7 @@ const HydrogenFields = () => {
       {showElectrolysis && (
         <div className="ml-20">
         <QuestionWithSelect
-          question={{ label: 'Electrolysis', options: ['PEM', 'Alkaline', 'SOEC'] }}
+          question={{ label: 'Technology used:', options: ['PEM', 'Alkaline', 'SOEC'] }}
           value={electrolysis}
           onChange={setElectrolysis}
         />
