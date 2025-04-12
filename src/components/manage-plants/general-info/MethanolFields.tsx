@@ -20,12 +20,12 @@ const MethanolFields: React.FC = () => {
     <>
       {/* Main question */}
       <div className="mb-4">
-        <label className="flex items-center gap-2 mr-4 accent-blue-600 whitespace-nowrap">
+        <label className="flex items-center gap-2 mr-4 font-medium accent-blue-600 whitespace-nowrap">
           Are you producing:
         </label>
 
         <div className="ml-16 mb-2 flex flex-col gap-2">
-          <label className="flex items-center gap-2">
+          <label className="flex font-medium items-center gap-2">
             <input
               type="radio"
               name="methanol_type"
@@ -51,7 +51,7 @@ const MethanolFields: React.FC = () => {
             </div>
           )}
 
-          <label className="flex items-center gap-2">
+          <label className="flex font-medium items-center gap-2">
             <input
               type="radio"
               name="methanol_type"
@@ -69,7 +69,7 @@ const MethanolFields: React.FC = () => {
           {mainChoice === 'renewable' && (
             <div className="ml-6 flex flex-col gap-1">
               {subtypeOptions.map((option, idx) => (
-                <label key={idx} className="flex items-center gap-2">
+                <label key={idx} className="flex font-medium items-center gap-2">
                   <input
                     type="radio"
                     name="renewable_subtype"
