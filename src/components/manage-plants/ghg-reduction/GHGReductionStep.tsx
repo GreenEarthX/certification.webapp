@@ -6,6 +6,7 @@ import QuestionWithRadio from '../common/QuestionWithRadio';
 
 const GHGReductionStep: React.FC = () => {
   const [methods, setMethods] = useState<string[]>([]);
+  const [accountingMethods, setAccountingMethods] = useState<string[]>([]);
   const [reductionTarget, setReductionTarget] = useState<string>('');
   const [auditorVerified, setAuditorVerified] = useState<boolean | null>(null);
   const [scopes, setScopes] = useState<string[]>([]);
@@ -23,49 +24,58 @@ const GHGReductionStep: React.FC = () => {
     <div className="space-y-6">
 
       {/* 1. Carbon footprint methods */}
-      <div>
-        <p className="font-medium mb-2">
-          How do you measure your product&apos;s carbon footprint? <span className="text-xs">(select all that apply)</span>
-        </p>
-        {[
-          'Life Cycle Assessment (LCA) using ISO 14067',
-          'GHG Protocol Corporate Standard',
-          'Default values from regulatory frameworks (RED II, EU ETS, CBAM)',
-          'No formal calculation method yet',
-        ].map(method => (
-          <div key={method} className="ml-8">
-            <label className="block mb-1">
-              <input
-                type="checkbox"
-                checked={methods.includes(method)}
-                onChange={() => toggleFromArray(methods, setMethods, method)}
-                className="mr-2 accent-blue-600"
-              />
-              {method}
-            </label>
-          </div>
-        ))}
-      </div>
+      <SelectWithCheckboxTags
+        label="What are the methodologies you use for calculating and reporting your carbon footprint? (select all that apply)"
+        options={[
+          'GHG Protocol',
+          'ISO 14064',
+          'ISO 14067',
+          'ISO 14040 / ISO 14044',
+          'Lifecycle Assessment',
+          'PAS 2050',
+          'PAS 2060',
+        ]}
+        selected={methods}
+        onChange={setMethods}
+      />
 
-      {/* 2. GHG reduction target (custom component) */}
+      {/* 2. GHG regulations/directives */}
+      <SelectWithCheckboxTags
+        label="What are the regulations/directives that you follow or plan to follow for GHG reporting and accounting:"
+        options={[
+          'RED II',
+          'RED III',
+          'CBAM',
+          'Fuel quality Directive',
+          'EU ETS',
+          'EU taxonomy',
+          'PEF',
+          'ESRS',
+          'CRSD',
+        ]}
+        selected={regulations}
+        onChange={setRegulations}
+      />
+
+      {/* 3. GHG reduction target */}
       <QuestionWithPercentageInput
         label="What is your current GHG reduction target?"
         value={reductionTarget}
         onChange={setReductionTarget}
       />
 
-      {/* 3. Audit verified? (custom radio) */}
+      {/* 4. Audit verified? */}
       <QuestionWithRadio
         label="Have you verified your product Carbon Footprint (PCF) calculations with a third-party auditor?"
         checked={auditorVerified}
         onCheck={setAuditorVerified}
       />
 
-      {/* 4. Emissions scopes */}
+      {/* 5. Emissions scopes (only shown if verified) */}
       {auditorVerified && (
         <div className="ml-28">
           <p className="font-medium mb-2">Which emissions accounting methodology do you follow?</p>
-          <div className="ml-36"> 
+          <div className="ml-36">
             {['Scope 1', 'Scope 2', 'Scope 3'].map(scope => (
               <label key={scope} className="block mb-1">
                 <input
@@ -80,15 +90,6 @@ const GHGReductionStep: React.FC = () => {
           </div>
         </div>
       )}
-
-
-      {/* 5. Multi-select regulations (custom component) */}
-      <SelectWithCheckboxTags
-        label="What are the regulations/directives that you follow or plan to follow for GHG reporting and accounting:"
-        options={['RED II', 'RED III', 'CBAM', 'Fuel quality Directive', 'EU ETS', 'EU taxonomy', 'PEF', 'ESRS', 'CRSD']}
-        selected={regulations}
-        onChange={setRegulations}
-      />
     </div>
   );
 };
