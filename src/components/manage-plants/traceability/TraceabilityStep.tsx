@@ -3,14 +3,25 @@ import React, { useState } from 'react';
 import QuestionWithRadio from '../common/QuestionWithRadio';
 
 const TraceabilityStep: React.FC = () => {
-  const [chainOfCustody, setChainOfCustody] = useState('');
-  const [traceabilityLevel, setTraceabilityLevel] = useState('');
+  // ✅ Types explicites
+  const [chainOfCustody, setChainOfCustody] = useState<string[]>([]);
+  const [traceabilityLevels, setTraceabilityLevels] = useState<string[]>([]);
   const [customTraceability, setCustomTraceability] = useState('');
   const [usesDigitalPlatform, setUsesDigitalPlatform] = useState<boolean | null>(null);
 
+  // ✅ Typage correct
+  const handleToggle = (
+    list: string[],
+    setList: React.Dispatch<React.SetStateAction<string[]>>,
+    value: string
+  ) => {
+    setList((prev) =>
+      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
+    );
+  };
+
   return (
     <div className="space-y-6">
-
       {/* 1. Chain of custody */}
       <div>
         <p className="font-medium mb-2">Which chain of custody do you follow?</p>
@@ -24,11 +35,10 @@ const TraceabilityStep: React.FC = () => {
           <div key={option} className="ml-8">
             <label className="block mb-1">
               <input
-                type="radio"
-                name="chainOfCustody"
+                type="checkbox"
                 value={option}
-                checked={chainOfCustody === option}
-                onChange={() => setChainOfCustody(option)}
+                checked={chainOfCustody.includes(option)}
+                onChange={() => handleToggle(chainOfCustody, setChainOfCustody, option)}
                 className="mr-2 accent-blue-600"
               />
               {option}
@@ -41,18 +51,16 @@ const TraceabilityStep: React.FC = () => {
       <div>
         <p className="font-medium mb-2">What level of traceability is required by your customers?</p>
         {['Batch-level', 'Real-time', 'Blockchain-based', 'ERP system', 'Other'].map((option) => (
-          <div key={option} className="flex items-center mb-1">
-            <div className="ml-8">
+          <div key={option} className="flex items-center mb-1 ml-8">
             <input
-              type="radio"
-              name="traceabilityLevel"
+              type="checkbox"
               value={option}
-              checked={traceabilityLevel === option}
-              onChange={() => setTraceabilityLevel(option)}
+              checked={traceabilityLevels.includes(option)}
+              onChange={() => handleToggle(traceabilityLevels, setTraceabilityLevels, option)}
               className="accent-blue-600 mr-2"
             />
             <label>{option}</label>
-            {option === 'Other' && traceabilityLevel === 'Other' && (
+            {option === 'Other' && traceabilityLevels.includes('Other') && (
               <input
                 type="text"
                 placeholder="Level"
@@ -61,7 +69,6 @@ const TraceabilityStep: React.FC = () => {
                 className="ml-2 border px-2 py-1 text-sm rounded-md w-24"
               />
             )}
-          </div>
           </div>
         ))}
       </div>
@@ -72,7 +79,6 @@ const TraceabilityStep: React.FC = () => {
         checked={usesDigitalPlatform}
         onCheck={setUsesDigitalPlatform}
       />
-
     </div>
   );
 };
