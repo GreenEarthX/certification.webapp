@@ -10,7 +10,7 @@ const SpotMarketDetails: React.FC = () => {
     <div className="ml-4 mt-2 flex flex-col gap-4">
       {/* Purchase Records Upload */}
       <div>
-        <label className="flex items-center gap-2">
+        <label className="flex items-center font-medium  gap-2">
           Provide purchase records
         </label>
         <FileUpload label="Submit" onChange={setPurchaseFile} />
@@ -18,7 +18,7 @@ const SpotMarketDetails: React.FC = () => {
 
       {/* GoO Upload */}
       <div>
-        <label className="flex items-center gap-2">
+        <label className="flex items-center font-medium  gap-2">
           Provide GoO proving renewable match
         </label>
         <FileUpload label="Submit" onChange={setGoOFile} />
