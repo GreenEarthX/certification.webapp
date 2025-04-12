@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { certificationService } from '@/services/certifications/certificationService';
 
 export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const id = params?.id;
+  const { id } = await params;
 
   if (!id) {
     return NextResponse.json(
@@ -27,4 +27,3 @@ export async function GET(
     return NextResponse.json({ error: 'Something went wrong' }, { status: 500 });
   }
 }
-
