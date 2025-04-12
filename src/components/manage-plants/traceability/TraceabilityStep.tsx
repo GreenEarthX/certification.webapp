@@ -33,7 +33,7 @@ const TraceabilityStep: React.FC = () => {
           'No formal model yet',
         ].map((option) => (
           <div key={option} className="ml-8">
-            <label className="block mb-1">
+            <label className="block font-medium mb-1">
               <input
                 type="checkbox"
                 value={option}
@@ -51,13 +51,13 @@ const TraceabilityStep: React.FC = () => {
       <div>
         <p className="font-medium mb-2">What level of traceability is required by your customers?</p>
         {['Batch-level', 'Real-time', 'Blockchain-based', 'ERP system', 'Other'].map((option) => (
-          <div key={option} className="flex items-center mb-1 ml-8">
+          <div key={option} className="flex font-medium items-center mb-1 ml-8">
             <input
               type="checkbox"
               value={option}
               checked={traceabilityLevels.includes(option)}
               onChange={() => handleToggle(traceabilityLevels, setTraceabilityLevels, option)}
-              className="accent-blue-600 mr-2"
+              className="accent-blue-600 font-medium mr-2"
             />
             <label>{option}</label>
             {option === 'Other' && traceabilityLevels.includes('Other') && (
@@ -66,7 +66,7 @@ const TraceabilityStep: React.FC = () => {
                 placeholder="Level"
                 value={customTraceability}
                 onChange={(e) => setCustomTraceability(e.target.value)}
-                className="ml-2 border px-2 py-1 text-sm rounded-md w-24"
+                className="ml-2 border font-medium px-2 py-1 text-sm rounded-md w-24"
               />
             )}
           </div>
