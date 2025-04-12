@@ -14,6 +14,7 @@ import OffTakersStep from '@/components/manage-plants/off-takers/OffTakersStep';
 import CertificationStep from '@/components/manage-plants/certification-preferences/CertificationStep';
 import StepNotice from '@/components/manage-plants/common/StepNotice';
 import FacilityDropdown from '@/components/plantDashboard/FacilityDropdown';
+import { useRouter } from 'next/navigation';
 
 interface Plant {
   id: string;
@@ -32,16 +33,65 @@ const steps = [
   'Certification Preferences'
 ];
 
+interface ElectricityData {
+  selectedSources: string[];
+  ppaFile: File | null;
+  energyMix: { type: string; percent: string }[];
+}
+
+interface WaterData {
+  waterConsumption: string;
+  waterSources: string[];
+  trackWaterUsage: boolean | null;
+}
+
+interface FormDataType {
+  hydrogen: any;
+  ammonia: any;
+  biofuels: any;
+  saf: any;
+  eng: any;
+  methanol: any;
+  electricity: ElectricityData;
+  water: WaterData;
+  ghg: any;
+  traceability: any;
+  offtakers: any;
+  certifications: any;
+}
+
+
 export default function PlantDetailsPage() {
   const [currentStep, setCurrentStep] = useState(0);
   const [fuelType, setFuelType] = useState('');
   const [plants, setPlants] = useState<Plant[]>([]);
   const [selectedPlantId, setSelectedPlantId] = useState<string>('');
+  const router = useRouter();
 
+  const [formData, setFormData] = useState<FormDataType>({
+    hydrogen: {},
+    ammonia: {},
+    biofuels: {},
+    saf: {},
+    eng: {},
+    methanol: {},
+    electricity: {
+      selectedSources: [],
+      ppaFile: null,
+      energyMix: [{ type: '', percent: '' }],
+    },
+    water: {
+      waterConsumption: '',
+      waterSources: [],
+      trackWaterUsage: null,
+    },
+    ghg: {},
+    traceability: {},
+    offtakers: {},
+    certifications: {},
+  });
+  
 
-  //const selectedPlant = plants.find((p) => p.id === selectedPlantId);
-
-  // Fetch plants on mount
   useEffect(() => {
     const fetchPlants = async () => {
       try {
@@ -49,7 +99,7 @@ export default function PlantDetailsPage() {
         const data = await res.json();
         setPlants(data);
         if (data.length > 0) {
-          setSelectedPlantId(data[0].id); // default to first plant
+          setSelectedPlantId(data[0].id);
         }
       } catch (err) {
         console.error('Failed to fetch plants:', err);
@@ -58,7 +108,6 @@ export default function PlantDetailsPage() {
 
     fetchPlants();
   }, []);
-
 
   const handleStepClick = (index: number) => {
     setCurrentStep(index);
@@ -97,12 +146,10 @@ export default function PlantDetailsPage() {
 
   return (
     <div className="w-full p-8  min-h-screen">
-      {/* Plant selection header */}
       <div className="flex justify-between items-center p-4 rounded-lg">
         <FacilityDropdown selectedPlant={selectedPlantId} onChange={(e) => setSelectedPlantId(e.target.value)} />
       </div>
       <br/>
-      {/* Steps navigation */}
       <div className="flex justify-between items-center  pb-4 mb-8 relative">
         <div className="absolute top-[5px] left-[6%] right-[7%] h-[1px] bg-gray-400 z-0"></div>
         {steps.map((step, index) => (
@@ -113,7 +160,6 @@ export default function PlantDetailsPage() {
         ))}
       </div>
 
-      {/* Current Step Content */}
       {currentStep === 0 && (
         <StepContainer title={steps[0]}>
           <div className="flex items-center mb-4">
@@ -134,52 +180,51 @@ export default function PlantDetailsPage() {
               <option value="biofuels">Biofuels</option>
             </select>
           </div>
-          {fuelType === 'hydrogen' && <HydrogenFields /> }
-          {fuelType === 'ammonia' && <AmmoniaFields />}
-          {fuelType === 'eng' && <ENGFields />}
-          {fuelType === 'saf' && <SAFFields />}
-          {fuelType === 'biofuels' && <BiofuelFields />}
-          {fuelType === 'methanol' && <MethanolFields />}
+          {fuelType === 'hydrogen' && <HydrogenFields data={formData.hydrogen} onChange={(updated) => setFormData(prev => ({ ...prev, hydrogen: updated }))} />}
+          {fuelType === 'ammonia' && <AmmoniaFields data={formData.ammonia} onChange={(updated) => setFormData(prev => ({ ...prev, ammonia: updated }))} />}
+          {fuelType === 'eng' && <ENGFields data={formData.eng} onChange={(updated) => setFormData(prev => ({ ...prev, eng: updated }))} />}
+          {fuelType === 'saf' && <SAFFields data={formData.saf} onChange={(updated) => setFormData(prev => ({ ...prev, saf: updated }))} />}
+          {fuelType === 'biofuels' && <BiofuelFields data={formData.biofuels} onChange={(updated) => setFormData(prev => ({ ...prev, biofuels: updated }))} />}
+          {fuelType === 'methanol' && <MethanolFields data={formData.methanol} onChange={(updated) => setFormData(prev => ({ ...prev, methanol: updated }))} />}
         </StepContainer>
       )}
 
       {currentStep === 1 && (
         <div>
-        <StepContainer title={steps[1]}>
-          <ElectricityStep />
-        </StepContainer>
-        <br/>
-        <StepContainerNoNotice title={"Water Consumption"}>
-        <WaterStep />
-      </StepContainerNoNotice>
-      </div>
+          <StepContainer title={steps[1]}>
+            <ElectricityStep data={formData.electricity} onChange={(updated) => setFormData(prev => ({ ...prev, electricity: updated }))} />
+          </StepContainer>
+          <br/>
+          <StepContainerNoNotice title={"Water Consumption"}>
+            <WaterStep data={formData.water} onChange={(updated) => setFormData(prev => ({ ...prev, water: updated }))} />
+          </StepContainerNoNotice>
+        </div>
       )}
 
       {currentStep === 2 && (
         <StepContainer title={steps[2]}>
-          <GHGReductionStep />
+          <GHGReductionStep data={formData.ghg} onChange={(updated) => setFormData(prev => ({ ...prev, ghg: updated }))}/>
         </StepContainer>
       )}
 
       {currentStep === 3 && (
         <StepContainer title={steps[3]}>
-          <TraceabilityStep />
+          <TraceabilityStep data={formData.traceability} onChange={(updated) => setFormData(prev => ({ ...prev, traceability: updated }))}/>
         </StepContainer>
       )}
 
       {currentStep === 4 && (
         <StepContainer title={steps[4]}>
-          <OffTakersStep />
+          <OffTakersStep data={formData.offtakers} onChange={(updated) => setFormData(prev => ({ ...prev, offtakers: updated }))} />
         </StepContainer>
       )}
 
       {currentStep === 5 && (
         <StepContainersplited title={steps[5]}>
-          <CertificationStep />
+          <CertificationStep data={formData.certifications} onChange={(updated) => setFormData(prev => ({ ...prev, certifications: updated }))}/>
         </StepContainersplited>
       )}
 
-      {/* Navigation Buttons */}
       <div className="flex justify-between mt-6">
         <div>
           {currentStep > 0 && (
@@ -202,7 +247,10 @@ export default function PlantDetailsPage() {
           ) : (
             <button
               className="px-4 py-2 bg-blue-600 text-white rounded-md shadow hover:bg-blue-700"
-              onClick={() => alert('Finished!')}
+              onClick={() => {
+                console.log('📝 Submitted Form Data:', formData);
+                router.push('/dashboards/manage-plants/loading');
+              }}
             >
               Finish
             </button>

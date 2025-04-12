@@ -1,23 +1,32 @@
 'use client';
-import React, { useState } from 'react';
+import React from 'react';
 import QuestionWithRadio from '../common/QuestionWithRadio';
 
-const TraceabilityStep: React.FC = () => {
-  // ✅ Types explicites
-  const [chainOfCustody, setChainOfCustody] = useState<string[]>([]);
-  const [traceabilityLevels, setTraceabilityLevels] = useState<string[]>([]);
-  const [customTraceability, setCustomTraceability] = useState('');
-  const [usesDigitalPlatform, setUsesDigitalPlatform] = useState<boolean | null>(null);
+interface Props {
+  data: {
+    chainOfCustody?: string[];
+    traceabilityLevels?: string[];
+    customTraceability?: string;
+    usesDigitalPlatform?: boolean | null;
+  };
+  onChange: (updated: any) => void;
+}
 
-  // ✅ Typage correct
+const TraceabilityStep: React.FC<Props> = ({ data, onChange }) => {
   const handleToggle = (
     list: string[],
-    setList: React.Dispatch<React.SetStateAction<string[]>>,
+    key: 'chainOfCustody' | 'traceabilityLevels',
     value: string
   ) => {
-    setList((prev) =>
-      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
-    );
+    const updated = list.includes(value)
+      ? list.filter((v) => v !== value)
+      : [...list, value];
+    onChange({ ...data, [key]: updated });
+
+    // Clear custom input if "Other" is deselected
+    if (key === 'traceabilityLevels' && value === 'Other' && list.includes('Other')) {
+      onChange({ ...data, traceabilityLevels: updated, customTraceability: '' });
+    }
   };
 
   return (
@@ -37,8 +46,10 @@ const TraceabilityStep: React.FC = () => {
               <input
                 type="checkbox"
                 value={option}
-                checked={chainOfCustody.includes(option)}
-                onChange={() => handleToggle(chainOfCustody, setChainOfCustody, option)}
+                checked={(data.chainOfCustody || []).includes(option)}
+                onChange={() =>
+                  handleToggle(data.chainOfCustody || [], 'chainOfCustody', option)
+                }
                 className="mr-2 accent-blue-600"
               />
               {option}
@@ -55,20 +66,25 @@ const TraceabilityStep: React.FC = () => {
             <input
               type="checkbox"
               value={option}
-              checked={traceabilityLevels.includes(option)}
-              onChange={() => handleToggle(traceabilityLevels, setTraceabilityLevels, option)}
+              checked={(data.traceabilityLevels || []).includes(option)}
+              onChange={() =>
+                handleToggle(data.traceabilityLevels || [], 'traceabilityLevels', option)
+              }
               className="accent-blue-600 font-medium mr-2"
             />
             <label>{option}</label>
-            {option === 'Other' && traceabilityLevels.includes('Other') && (
-              <input
-                type="text"
-                placeholder="Level"
-                value={customTraceability}
-                onChange={(e) => setCustomTraceability(e.target.value)}
-                className="ml-2 border font-medium px-2 py-1 text-sm rounded-md w-24"
-              />
-            )}
+            {option === 'Other' &&
+              (data.traceabilityLevels || []).includes('Other') && (
+                <input
+                  type="text"
+                  placeholder="Level"
+                  value={data.customTraceability || ''}
+                  onChange={(e) =>
+                    onChange({ ...data, customTraceability: e.target.value })
+                  }
+                  className="ml-2 border font-medium px-2 py-1 text-sm rounded-md w-24"
+                />
+              )}
           </div>
         ))}
       </div>
@@ -76,8 +92,8 @@ const TraceabilityStep: React.FC = () => {
       {/* 3. Digital platform tracking */}
       <QuestionWithRadio
         label="Are you using digital platforms for certification tracking?"
-        checked={usesDigitalPlatform}
-        onCheck={setUsesDigitalPlatform}
+        checked={data.usesDigitalPlatform ?? null}
+        onCheck={(val) => onChange({ ...data, usesDigitalPlatform: val })}
       />
     </div>
   );

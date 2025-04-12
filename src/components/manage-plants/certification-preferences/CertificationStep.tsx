@@ -1,19 +1,23 @@
 'use client';
-import React, { useState } from 'react';
+import React from 'react';
 import QuestionWithRadio from '../common/QuestionWithRadio';
 import SelectWithTags from '../common/SelectWithTags';
 
-const CertificationStep: React.FC = () => {
-  const [selectedSchemes, setSelectedSchemes] = useState<string[]>([]);
-  const [primaryReasons, setPrimaryReasons] = useState<string[]>([]);
-  const [certificationRequirements, setCertificationRequirements] = useState<string[]>([]);
-  const [requirementText, setRequirementText] = useState('');
-  const [labeling, setLabeling] = useState<string[]>([]);
-  const [hasBodyCriteria, setHasBodyCriteria] = useState<boolean | null>(null);
-  const [bodyCriteriaText, setBodyCriteriaText] = useState('');
-  const [hasPreferences, setHasPreferences] = useState<boolean | null>(null);
-  const [preferencesText, setPreferencesText] = useState('');
+interface Props {
+  data: {
+    selectedSchemes?: string[];
+    primaryReasons?: string[];
+    certificationRequirements?: string[];
+    requirementText?: string;
+    hasBodyCriteria?: boolean | null;
+    bodyCriteriaText?: string;
+    hasPreferences?: boolean | null;
+    preferencesText?: string;
+  };
+  onChange: (updated: any) => void;
+}
 
+const CertificationStep: React.FC<Props> = ({ data, onChange }) => {
   const schemeOptions = [
     'CertifHy EU RFNBO Scheme',
     'CertifHy NGC Scheme',
@@ -53,15 +57,15 @@ const CertificationStep: React.FC = () => {
   const reasons = ['Regulatory Compliance', 'Market Access', 'Carbon Credits', 'Corporate Sustainability'];
 
   const toggleItem = (
-    list: string[],
-    setList: React.Dispatch<React.SetStateAction<string[]>>,
+    list: string[] = [],
+    key: keyof Props['data'],
     value: string
   ) => {
-    setList((prev) =>
-      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
-    );
+    const updated = list.includes(value)
+      ? list.filter((v) => v !== value)
+      : [...list, value];
+    onChange({ ...data, [key]: updated });
   };
-  
 
   return (
     <div className="space-y-6 bg-transparent">
@@ -70,8 +74,8 @@ const CertificationStep: React.FC = () => {
         <SelectWithTags
           label="Which certification schemes are you currently considering?"
           options={schemeOptions}
-          selected={selectedSchemes}
-          onChange={setSelectedSchemes}
+          selected={data.selectedSchemes ?? []}
+          onChange={(val) => onChange({ ...data, selectedSchemes: val })}
         />
       </div>
 
@@ -84,8 +88,8 @@ const CertificationStep: React.FC = () => {
               <input
                 type="checkbox"
                 className="mr-2 accent-blue-600"
-                checked={primaryReasons.includes(reason)}
-                onChange={() => toggleItem(primaryReasons, setPrimaryReasons, reason)}
+                checked={data.primaryReasons?.includes(reason) || false}
+                onChange={() => toggleItem(data.primaryReasons ?? [], 'primaryReasons', reason)}
               />
               {reason}
             </label>
@@ -100,19 +104,21 @@ const CertificationStep: React.FC = () => {
               <input
                 type="checkbox"
                 className="mr-2 accent-blue-600"
-                checked={certificationRequirements.includes(option)}
-                onChange={() => toggleItem(certificationRequirements, setCertificationRequirements, option)}
+                checked={data.certificationRequirements?.includes(option) || false}
+                onChange={() =>
+                  toggleItem(data.certificationRequirements ?? [], 'certificationRequirements', option)
+                }
               />
               {option}
             </label>
           ))}
 
-          {certificationRequirements.includes('Mandatory compliance') && (
+          {data.certificationRequirements?.includes('Mandatory compliance') && (
             <textarea
               placeholder="Please describe which regulations or directives you need to comply with..."
               className="ml-8 mt-2 border w-1/2 px-2 py-1 rounded-md"
-              value={requirementText}
-              onChange={(e) => setRequirementText(e.target.value)}
+              value={data.requirementText || ''}
+              onChange={(e) => onChange({ ...data, requirementText: e.target.value })}
             />
           )}
         </div>
@@ -120,30 +126,30 @@ const CertificationStep: React.FC = () => {
         {/* Specific Body Criteria */}
         <QuestionWithRadio
           label="Do you have specific certification body selection criteria?"
-          checked={hasBodyCriteria}
-          onCheck={setHasBodyCriteria}
+          checked={data.hasBodyCriteria ?? null}
+          onCheck={(val) => onChange({ ...data, hasBodyCriteria: val })}
         />
-        {hasBodyCriteria && (
+        {data.hasBodyCriteria && (
           <textarea
             placeholder="Please describe your selection criteria..."
             className="ml-8 border w-1/2 px-2 py-1 rounded-md"
-            value={bodyCriteriaText}
-            onChange={(e) => setBodyCriteriaText(e.target.value)}
+            value={data.bodyCriteriaText || ''}
+            onChange={(e) => onChange({ ...data, bodyCriteriaText: e.target.value })}
           />
         )}
 
         {/* Additional Preferences */}
         <QuestionWithRadio
           label="Do you have any additional preferences we should consider?"
-          checked={hasPreferences}
-          onCheck={setHasPreferences}
+          checked={data.hasPreferences ?? null}
+          onCheck={(val) => onChange({ ...data, hasPreferences: val })}
         />
-        {hasPreferences && (
+        {data.hasPreferences && (
           <textarea
             placeholder="Add any specific preferences..."
             className="ml-8 border w-1/2 px-2 py-1 rounded-md"
-            value={preferencesText}
-            onChange={(e) => setPreferencesText(e.target.value)}
+            value={data.preferencesText || ''}
+            onChange={(e) => onChange({ ...data, preferencesText: e.target.value })}
           />
         )}
       </div>

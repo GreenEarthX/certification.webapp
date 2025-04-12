@@ -1,29 +1,34 @@
 'use client';
-import React, { useState } from 'react';
+import React from 'react';
 import SelectWithCheckboxTags from '../common/SelectWithTags';
 import QuestionWithPercentageInput from '../common/QuestionWithPercentageInput';
 import QuestionWithRadio from '../common/QuestionWithRadio';
 
-const GHGReductionStep: React.FC = () => {
-  const [methods, setMethods] = useState<string[]>([]);
-  const [accountingMethods, setAccountingMethods] = useState<string[]>([]);
-  const [reductionTarget, setReductionTarget] = useState<string>('');
-  const [auditorVerified, setAuditorVerified] = useState<boolean | null>(null);
-  const [scopes, setScopes] = useState<string[]>([]);
-  const [regulations, setRegulations] = useState<string[]>([]);
+interface Props {
+  data: {
+    methods?: string[];
+    regulations?: string[];
+    reductionTarget?: string;
+    auditorVerified?: boolean | null;
+    scopes?: string[];
+  };
+  onChange: (updated: any) => void;
+}
 
+const GHGReductionStep: React.FC<Props> = ({ data, onChange }) => {
   const toggleFromArray = (
     current: string[],
-    setFn: (val: string[]) => void,
-    value: string
+    value: string,
+    key: 'methods' | 'regulations' | 'scopes'
   ) => {
-    setFn(current.includes(value) ? current.filter(v => v !== value) : [...current, value]);
+    const updated = current.includes(value)
+      ? current.filter(v => v !== value)
+      : [...current, value];
+    onChange({ ...data, [key]: updated });
   };
 
   return (
     <div className="space-y-6">
-
-      {/* 1. Carbon footprint methods */}
       <SelectWithCheckboxTags
         label="What are the methodologies you use for calculating and reporting your carbon footprint? (select all that apply)"
         options={[
@@ -35,11 +40,10 @@ const GHGReductionStep: React.FC = () => {
           'PAS 2050',
           'PAS 2060',
         ]}
-        selected={methods}
-        onChange={setMethods}
+        selected={data.methods || []}
+        onChange={(val) => onChange({ ...data, methods: val })}
       />
 
-      {/* 2. GHG regulations/directives */}
       <SelectWithCheckboxTags
         label="What are the regulations/directives that you follow or plan to follow for GHG reporting and accounting:"
         options={[
@@ -53,26 +57,23 @@ const GHGReductionStep: React.FC = () => {
           'ESRS',
           'CRSD',
         ]}
-        selected={regulations}
-        onChange={setRegulations}
+        selected={data.regulations || []}
+        onChange={(val) => onChange({ ...data, regulations: val })}
       />
 
-      {/* 3. GHG reduction target */}
       <QuestionWithPercentageInput
         label="What is your current GHG reduction target?"
-        value={reductionTarget}
-        onChange={setReductionTarget}
+        value={data.reductionTarget || ''}
+        onChange={(val) => onChange({ ...data, reductionTarget: val })}
       />
 
-      {/* 4. Audit verified? */}
       <QuestionWithRadio
         label="Have you verified your product Carbon Footprint (PCF) calculations with a third-party auditor?"
-        checked={auditorVerified}
-        onCheck={setAuditorVerified}
+        checked={data.auditorVerified ?? null}
+        onCheck={(val) => onChange({ ...data, auditorVerified: val })}
       />
 
-      {/* 5. Emissions scopes (only shown if verified) */}
-      {auditorVerified && (
+      {data.auditorVerified && (
         <div className="ml-28">
           <p className="font-medium mb-2">Which emissions accounting methodology do you follow?</p>
           <div className="ml-36">
@@ -80,8 +81,10 @@ const GHGReductionStep: React.FC = () => {
               <label key={scope} className="block mb-1">
                 <input
                   type="checkbox"
-                  checked={scopes.includes(scope)}
-                  onChange={() => toggleFromArray(scopes, setScopes, scope)}
+                  checked={(data.scopes || []).includes(scope)}
+                  onChange={() =>
+                    toggleFromArray(data.scopes || [], scope, 'scopes')
+                  }
                   className="mr-2 accent-blue-600"
                 />
                 {scope}
