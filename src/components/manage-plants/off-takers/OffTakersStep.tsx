@@ -1,14 +1,18 @@
 'use client';
-import React, { useState } from 'react';
+import React from 'react';
 import QuestionWithRadio from '../common/QuestionWithRadio';
 import SelectWithCheckboxTags from '../common/SelectWithTags';
 
-const OffTakersStep: React.FC = () => {
-  const [offTakers, setOffTakers] = useState<string[]>([]);
-  const [requiresLabels, setRequiresLabels] = useState<boolean | null>(null);
-  const [labelsText, setLabelsText] = useState<string>('');
+interface Props {
+  data: {
+    offTakers?: string[];
+    requiresLabels?: boolean | null;
+    labelsText?: string;
+  };
+  onChange: (updated: any) => void;
+}
 
-
+const OffTakersStep: React.FC<Props> = ({ data, onChange }) => {
   const offTakerOptions = [
     'Refineries',
     'Chemical Manufacturers',
@@ -50,7 +54,6 @@ const OffTakersStep: React.FC = () => {
     'International Shipping Organizations',
     'Renewable Energy'
   ];
-  
 
   return (
     <div className="space-y-6">
@@ -58,25 +61,25 @@ const OffTakersStep: React.FC = () => {
       <SelectWithCheckboxTags
         label="Who are your primary Off-Takers?"
         options={offTakerOptions}
-        selected={offTakers}
-        onChange={setOffTakers}
+        selected={data.offTakers || []}
+        onChange={(selected) => onChange({ ...data, offTakers: selected })}
       />
 
       {/* Require Sustainability Labels */}
       <QuestionWithRadio
         label="Do your Off-Takers require specific sustainability labels?"
-        checked={requiresLabels}
-        onCheck={setRequiresLabels}
+        checked={data.requiresLabels ?? null}
+        onCheck={(val) => onChange({ ...data, requiresLabels: val })}
       />
-      {requiresLabels && (
+
+      {data.requiresLabels && (
         <textarea
           className="ml-8 border w-1/2 px-2 py-1 rounded-md"
           placeholder="Please describe which labels are required..."
-          value={labelsText}
-          onChange={(e) => setLabelsText(e.target.value)}
+          value={data.labelsText || ''}
+          onChange={(e) => onChange({ ...data, labelsText: e.target.value })}
         />
       )}
-      
     </div>
   );
 };

@@ -1,20 +1,36 @@
 'use client';
-import React, { useState } from 'react';
+import React from 'react';
 import { fuelConfigurations } from '@/utils/fuelConfigurations';
 import QuestionWithRadioAndInput from '../common/QuestionWithRadioAndInput';
 import QuestionWithMultiSelect from '../common/MultiSelectDropdown';
 import QuestionWithRadio from '../common/QuestionWithRadio';
 
-const MethanolFields: React.FC = () => {
-  const [mainChoice, setMainChoice] = useState<'fossil' | 'renewable' | null>(null);
-  const [ccus, setCcus] = useState(false);
-  const [ccusPercentage, setCcusPercentage] = useState('');
-  const [renewableType, setRenewableType] = useState<string>('');
-  const [feedstock, setFeedstock] = useState<string[]>([]);
-    const [isRFNBO, setIsRFNBO] = useState<boolean | null>(null);
+interface MethanolData {
+  mainChoice: 'fossil' | 'renewable' | null;
+  ccus: boolean;
+  ccusPercentage: string;
+  renewableType: string;
+  feedstock: string[];
+  isRFNBO: boolean | null;
+}
 
-  const feedstockQuestion = fuelConfigurations.methanol.find(q => q.label === 'What is the feedstock used?');
+interface Props {
+  data: Partial<MethanolData>;
+  onChange: (updated: Partial<MethanolData>) => void;
+}
+
+const MethanolFields: React.FC<Props> = ({ data, onChange }) => {
+  const feedstockQuestion = fuelConfigurations.methanol.find(
+    (q) => q.label === 'What is the feedstock used?'
+  );
   const subtypeOptions = fuelConfigurations.methanol_subtypes?.[0]?.options || [];
+
+  const mainChoice = data.mainChoice ?? null;
+  const ccus = data.ccus ?? false;
+  const ccusPercentage = data.ccusPercentage ?? '';
+  const renewableType = data.renewableType ?? '';
+  const feedstock = data.feedstock ?? [];
+  const isRFNBO = data.isRFNBO ?? null;
 
   return (
     <>
@@ -25,15 +41,19 @@ const MethanolFields: React.FC = () => {
         </label>
 
         <div className="ml-16 mb-2 flex flex-col gap-2">
+          {/* Fossil */}
           <label className="flex font-medium items-center gap-2">
             <input
               type="radio"
               name="methanol_type"
               checked={mainChoice === 'fossil'}
-              onChange={() => {
-                setMainChoice('fossil');
-                setRenewableType('');
-              }}
+              onChange={() =>
+                onChange({
+                  ...data,
+                  mainChoice: 'fossil',
+                  renewableType: '',
+                })
+              }
               className="accent-blue-600"
             />
             Fossil fuel-based Methanol
@@ -42,25 +62,29 @@ const MethanolFields: React.FC = () => {
           {mainChoice === 'fossil' && (
             <div className="ml-6">
               <QuestionWithRadioAndInput
-                label="Do you use Carbon Capture Storage Utilization CCUS ?"
+                label="Do you use Carbon Capture Storage Utilization CCUS?"
                 checked={ccus}
                 percentage={ccusPercentage}
-                onCheck={setCcus}
-                onPercentageChange={setCcusPercentage}
+                onCheck={(val) => onChange({ ...data, ccus: val })}
+                onPercentageChange={(val) => onChange({ ...data, ccusPercentage: val })}
               />
             </div>
           )}
 
+          {/* Renewable */}
           <label className="flex font-medium items-center gap-2">
             <input
               type="radio"
               name="methanol_type"
               checked={mainChoice === 'renewable'}
-              onChange={() => {
-                setMainChoice('renewable');
-                setCcus(false);
-                setCcusPercentage('');
-              }}
+              onChange={() =>
+                onChange({
+                  ...data,
+                  mainChoice: 'renewable',
+                  ccus: false,
+                  ccusPercentage: '',
+                })
+              }
               className="accent-blue-600"
             />
             Renewable and low carbon methanol
@@ -74,7 +98,7 @@ const MethanolFields: React.FC = () => {
                     type="radio"
                     name="renewable_subtype"
                     checked={renewableType === option}
-                    onChange={() => setRenewableType(option)}
+                    onChange={() => onChange({ ...data, renewableType: option })}
                     className="accent-blue-600"
                   />
                   {option}
@@ -91,14 +115,15 @@ const MethanolFields: React.FC = () => {
           label={feedstockQuestion.label}
           options={feedstockQuestion.options}
           selected={feedstock}
-          onChange={setFeedstock}
+          onChange={(val) => onChange({ ...data, feedstock: val })}
         />
       )}
 
+      {/* RFNBO */}
       <QuestionWithRadio
-              label="Is your fuel classified as RFNBO?"
-              checked={isRFNBO}
-              onCheck={setIsRFNBO}
+        label="Is your fuel classified as RFNBO?"
+        checked={isRFNBO}
+        onCheck={(val) => onChange({ ...data, isRFNBO: val })}
       />
     </>
   );

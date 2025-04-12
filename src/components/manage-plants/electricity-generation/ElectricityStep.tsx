@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React from 'react';
 import PPADetails from './PPADetails';
 import DirectGridDetails from './DirectGridDetails';
 import FileUpload from './FileUpload';
@@ -8,10 +8,17 @@ import GreenTariffsDetails from './GreenTariffsDetails';
 import SpotMarketDetails from './SpotMarketDetails';
 import ContractDifferenceDetails from './ContractDifferenceDetails';
 
-const ElectricityStep: React.FC = () => {
-  const [selectedSources, setSelectedSources] = useState<string[]>([]);
-  const [ppaFile, setPpaFile] = useState<File | null>(null);
-  const [energyMix, setEnergyMix] = useState([{ type: '', percent: '' }]);
+interface Props {
+  data: {
+    selectedSources: string[];
+    ppaFile: File | null;
+    energyMix: { type: string; percent: string }[];
+  };
+  onChange: (updated: Props['data']) => void;
+}
+
+const ElectricityStep: React.FC<Props> = ({ data, onChange }) => {
+  const { selectedSources = [], ppaFile = null, energyMix = [] } = data;
 
   const sources = [
     'PPA',
@@ -25,9 +32,10 @@ const ElectricityStep: React.FC = () => {
   const energyOptions = ['Solar', 'Wind', 'Hydropower', 'Geothermal', 'Other'];
 
   const toggleSource = (source: string) => {
-    setSelectedSources((prev) =>
-      prev.includes(source) ? prev.filter((s) => s !== source) : [...prev, source]
-    );
+    const updated = selectedSources.includes(source)
+      ? selectedSources.filter((s) => s !== source)
+      : [...selectedSources, source];
+    onChange({ ...data, selectedSources: updated });
   };
 
   const totalPercentage = energyMix.reduce((sum, entry) => sum + Number(entry.percent || 0), 0);
@@ -50,19 +58,19 @@ const ElectricityStep: React.FC = () => {
       updated[index].percent = Math.min(parsed, remaining).toString();
     }
 
-    setEnergyMix(updated);
+    onChange({ ...data, energyMix: updated });
   };
 
   const addEnergySource = () => {
     if (totalPercentage < 100) {
-      setEnergyMix([...energyMix, { type: '', percent: '' }]);
+      onChange({ ...data, energyMix: [...energyMix, { type: '', percent: '' }] });
     }
   };
 
   const removeEnergySource = (index: number) => {
     const updated = [...energyMix];
     updated.splice(index, 1);
-    setEnergyMix(updated);
+    onChange({ ...data, energyMix: updated });
   };
 
   return (
@@ -90,7 +98,7 @@ const ElectricityStep: React.FC = () => {
                   <>
                     {source === 'PPA' && (
                       <>
-                        <FileUpload label="Submit" onChange={setPpaFile} />
+                        <FileUpload label="Submit" onChange={(file) => onChange({ ...data, ppaFile: file })} />
                         <PPADetails />
                       </>
                     )}
