@@ -4,7 +4,10 @@ import GoOQuestion from './GoOQuestion';
 import FileUpload from './FileUpload';
 
 const PPADetails: React.FC = () => {
-  const [selectedPPA, setSelectedPPA] = useState<'on-site' | 'off-site' | null>(null);
+  const [selectedPPA, setSelectedPPA] = useState<{ onSite: boolean; offSite: boolean }>({
+    onSite: false,
+    offSite: false,
+  });
 
   const [onSiteGoO, setOnSiteGoO] = useState<boolean | null>(null);
   const [onSiteFile, setOnSiteFile] = useState<File | null>(null);
@@ -13,22 +16,28 @@ const PPADetails: React.FC = () => {
   const [offSiteGoO, setOffSiteGoO] = useState<boolean | null>(null);
   const [offSiteFile, setOffSiteFile] = useState<File | null>(null);
 
+  const handleCheckboxChange = (key: 'onSite' | 'offSite') => {
+    setSelectedPPA((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
+
   return (
     <div className="ml-4 mt-2">
       <div className="flex flex-col gap-4">
-        {/* On-site radio */}
-        <label className="flex items-center gap-2">
+        {/* On-site PPA checkbox */}
+        <label className="flex font-medium  items-center gap-2">
           <input
-            type="radio"
-            name="ppa_type"
-            checked={selectedPPA === 'on-site'}
-            onChange={() => setSelectedPPA('on-site')}
-            className="accent-blue-600"
+            type="checkbox"
+            checked={selectedPPA.onSite}
+            onChange={() => handleCheckboxChange('onSite')}
+            className="accent-blue-600 font-medium "
           />
           On-site PPA
         </label>
 
-        {selectedPPA === 'on-site' && (
+        {selectedPPA.onSite && (
           <div className="ml-4">
             <GoOQuestion
               checked={onSiteGoO}
@@ -39,22 +48,21 @@ const PPADetails: React.FC = () => {
           </div>
         )}
 
-        {/* Off-site radio */}
-        <label className="flex items-center gap-2">
+        {/* Off-site PPA checkbox */}
+        <label className="flex items-center font-medium  gap-2">
           <input
-            type="radio"
-            name="ppa_type"
-            checked={selectedPPA === 'off-site'}
-            onChange={() => setSelectedPPA('off-site')}
-            className="accent-blue-600"
+            type="checkbox"
+            checked={selectedPPA.offSite}
+            onChange={() => handleCheckboxChange('offSite')}
+            className="accent-blue-600 font-medium "
           />
           Off-site PPA
         </label>
 
-        {selectedPPA === 'off-site' && (
+        {selectedPPA.offSite && (
           <div className="ml-4 flex flex-col gap-4">
             <div>
-              <label className="flex items-center gap-2">Grid injection & withdrawal</label>
+              <label className="flex items-center font-medium  gap-2">Grid injection & withdrawal</label>
               <FileUpload label="Submit" onChange={setGridFile} />
             </div>
             <GoOQuestion
