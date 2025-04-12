@@ -63,7 +63,7 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({ recommen
           </List>
 
           <Typography variant="body2" sx={{ mt: 2 }}>
-            <strong>Certifying Entities:</strong> {recommendation.certifyingEntity}
+            <strong>Certification Bodies:</strong> {recommendation.certifyingEntity}
           </Typography>
           <Typography variant="body2" sx={{ mb: 2 }}>
             <strong>Validity:</strong> {recommendation.validity}

@@ -75,9 +75,9 @@ export default function PlantDashboard() {
           <br/>
           <CertificationRequests
             requests={[
-              { name: "CertifyH™ Scheme", entity: "CertifyH", progress: 50 },
-              { name: "Sustainability Certification", entity: "DNV", progress: 75 },
-              { name: "Rheinland H2.21", entity: "TÜV", progress: 25 },
+              { name: "PosHYdon Certification", entity: "DNV", progress: 50 },
+              { name: "GHG Reduction Certificate", entity: "Verra", progress: 75 },
+              { name: "SÜD CMS 70", entity: "TÜV SÜD", progress: 25 },
             ]}
           />
         </section>
