@@ -1,5 +1,5 @@
 'use client';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import QuestionWithRadio from '../common/QuestionWithRadio';
 import SelectWithTags from '../common/SelectWithTags';
 
@@ -18,6 +18,16 @@ interface Props {
 }
 
 const CertificationStep: React.FC<Props> = ({ data, onChange }) => {
+  const [localData, setLocalData] = useState(data);
+
+  useEffect(() => {
+    setLocalData(data); // Sync with parent
+  }, [data]);
+
+  const handleBlur = () => {
+    onChange(localData);
+  };
+
   const schemeOptions = [
     'CertifHy EU RFNBO Scheme',
     'CertifHy NGC Scheme',
@@ -64,7 +74,10 @@ const CertificationStep: React.FC<Props> = ({ data, onChange }) => {
     const updated = list.includes(value)
       ? list.filter((v) => v !== value)
       : [...list, value];
-    onChange({ ...data, [key]: updated });
+
+    const newData = { ...localData, [key]: updated };
+    setLocalData(newData);
+    onChange(newData); // immediate update for checkbox
   };
 
   return (
@@ -74,8 +87,12 @@ const CertificationStep: React.FC<Props> = ({ data, onChange }) => {
         <SelectWithTags
           label="Which certification schemes are you currently considering?"
           options={schemeOptions}
-          selected={data.selectedSchemes ?? []}
-          onChange={(val) => onChange({ ...data, selectedSchemes: val })}
+          selected={localData.selectedSchemes ?? []}
+          onChange={(val) => {
+            const updated = { ...localData, selectedSchemes: val };
+            setLocalData(updated);
+            onChange(updated);
+          }}
         />
       </div>
 
@@ -88,8 +105,10 @@ const CertificationStep: React.FC<Props> = ({ data, onChange }) => {
               <input
                 type="checkbox"
                 className="mr-2 accent-blue-600"
-                checked={data.primaryReasons?.includes(reason) || false}
-                onChange={() => toggleItem(data.primaryReasons ?? [], 'primaryReasons', reason)}
+                checked={localData.primaryReasons?.includes(reason) || false}
+                onChange={() =>
+                  toggleItem(localData.primaryReasons ?? [], 'primaryReasons', reason)
+                }
               />
               {reason}
             </label>
@@ -104,21 +123,24 @@ const CertificationStep: React.FC<Props> = ({ data, onChange }) => {
               <input
                 type="checkbox"
                 className="mr-2 accent-blue-600"
-                checked={data.certificationRequirements?.includes(option) || false}
+                checked={localData.certificationRequirements?.includes(option) || false}
                 onChange={() =>
-                  toggleItem(data.certificationRequirements ?? [], 'certificationRequirements', option)
+                  toggleItem(localData.certificationRequirements ?? [], 'certificationRequirements', option)
                 }
               />
               {option}
             </label>
           ))}
 
-          {data.certificationRequirements?.includes('Mandatory compliance') && (
+          {localData.certificationRequirements?.includes('Mandatory compliance') && (
             <textarea
               placeholder="Please describe which regulations or directives you need to comply with..."
               className="ml-8 mt-2 border w-1/2 px-2 py-1 rounded-md"
-              value={data.requirementText || ''}
-              onChange={(e) => onChange({ ...data, requirementText: e.target.value })}
+              value={localData.requirementText || ''}
+              onChange={(e) =>
+                setLocalData((prev) => ({ ...prev, requirementText: e.target.value }))
+              }
+              onBlur={handleBlur}
             />
           )}
         </div>
@@ -126,30 +148,44 @@ const CertificationStep: React.FC<Props> = ({ data, onChange }) => {
         {/* Specific Body Criteria */}
         <QuestionWithRadio
           label="Do you have specific certification body selection criteria?"
-          checked={data.hasBodyCriteria ?? null}
-          onCheck={(val) => onChange({ ...data, hasBodyCriteria: val })}
+          checked={localData.hasBodyCriteria ?? null}
+          onCheck={(val) => {
+            const updated = { ...localData, hasBodyCriteria: val };
+            setLocalData(updated);
+            onChange(updated);
+          }}
         />
-        {data.hasBodyCriteria && (
+        {localData.hasBodyCriteria && (
           <textarea
             placeholder="Please describe your selection criteria..."
             className="ml-8 border w-1/2 px-2 py-1 rounded-md"
-            value={data.bodyCriteriaText || ''}
-            onChange={(e) => onChange({ ...data, bodyCriteriaText: e.target.value })}
+            value={localData.bodyCriteriaText || ''}
+            onChange={(e) =>
+              setLocalData((prev) => ({ ...prev, bodyCriteriaText: e.target.value }))
+            }
+            onBlur={handleBlur}
           />
         )}
 
         {/* Additional Preferences */}
         <QuestionWithRadio
           label="Do you have any additional preferences we should consider?"
-          checked={data.hasPreferences ?? null}
-          onCheck={(val) => onChange({ ...data, hasPreferences: val })}
+          checked={localData.hasPreferences ?? null}
+          onCheck={(val) => {
+            const updated = { ...localData, hasPreferences: val };
+            setLocalData(updated);
+            onChange(updated);
+          }}
         />
-        {data.hasPreferences && (
+        {localData.hasPreferences && (
           <textarea
             placeholder="Add any specific preferences..."
             className="ml-8 border w-1/2 px-2 py-1 rounded-md"
-            value={data.preferencesText || ''}
-            onChange={(e) => onChange({ ...data, preferencesText: e.target.value })}
+            value={localData.preferencesText || ''}
+            onChange={(e) =>
+              setLocalData((prev) => ({ ...prev, preferencesText: e.target.value }))
+            }
+            onBlur={handleBlur}
           />
         )}
       </div>

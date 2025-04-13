@@ -1,5 +1,5 @@
 'use client';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import PPADetails from './PPADetails';
 import DirectGridDetails from './DirectGridDetails';
 import FileUpload from './FileUpload';
@@ -13,12 +13,23 @@ interface Props {
     selectedSources: string[];
     ppaFile: File | null;
     energyMix: { type: string; percent: string }[];
+    ppaDetails: any;
+    directGridDetails: any;
+    selfGenerationDetails: any;
+    greenTariffsDetails: any;
+    spotMarketDetails: any;
+    contractDiffDetails: any;
   };
-  onChange: (updated: Props['data']) => void;
+  onChange: (key: keyof Props['data'], value: any) => void;
 }
 
 const ElectricityStep: React.FC<Props> = ({ data, onChange }) => {
-  const { selectedSources = [], ppaFile = null, energyMix = [] } = data;
+  const { selectedSources = [], ppaFile = null } = data;
+  const [localEnergyMix, setLocalEnergyMix] = useState(data.energyMix || []);
+
+  useEffect(() => {
+    setLocalEnergyMix(data.energyMix || []);
+  }, [data.energyMix]);
 
   const sources = [
     'PPA',
@@ -35,13 +46,13 @@ const ElectricityStep: React.FC<Props> = ({ data, onChange }) => {
     const updated = selectedSources.includes(source)
       ? selectedSources.filter((s) => s !== source)
       : [...selectedSources, source];
-    onChange({ ...data, selectedSources: updated });
+    onChange('selectedSources', updated);
   };
 
-  const totalPercentage = energyMix.reduce((sum, entry) => sum + Number(entry.percent || 0), 0);
+  const totalPercentage = localEnergyMix.reduce((sum, entry) => sum + Number(entry.percent || 0), 0);
 
   const updateEntry = (index: number, field: 'type' | 'percent', value: string) => {
-    const updated = [...energyMix];
+    const updated = [...localEnergyMix];
 
     if (field === 'type') {
       const cleanVal = value.startsWith('Other:') ? 'Other:' : value;
@@ -58,19 +69,26 @@ const ElectricityStep: React.FC<Props> = ({ data, onChange }) => {
       updated[index].percent = Math.min(parsed, remaining).toString();
     }
 
-    onChange({ ...data, energyMix: updated });
+    setLocalEnergyMix(updated);
+  };
+
+  const saveOnBlur = () => {
+    onChange('energyMix', localEnergyMix);
   };
 
   const addEnergySource = () => {
     if (totalPercentage < 100) {
-      onChange({ ...data, energyMix: [...energyMix, { type: '', percent: '' }] });
+      const updated = [...localEnergyMix, { type: '', percent: '' }];
+      setLocalEnergyMix(updated);
+      onChange('energyMix', updated); // sync with parent to keep consistency
     }
   };
 
   const removeEnergySource = (index: number) => {
-    const updated = [...energyMix];
+    const updated = [...localEnergyMix];
     updated.splice(index, 1);
-    onChange({ ...data, energyMix: updated });
+    setLocalEnergyMix(updated);
+    onChange('energyMix', updated);
   };
 
   return (
@@ -98,15 +116,46 @@ const ElectricityStep: React.FC<Props> = ({ data, onChange }) => {
                   <>
                     {source === 'PPA' && (
                       <>
-                        <FileUpload label="Submit" onChange={(file) => onChange({ ...data, ppaFile: file })} />
-                        <PPADetails />
+                        <FileUpload
+                          label="Submit"
+                          onChange={(file) => onChange('ppaFile', file)}
+                        />
+                        <PPADetails
+                          data={data.ppaDetails}
+                          onChange={(val) => onChange('ppaDetails', val)}
+                        />
                       </>
                     )}
-                    {source === 'Direct grid purchase' && <DirectGridDetails />}
-                    {source === 'Self generation (on site renewables)' && <SelfGenerationDetails />}
-                    {source === 'Green Tariffs' && <GreenTariffsDetails />}
-                    {source === 'Spot market purchase' && <SpotMarketDetails />}
-                    {source === 'Contract for difference' && <ContractDifferenceDetails />}
+                    {source === 'Direct grid purchase' && (
+                      <DirectGridDetails
+                        data={data.directGridDetails}
+                        onChange={(val) => onChange('directGridDetails', val)}
+                      />
+                    )}
+                    {source === 'Self generation (on site renewables)' && (
+                      <SelfGenerationDetails
+                        data={data.selfGenerationDetails}
+                        onChange={(val) => onChange('selfGenerationDetails', val)}
+                      />
+                    )}
+                    {source === 'Green Tariffs' && (
+                      <GreenTariffsDetails
+                        data={data.greenTariffsDetails}
+                        onChange={(val) => onChange('greenTariffsDetails', val)}
+                      />
+                    )}
+                    {source === 'Spot market purchase' && (
+                      <SpotMarketDetails
+                        data={data.spotMarketDetails}
+                        onChange={(val) => onChange('spotMarketDetails', val)}
+                      />
+                    )}
+                    {source === 'Contract for difference' && (
+                      <ContractDifferenceDetails
+                        data={data.contractDiffDetails}
+                        onChange={(val) => onChange('contractDiffDetails', val)}
+                      />
+                    )}
                   </>
                 )}
               </div>
@@ -118,7 +167,7 @@ const ElectricityStep: React.FC<Props> = ({ data, onChange }) => {
       {/* Energy Mix Section */}
       <p className="font-medium mb-2 text-black-900">Input your energy mix:</p>
 
-      {energyMix.map((entry, index) => (
+      {localEnergyMix.map((entry, index) => (
         <div key={index} className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center mb-2">
           <div className="flex items-center gap-4">
             <label className="text-sm font-medium whitespace-nowrap w-36">Type of energy:</label>
@@ -127,6 +176,7 @@ const ElectricityStep: React.FC<Props> = ({ data, onChange }) => {
                 type="text"
                 value={entry.type.replace('Other:', '')}
                 onChange={(e) => updateEntry(index, 'type', 'Other:' + e.target.value)}
+                onBlur={saveOnBlur}
                 placeholder="Enter energy type"
                 className="border px-3 py-1.5 rounded-md text-sm flex-1 bg-white"
               />
@@ -141,6 +191,7 @@ const ElectricityStep: React.FC<Props> = ({ data, onChange }) => {
                     updateEntry(index, 'type', value);
                   }
                 }}
+                onBlur={saveOnBlur}
                 className="border px-3 py-1.5 rounded-md text-sm flex-1 bg-white"
               >
                 <option value="">Select</option>
@@ -148,9 +199,7 @@ const ElectricityStep: React.FC<Props> = ({ data, onChange }) => {
                   <option
                     key={opt}
                     value={opt}
-                    disabled={
-                      energyMix.some((e, i) => e.type === opt && i !== index)
-                    }
+                    disabled={localEnergyMix.some((e, i) => e.type === opt && i !== index)}
                   >
                     {opt}
                   </option>
@@ -165,12 +214,14 @@ const ElectricityStep: React.FC<Props> = ({ data, onChange }) => {
               placeholder="%"
               value={entry.percent}
               onChange={(e) => updateEntry(index, 'percent', e.target.value)}
+              onBlur={saveOnBlur}
               className="border px-3 py-1.5 rounded-md text-sm w-24"
               max={100 - totalPercentage + Number(entry.percent || 0)}
             />
             <span className="text-sm font-medium">%</span>
-            {energyMix.length > 1 && (
+            {localEnergyMix.length > 1 && (
               <button
+                type="button"
                 onClick={() => removeEnergySource(index)}
                 className="text-red-500 text-sm ml-2"
               >
@@ -183,6 +234,7 @@ const ElectricityStep: React.FC<Props> = ({ data, onChange }) => {
 
       {totalPercentage < 100 && (
         <button
+          type="button"
           onClick={addEnergySource}
           className="mt-2 px-3 py-1 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700"
         >

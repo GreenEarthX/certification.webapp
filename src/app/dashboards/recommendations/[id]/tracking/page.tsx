@@ -111,7 +111,7 @@ const TrackingPage = () => {
             <th className="py-3 px-4 text-gray-700 font-semibold">Task</th>
             <th className="py-3 px-4 text-gray-700 font-semibold">Status</th>
             <th className="py-3 px-4 text-gray-700 font-semibold">Deadline</th>
-            <th className="py-3 px-4 text-gray-700 font-semibold">To Do</th>
+            <th className="py-3 px-4 text-gray-700 font-semibold">Progress Rate</th>
           </tr>
         </thead>
         <tbody>

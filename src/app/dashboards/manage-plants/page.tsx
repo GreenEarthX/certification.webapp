@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect,useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import HydrogenFields from '@/components/manage-plants/general-info/HydrogenFields';
 import AmmoniaFields from '@/components/manage-plants/general-info/AmmoniaFields';
 import ENGFields from '@/components/manage-plants/general-info/ENGFields';
@@ -37,6 +37,12 @@ interface ElectricityData {
   selectedSources: string[];
   ppaFile: File | null;
   energyMix: { type: string; percent: string }[];
+  ppaDetails: any;
+  directGridDetails: any;
+  selfGenerationDetails: any;
+  greenTariffsDetails: any;
+  spotMarketDetails: any;
+  contractDiffDetails: any;
 }
 
 interface WaterData {
@@ -60,7 +66,6 @@ interface FormDataType {
   certifications: any;
 }
 
-
 export default function PlantDetailsPage() {
   const [currentStep, setCurrentStep] = useState(0);
   const [fuelType, setFuelType] = useState('');
@@ -79,6 +84,12 @@ export default function PlantDetailsPage() {
       selectedSources: [],
       ppaFile: null,
       energyMix: [{ type: '', percent: '' }],
+      ppaDetails: {},
+      directGridDetails: {},
+      selfGenerationDetails: {},
+      greenTariffsDetails: {},
+      spotMarketDetails: {},
+      contractDiffDetails: {},
     },
     water: {
       waterConsumption: '',
@@ -90,7 +101,6 @@ export default function PlantDetailsPage() {
     offtakers: {},
     certifications: {},
   });
-  
 
   useEffect(() => {
     const fetchPlants = async () => {
@@ -145,12 +155,12 @@ export default function PlantDetailsPage() {
   );
 
   return (
-    <div className="w-full p-8  min-h-screen">
+    <form className="w-full p-8 min-h-screen" autoComplete="off">
       <div className="flex justify-between items-center p-4 rounded-lg">
         <FacilityDropdown selectedPlant={selectedPlantId} onChange={(e) => setSelectedPlantId(e.target.value)} />
       </div>
-      <br/>
-      <div className="flex justify-between items-center  pb-4 mb-8 relative">
+      <br />
+      <div className="flex justify-between items-center pb-4 mb-8 relative">
         <div className="absolute top-[5px] left-[6%] right-[7%] h-[1px] bg-gray-400 z-0"></div>
         {steps.map((step, index) => (
           <div key={step} className="flex flex-col items-center cursor-pointer z-10" onClick={() => handleStepClick(index)}>
@@ -160,6 +170,7 @@ export default function PlantDetailsPage() {
         ))}
       </div>
 
+      {/* Steps */}
       {currentStep === 0 && (
         <StepContainer title={steps[0]}>
           <div className="flex items-center mb-4">
@@ -192,10 +203,21 @@ export default function PlantDetailsPage() {
       {currentStep === 1 && (
         <div>
           <StepContainer title={steps[1]}>
-            <ElectricityStep data={formData.electricity} onChange={(updated) => setFormData(prev => ({ ...prev, electricity: updated }))} />
+            <ElectricityStep
+              data={formData.electricity}
+              onChange={(key, value) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  electricity: {
+                    ...prev.electricity,
+                    [key]: value,
+                  },
+                }))
+              }
+            />
           </StepContainer>
-          <br/>
-          <StepContainerNoNotice title={"Water Consumption"}>
+          <br />
+          <StepContainerNoNotice title={'Water Consumption'}>
             <WaterStep data={formData.water} onChange={(updated) => setFormData(prev => ({ ...prev, water: updated }))} />
           </StepContainerNoNotice>
         </div>
@@ -203,13 +225,13 @@ export default function PlantDetailsPage() {
 
       {currentStep === 2 && (
         <StepContainer title={steps[2]}>
-          <GHGReductionStep data={formData.ghg} onChange={(updated) => setFormData(prev => ({ ...prev, ghg: updated }))}/>
+          <GHGReductionStep data={formData.ghg} onChange={(updated) => setFormData(prev => ({ ...prev, ghg: updated }))} />
         </StepContainer>
       )}
 
       {currentStep === 3 && (
         <StepContainer title={steps[3]}>
-          <TraceabilityStep data={formData.traceability} onChange={(updated) => setFormData(prev => ({ ...prev, traceability: updated }))}/>
+          <TraceabilityStep data={formData.traceability} onChange={(updated) => setFormData(prev => ({ ...prev, traceability: updated }))} />
         </StepContainer>
       )}
 
@@ -221,7 +243,7 @@ export default function PlantDetailsPage() {
 
       {currentStep === 5 && (
         <StepContainersplited title={steps[5]}>
-          <CertificationStep data={formData.certifications} onChange={(updated) => setFormData(prev => ({ ...prev, certifications: updated }))}/>
+          <CertificationStep data={formData.certifications} onChange={(updated) => setFormData(prev => ({ ...prev, certifications: updated }))} />
         </StepContainersplited>
       )}
 
@@ -229,23 +251,27 @@ export default function PlantDetailsPage() {
         <div>
           {currentStep > 0 && (
             <button
-              className="px-4 py-2 bg-blue-100 text-blue-600 rounded-md shadow hover:bg-blue-200"
-              onClick={prevStep}
-            >
-              Back
-            </button>
+            type="button" // 🔴 This line prevents form submission!
+            className="px-4 py-2 bg-blue-100 text-blue-600 rounded-md shadow hover:bg-blue-200"
+            onClick={prevStep}
+          >
+            Back
+          </button>
           )}
         </div>
         <div>
           {currentStep < steps.length - 1 ? (
             <button
-              className="px-4 py-2 bg-blue-600 text-white rounded-md shadow hover:bg-blue-700"
-              onClick={nextStep}
-            >
-              Next
-            </button>
+            type="button" // 🔴 Same here!
+            className="px-4 py-2 bg-blue-600 text-white rounded-md shadow hover:bg-blue-700"
+            onClick={nextStep}
+          >
+            Next
+          </button>
+          
           ) : (
             <button
+              type="button" // ✅ Prevent reload here too
               className="px-4 py-2 bg-blue-600 text-white rounded-md shadow hover:bg-blue-700"
               onClick={() => {
                 console.log('📝 Submitted Form Data:', formData);
@@ -257,6 +283,6 @@ export default function PlantDetailsPage() {
           )}
         </div>
       </div>
-    </div>
+    </form>
   );
 }
