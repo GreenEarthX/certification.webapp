@@ -218,7 +218,7 @@ class CertificationService {
   async uploadFileToExtractAPI(file: Blob) {
     const form = new FormData();
     form.append('file', file);
-    const response = await fetch("http://localhost:8000/extract/", {
+    const response = await fetch("http://10.0.2.38:8000/extract/", {
       method: "POST",
       body: form,
     });
