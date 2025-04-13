@@ -62,32 +62,35 @@ const TraceabilityStep: React.FC<Props> = ({ data, onChange }) => {
       <div>
         <p className="font-medium mb-2">What level of traceability is required by your customers?</p>
         {['Batch-level', 'Real-time', 'Blockchain-based', 'ERP system', 'Other'].map((option) => (
-          <div key={option} className="flex font-medium items-center mb-1 ml-8">
-            <input
-              type="checkbox"
-              value={option}
-              checked={(data.traceabilityLevels || []).includes(option)}
-              onChange={() =>
-                handleToggle(data.traceabilityLevels || [], 'traceabilityLevels', option)
-              }
-              className="accent-blue-600 font-medium mr-2"
-            />
-            <label>{option}</label>
-            {option === 'Other' &&
-              (data.traceabilityLevels || []).includes('Other') && (
-                <input
-                  type="text"
-                  placeholder="Level"
-                  value={data.customTraceability || ''}
-                  onChange={(e) =>
-                    onChange({ ...data, customTraceability: e.target.value })
-                  }
-                  className="ml-2 border font-medium px-2 py-1 text-sm rounded-md w-24"
-                />
-              )}
+          <div key={option} className="ml-8">
+            <label className="flex font-medium items-center mb-1 cursor-pointer">
+              <input
+                type="checkbox"
+                value={option}
+                checked={(data.traceabilityLevels || []).includes(option)}
+                onChange={() =>
+                  handleToggle(data.traceabilityLevels || [], 'traceabilityLevels', option)
+                }
+                className="accent-blue-600 font-medium mr-2"
+              />
+              {option}
+              {option === 'Other' &&
+                (data.traceabilityLevels || []).includes('Other') && (
+                  <input
+                    type="text"
+                    placeholder="Level"
+                    value={data.customTraceability || ''}
+                    onChange={(e) =>
+                      onChange({ ...data, customTraceability: e.target.value })
+                    }
+                    className="ml-2 border font-medium px-2 py-1 text-sm rounded-md w-24"
+                  />
+                )}
+            </label>
           </div>
         ))}
       </div>
+
 
       {/* 3. Digital platform tracking */}
       <QuestionWithRadio

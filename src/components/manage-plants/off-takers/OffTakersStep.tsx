@@ -1,5 +1,5 @@
 'use client';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import QuestionWithRadio from '../common/QuestionWithRadio';
 import SelectWithCheckboxTags from '../common/SelectWithTags';
 
@@ -13,6 +13,16 @@ interface Props {
 }
 
 const OffTakersStep: React.FC<Props> = ({ data, onChange }) => {
+  const [localData, setLocalData] = useState(data);
+
+  useEffect(() => {
+    setLocalData(data); // Sync if props update
+  }, [data]);
+
+  const handleBlur = () => {
+    onChange(localData);
+  };
+
   const offTakerOptions = [
     'Refineries',
     'Chemical Manufacturers',
@@ -61,23 +71,35 @@ const OffTakersStep: React.FC<Props> = ({ data, onChange }) => {
       <SelectWithCheckboxTags
         label="Who are your primary Off-Takers?"
         options={offTakerOptions}
-        selected={data.offTakers || []}
-        onChange={(selected) => onChange({ ...data, offTakers: selected })}
+        selected={localData.offTakers || []}
+        onChange={(selected) => {
+          const updated = { ...localData, offTakers: selected };
+          setLocalData(updated);
+          onChange(updated); // Save immediately for checkboxes
+        }}
       />
 
       {/* Require Sustainability Labels */}
       <QuestionWithRadio
         label="Do your Off-Takers require specific sustainability labels?"
-        checked={data.requiresLabels ?? null}
-        onCheck={(val) => onChange({ ...data, requiresLabels: val })}
+        checked={localData.requiresLabels ?? null}
+        onCheck={(val) => {
+          const updated = { ...localData, requiresLabels: val };
+          setLocalData(updated);
+          onChange(updated); // Save immediately
+        }}
       />
 
-      {data.requiresLabels && (
+      {/* Sustainability Label Details */}
+      {localData.requiresLabels && (
         <textarea
           className="ml-8 border w-1/2 px-2 py-1 rounded-md"
           placeholder="Please describe which labels are required..."
-          value={data.labelsText || ''}
-          onChange={(e) => onChange({ ...data, labelsText: e.target.value })}
+          value={localData.labelsText || ''}
+          onChange={(e) =>
+            setLocalData((prev) => ({ ...prev, labelsText: e.target.value }))
+          }
+          onBlur={handleBlur} // ✅ Save on blur only
         />
       )}
     </div>
