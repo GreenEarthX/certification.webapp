@@ -1,80 +1,114 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { fuelConfigurations } from '@/utils/fuelConfigurations';
 import QuestionWithRadioAndInput from '../common/QuestionWithRadioAndInput';
 import QuestionWithMultiSelect from '../common/MultiSelectDropdown';
 import QuestionWithRadio from '../common/QuestionWithRadio';
 
-const MethanolFields: React.FC = () => {
-  const [mainChoice, setMainChoice] = useState<'fossil' | 'renewable' | null>(null);
-  const [ccus, setCcus] = useState(false);
-  const [ccusPercentage, setCcusPercentage] = useState('');
-  const [renewableType, setRenewableType] = useState<string>('');
-  const [feedstock, setFeedstock] = useState<string[]>([]);
-    const [isRFNBO, setIsRFNBO] = useState<boolean | null>(null);
+interface MethanolData {
+  mainChoice: 'fossil' | 'renewable' | null;
+  ccus: boolean;
+  ccusPercentage: string;
+  renewableType: string;
+  feedstock: string[];
+  isRFNBO: boolean | null;
+}
 
-  const feedstockQuestion = fuelConfigurations.methanol.find(q => q.label === 'What is the feedstock used?');
+interface Props {
+  data: Partial<MethanolData>;
+  onChange: (updated: Partial<MethanolData>) => void;
+}
+
+const MethanolFields: React.FC<Props> = ({ data, onChange }) => {
+  const feedstockQuestion = fuelConfigurations.methanol.find(
+    (q) => q.label === 'What is the feedstock used?'
+  );
   const subtypeOptions = fuelConfigurations.methanol_subtypes?.[0]?.options || [];
+
+  const [localData, setLocalData] = useState<Partial<MethanolData>>(data);
+  const [ccusPercentInput, setCcusPercentInput] = useState(data.ccusPercentage || '');
+
+  useEffect(() => {
+    setLocalData(data);
+    setCcusPercentInput(data.ccusPercentage || '');
+  }, [data]);
+
+  const updateAndSync = (partial: Partial<MethanolData>) => {
+    const updated = { ...localData, ...partial };
+    setLocalData(updated);
+    onChange(updated);
+  };
+
+  const handleCCUSPercentageBlur = () => {
+    updateAndSync({ ccusPercentage: ccusPercentInput });
+  };
 
   return (
     <>
-      {/* Main question */}
+      {/* Main choice */}
       <div className="mb-4">
-        <label className="flex items-center gap-2 mr-4 accent-blue-600 whitespace-nowrap">
+        <label className="flex items-center gap-2 mr-4 font-medium accent-blue-600 whitespace-nowrap">
           Are you producing:
         </label>
 
         <div className="ml-16 mb-2 flex flex-col gap-2">
-          <label className="flex items-center gap-2">
+          {/* Fossil-based */}
+          <label className="flex font-medium items-center gap-2">
             <input
               type="radio"
               name="methanol_type"
-              checked={mainChoice === 'fossil'}
-              onChange={() => {
-                setMainChoice('fossil');
-                setRenewableType('');
-              }}
+              checked={localData.mainChoice === 'fossil'}
+              onChange={() =>
+                updateAndSync({
+                  mainChoice: 'fossil',
+                  renewableType: '',
+                })
+              }
               className="accent-blue-600"
             />
             Fossil fuel-based Methanol
           </label>
 
-          {mainChoice === 'fossil' && (
+          {localData.mainChoice === 'fossil' && (
             <div className="ml-6">
               <QuestionWithRadioAndInput
-                label="Do you use Carbon Capture Storage Utilization CCUS ?"
-                checked={ccus}
-                percentage={ccusPercentage}
-                onCheck={setCcus}
-                onPercentageChange={setCcusPercentage}
+                label="Do you use Carbon Capture Storage Utilization CCUS?"
+                checked={localData.ccus || false}
+                percentage={ccusPercentInput}
+                onCheck={(val) => updateAndSync({ ccus: val })}
+                onPercentageChange={(val) => setCcusPercentInput(val)} // local only
+                onPercentageBlur={handleCCUSPercentageBlur} // sync on blur
               />
             </div>
           )}
 
-          <label className="flex items-center gap-2">
+          {/* Renewable-based */}
+          <label className="flex font-medium items-center gap-2">
             <input
               type="radio"
               name="methanol_type"
-              checked={mainChoice === 'renewable'}
-              onChange={() => {
-                setMainChoice('renewable');
-                setCcus(false);
-                setCcusPercentage('');
-              }}
+              checked={localData.mainChoice === 'renewable'}
+              onChange={() =>
+                updateAndSync({
+                  mainChoice: 'renewable',
+                  ccus: false,
+                  ccusPercentage: '',
+                })
+              }
               className="accent-blue-600"
             />
             Renewable and low carbon methanol
           </label>
 
-          {mainChoice === 'renewable' && (
+          {localData.mainChoice === 'renewable' && (
             <div className="ml-6 flex flex-col gap-1">
               {subtypeOptions.map((option, idx) => (
-                <label key={idx} className="flex items-center gap-2">
+                <label key={idx} className="flex font-medium items-center gap-2">
                   <input
                     type="radio"
                     name="renewable_subtype"
-                    checked={renewableType === option}
-                    onChange={() => setRenewableType(option)}
+                    checked={localData.renewableType === option}
+                    onChange={() => updateAndSync({ renewableType: option })}
                     className="accent-blue-600"
                   />
                   {option}
@@ -85,20 +119,21 @@ const MethanolFields: React.FC = () => {
         </div>
       </div>
 
-      {/* Feedstock always last */}
+      {/* Feedstock */}
       {feedstockQuestion && (
         <QuestionWithMultiSelect
           label={feedstockQuestion.label}
           options={feedstockQuestion.options}
-          selected={feedstock}
-          onChange={setFeedstock}
+          selected={localData.feedstock || []}
+          onChange={(val) => updateAndSync({ feedstock: val })}
         />
       )}
 
+      {/* RFNBO */}
       <QuestionWithRadio
-              label="Is your fuel classified as RFNBO?"
-              checked={isRFNBO}
-              onCheck={setIsRFNBO}
+        label="Is your fuel classified as RFNBO?"
+        checked={localData.isRFNBO ?? null}
+        onCheck={(val) => updateAndSync({ isRFNBO: val })}
       />
     </>
   );

@@ -38,7 +38,7 @@ const CertificationsTable: React.FC<CertificationsTableProps> = ({ certification
           <thead>
             <tr className="text-left text-gray-500 text-sm uppercase border-b border-gray-200">
               <th className="pb-3 font-medium">Name</th>
-              <th className="pb-3 font-medium">Entity</th>
+              <th className="pb-3 font-medium">Issuing Body</th>
               <th className="pb-3 font-medium">Submission Date</th>
               <th className="pb-3 font-medium">Type</th>
               <th className="pb-3 font-medium">Status</th>

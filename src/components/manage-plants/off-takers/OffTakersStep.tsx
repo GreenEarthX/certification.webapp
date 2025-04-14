@@ -1,13 +1,27 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import QuestionWithRadio from '../common/QuestionWithRadio';
 import SelectWithCheckboxTags from '../common/SelectWithTags';
 
-const OffTakersStep: React.FC = () => {
-  const [offTakers, setOffTakers] = useState<string[]>([]);
-  const [requiresLabels, setRequiresLabels] = useState<boolean | null>(null);
-  const [labelsText, setLabelsText] = useState<string>('');
+interface Props {
+  data: {
+    offTakers?: string[];
+    requiresLabels?: boolean | null;
+    labelsText?: string;
+  };
+  onChange: (updated: any) => void;
+}
 
+const OffTakersStep: React.FC<Props> = ({ data, onChange }) => {
+  const [localData, setLocalData] = useState(data);
+
+  useEffect(() => {
+    setLocalData(data); // Sync if props update
+  }, [data]);
+
+  const handleBlur = () => {
+    onChange(localData);
+  };
 
   const offTakerOptions = [
     'Refineries',
@@ -50,7 +64,6 @@ const OffTakersStep: React.FC = () => {
     'International Shipping Organizations',
     'Renewable Energy'
   ];
-  
 
   return (
     <div className="space-y-6">
@@ -58,25 +71,37 @@ const OffTakersStep: React.FC = () => {
       <SelectWithCheckboxTags
         label="Who are your primary Off-Takers?"
         options={offTakerOptions}
-        selected={offTakers}
-        onChange={setOffTakers}
+        selected={localData.offTakers || []}
+        onChange={(selected) => {
+          const updated = { ...localData, offTakers: selected };
+          setLocalData(updated);
+          onChange(updated); // Save immediately for checkboxes
+        }}
       />
 
       {/* Require Sustainability Labels */}
       <QuestionWithRadio
         label="Do your Off-Takers require specific sustainability labels?"
-        checked={requiresLabels}
-        onCheck={setRequiresLabels}
+        checked={localData.requiresLabels ?? null}
+        onCheck={(val) => {
+          const updated = { ...localData, requiresLabels: val };
+          setLocalData(updated);
+          onChange(updated); // Save immediately
+        }}
       />
-      {requiresLabels && (
+
+      {/* Sustainability Label Details */}
+      {localData.requiresLabels && (
         <textarea
           className="ml-8 border w-1/2 px-2 py-1 rounded-md"
           placeholder="Please describe which labels are required..."
-          value={labelsText}
-          onChange={(e) => setLabelsText(e.target.value)}
+          value={localData.labelsText || ''}
+          onChange={(e) =>
+            setLocalData((prev) => ({ ...prev, labelsText: e.target.value }))
+          }
+          onBlur={handleBlur} // ✅ Save on blur only
         />
       )}
-      
     </div>
   );
 };

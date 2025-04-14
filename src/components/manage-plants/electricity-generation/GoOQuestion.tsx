@@ -7,12 +7,19 @@ interface Props {
   checked: boolean | null;
   onChange: (val: boolean) => void;
   showUpload: boolean;
+  file: File | null;
   onUpload: (file: File | null) => void;
 }
 
-const GoOQuestion: React.FC<Props> = ({ checked, onChange, showUpload, onUpload }) => {
+const GoOQuestion: React.FC<Props> = ({
+  checked,
+  onChange,
+  showUpload,
+  file,
+  onUpload
+}) => {
   return (
-    <div className="my-2"> {/* Removed ml-4 */}
+    <div className="my-2">
       <QuestionWithRadio
         label="Do you have GoO?"
         checked={checked}
@@ -24,6 +31,5 @@ const GoOQuestion: React.FC<Props> = ({ checked, onChange, showUpload, onUpload 
     </div>
   );
 };
-
 
 export default GoOQuestion;

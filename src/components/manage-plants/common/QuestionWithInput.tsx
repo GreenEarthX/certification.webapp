@@ -4,19 +4,22 @@ import React from 'react';
 interface Props {
   label: string;
   value: string;
-  onChange: (value: string) => void;
+  onChange: (val: string) => void;
+  onBlur?: () => void;
 }
 
-const QuestionWithInput: React.FC<Props> = ({ label, value, onChange }) => (
-  <div className="flex items-center mb-4">
-    <label className="flex items-center gap-2 mr-4 font-medium accent-blue-600 whitespace-nowrap">{label}</label>
+const QuestionWithInput: React.FC<Props> = ({ label, value, onChange, onBlur }) => (
+  <div className="mb-4 ml-8">
+    <label className="block text-sm font-medium mb-1">{label}</label>
     <input
       type="text"
-      className="border rounded-md px-3 py-1.5 outline-none bg-white shadow-sm text-sm flex-1"
+      className="border rounded-md px-3 py-1 w-1/2"
       value={value}
       onChange={(e) => onChange(e.target.value)}
+      onBlur={onBlur}
     />
   </div>
 );
+
 
 export default QuestionWithInput;

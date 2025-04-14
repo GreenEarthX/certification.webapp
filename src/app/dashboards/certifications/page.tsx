@@ -8,7 +8,7 @@ import { useCertifications } from "@/hooks/useCertifications";
 const columns: GridColDef[] = [
   { field: "Certification", headerName: "Certification", flex: 1, minWidth: 120 },
   { field: "Plant Name", headerName: "Plant Name", flex: 1, minWidth: 120 },
-  { field: "Entity", headerName: "Entity", flex: 1, minWidth: 120 },
+  { field: "Entity", headerName: "Issuing Body", flex: 1, minWidth: 120 },
   { field: "Submission Date", headerName: "Submission Date", flex: 1, minWidth: 120 },
   { field: "Type", headerName: "Type", flex: 1, minWidth: 100 },
   {
