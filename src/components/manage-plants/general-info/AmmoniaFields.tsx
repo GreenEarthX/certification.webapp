@@ -1,21 +1,49 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import QuestionWithRadio from '../common/QuestionWithRadio';
 import QuestionWithRadioAndInput from '../common/QuestionWithRadioAndInput';
 import QuestionWithInput from '../common/QuestionWithInput';
 import QuestionWithMultiSelect from '../common/MultiSelectDropdown';
 import { fuelConfigurations } from '@/utils/fuelConfigurations';
 
-const AmmoniaFields: React.FC = () => {
-  const [usesHaberBosch, setUsesHaberBosch] = useState<boolean | null>(null);
-  const [usesCCUS, setUsesCCUS] = useState(false);
-  const [ccusPercentage, setCcusPercentage] = useState('');
-  const [otherMethod, setOtherMethod] = useState('');
-  const [feedstock, setFeedstock] = useState<string[]>([]);
-    const [isRFNBO, setIsRFNBO] = useState<boolean | null>(null);
+interface Props {
+  data: any;
+  onChange: (updated: any) => void;
+}
 
+const AmmoniaFields: React.FC<Props> = ({ data, onChange }) => {
   const ammoniaQuestions = fuelConfigurations.ammonia;
   const feedstockQuestion = ammoniaQuestions.find(q => q.label === 'What is the feedstock used?');
+
+  const [usesHaberBosch, setUsesHaberBosch] = useState(data.usesHaberBosch ?? null);
+  const [usesCCUS, setUsesCCUS] = useState(data.usesCCUS ?? false);
+  const [ccusPercentage, setCcusPercentage] = useState(data.ccusPercentage ?? '');
+  const [otherMethod, setOtherMethod] = useState(data.otherMethod ?? '');
+  const [feedstock, setFeedstock] = useState(data.feedstock ?? []);
+  const [isRFNBO, setIsRFNBO] = useState(data.isRFNBO ?? null);
+
+  useEffect(() => {
+    setUsesHaberBosch(data.usesHaberBosch ?? null);
+    setUsesCCUS(data.usesCCUS ?? false);
+    setCcusPercentage(data.ccusPercentage ?? '');
+    setOtherMethod(data.otherMethod ?? '');
+    setFeedstock(data.feedstock ?? []);
+    setIsRFNBO(data.isRFNBO ?? null);
+  }, [data]);
+
+  const handleCcusBlur = () => {
+    onChange({ ...data, ccusPercentage });
+  };
+
+  const handleOtherMethodBlur = () => {
+    onChange({ ...data, otherMethod });
+  };
+
+  const handleHaberBoschToggle = (val: boolean) => {
+    setUsesHaberBosch(val);
+    const reset = val === false ? { usesCCUS: false, ccusPercentage: '' } : {};
+    onChange({ ...data, usesHaberBosch: val, ...reset });
+  };
 
   return (
     <>
@@ -23,25 +51,23 @@ const AmmoniaFields: React.FC = () => {
       <QuestionWithRadio
         label="Do you use Hober-Bosch process ?"
         checked={usesHaberBosch}
-        onCheck={(val) => {
-          setUsesHaberBosch(val);
-          if (!val) {
-            setUsesCCUS(false);
-            setCcusPercentage('');
-          }
-        }}
+        onCheck={handleHaberBoschToggle}
       />
 
       {/* 2. CCUS if yes */}
       {usesHaberBosch === true && (
         <div className="ml-20">
-        <QuestionWithRadioAndInput
-          label="Do you use Carbon Capture Storage Utilization ?"
-          checked={usesCCUS}
-          percentage={ccusPercentage}
-          onCheck={setUsesCCUS}
-          onPercentageChange={setCcusPercentage}
-        />
+          <QuestionWithRadioAndInput
+            label="Do you use Carbon Capture Storage Utilization ?"
+            checked={usesCCUS}
+            percentage={ccusPercentage}
+            onCheck={(val) => {
+              setUsesCCUS(val);
+              onChange({ ...data, usesCCUS: val });
+            }}
+            onPercentageChange={(val) => setCcusPercentage(val)}
+            onPercentageBlur={handleCcusBlur}
+          />
         </div>
       )}
 
@@ -50,24 +76,32 @@ const AmmoniaFields: React.FC = () => {
         <QuestionWithInput
           label="Write down the method used :"
           value={otherMethod}
-          onChange={setOtherMethod}
+          onChange={(val) => setOtherMethod(val)}
+          onBlur={handleOtherMethodBlur}
         />
       )}
 
-      {/* 4. Feedstock (multi-select) */}
+      {/* 4. Feedstock */}
       {feedstockQuestion && (
         <QuestionWithMultiSelect
           label={feedstockQuestion.label}
           options={feedstockQuestion.options}
           selected={feedstock}
-          onChange={setFeedstock}
+          onChange={(val) => {
+            setFeedstock(val);
+            onChange({ ...data, feedstock: val });
+          }}
         />
       )}
 
+      {/* 5. RFNBO */}
       <QuestionWithRadio
-              label="Is your fuel classified as RFNBO?"
-              checked={isRFNBO}
-              onCheck={setIsRFNBO}
+        label="Is your fuel classified as RFNBO?"
+        checked={isRFNBO}
+        onCheck={(val) => {
+          setIsRFNBO(val);
+          onChange({ ...data, isRFNBO: val });
+        }}
       />
     </>
   );

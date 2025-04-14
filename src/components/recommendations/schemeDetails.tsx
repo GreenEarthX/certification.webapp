@@ -137,7 +137,7 @@ const SchemeDetailsPage = () => {
       <div className="bg-white rounded-lg shadow-sm p-6">
         <div className="mb-6 flex justify-center items-center">
           <Image
-            src="/certifhyScheme.png"
+            src={schemeName === "REDcert-EU" ? "/RedcertLogo.jpg" : "/certifhyScheme.png"}
             alt="Scheme Logo"
             width={200}
             height={100}

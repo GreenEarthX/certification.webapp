@@ -6,7 +6,8 @@ class AlertService {
     try {
       const query = `
         SELECT 
-          a.alert_description AS title,
+          a.alert_title AS title,
+          a.alert_description AS description,
           a.alert_severity AS severity,
           a.timestamp
         FROM users u

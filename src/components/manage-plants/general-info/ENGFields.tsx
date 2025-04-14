@@ -1,24 +1,35 @@
 'use client';
-import React, { useState } from 'react';
+import React from 'react';
 import { fuelConfigurations } from '@/utils/fuelConfigurations';
 import QuestionWithSelect from '../common/QuestionWithSelect';
 import QuestionWithMultiSelect from '../common/MultiSelectDropdown';
 import QuestionWithRadio from '../common/QuestionWithRadio';
 
-const ENGFields: React.FC = () => {
+interface ENGData {
+  answers: string[];
+  feedstock: string[];
+  isRFNBO: boolean | null;
+}
+
+interface Props {
+  data: Partial<ENGData>;
+  onChange: (updated: Partial<ENGData>) => void;
+}
+
+const ENGFields: React.FC<Props> = ({ data, onChange }) => {
   const questions = fuelConfigurations.eng;
 
   const feedstockQuestion = questions.find(q => q.label === 'What is the feedstock used?');
   const mainQuestions = questions.filter(q => q.label !== 'What is the feedstock used?');
 
-  const [answers, setAnswers] = useState<string[]>(Array(mainQuestions.length).fill(''));
-  const [feedstock, setFeedstock] = useState<string[]>([]); // <-- changed to array
-    const [isRFNBO, setIsRFNBO] = useState<boolean | null>(null);
+  const answers = data.answers ?? Array(mainQuestions.length).fill('');
+  const feedstock = data.feedstock ?? [];
+  const isRFNBO = data.isRFNBO ?? null;
 
   const handleChange = (index: number, value: string) => {
     const updated = [...answers];
     updated[index] = value;
-    setAnswers(updated);
+    onChange({ ...data, answers: updated });
   };
 
   return (
@@ -37,14 +48,14 @@ const ENGFields: React.FC = () => {
           label={feedstockQuestion.label}
           options={feedstockQuestion.options}
           selected={feedstock}
-          onChange={setFeedstock}
+          onChange={(val) => onChange({ ...data, feedstock: val })}
         />
       )}
 
       <QuestionWithRadio
-              label="Is your fuel classified as RFNBO?"
-              checked={isRFNBO}
-              onCheck={setIsRFNBO}
+        label="Is your fuel classified as RFNBO?"
+        checked={isRFNBO}
+        onCheck={(val) => onChange({ ...data, isRFNBO: val })}
       />
     </>
   );
