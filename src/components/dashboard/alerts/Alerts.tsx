@@ -30,6 +30,7 @@ const Alerts: React.FC<AlertsProps> = ({ alerts, loading, error }) => {
               ></div>
               <div>
                 <p className="font-medium">{alert.title}</p>
+                <p className="text-sm text-gray-500">{alert.description}</p>
                 <p className="text-sm text-gray-500">{new Date(alert.timestamp).toLocaleString()}</p>
               </div>
             </div>

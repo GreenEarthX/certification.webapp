@@ -23,8 +23,6 @@ export const fuelConfigurations: FuelConfigurations = {
         'Oil-based reforming processes',
         'Biogas',
         'Biomass gasification',
-        'Hydrogen from chemical processes',
-        'Hydrogen recovered from steel production',
       ],
     },
   ],

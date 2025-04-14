@@ -4,7 +4,8 @@ import React from 'react';
 interface Props {
   label: string;
   value: string;
-  onChange: (value: string) => void;
+  onChange: (val: string) => void;
+  onBlur?: () => void; // ✅ ADD THIS LINE
 }
 
 const QuestionWithPercentageInput: React.FC<Props> = ({ label, value, onChange }) => (
@@ -14,6 +15,7 @@ const QuestionWithPercentageInput: React.FC<Props> = ({ label, value, onChange }
     </label>
     <input
       type="number"
+      min={0}
       className="border rounded-md px-3 py-1 w-24"
       value={value}
       onChange={(e) => onChange(e.target.value)}

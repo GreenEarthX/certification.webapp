@@ -1,77 +1,120 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import SelectWithCheckboxTags from '../common/SelectWithTags';
 import QuestionWithPercentageInput from '../common/QuestionWithPercentageInput';
 import QuestionWithRadio from '../common/QuestionWithRadio';
 
-const GHGReductionStep: React.FC = () => {
-  const [methods, setMethods] = useState<string[]>([]);
-  const [reductionTarget, setReductionTarget] = useState<string>('');
-  const [auditorVerified, setAuditorVerified] = useState<boolean | null>(null);
-  const [scopes, setScopes] = useState<string[]>([]);
-  const [regulations, setRegulations] = useState<string[]>([]);
+interface Props {
+  data: {
+    methods?: string[];
+    regulations?: string[];
+    reductionTarget?: string;
+    auditorVerified?: boolean | null;
+    scopes?: string[];
+  };
+  onChange: (updated: any) => void;
+}
+
+const GHGReductionStep: React.FC<Props> = ({ data, onChange }) => {
+  const [localData, setLocalData] = useState<Props['data']>(data);
+
+  useEffect(() => {
+    setLocalData(data); // resync if parent sends new data
+  }, [data]);
+
+  const handleBlur = () => {
+    onChange(localData);
+  };
 
   const toggleFromArray = (
     current: string[],
-    setFn: (val: string[]) => void,
-    value: string
+    value: string,
+    key: 'methods' | 'regulations' | 'scopes'
   ) => {
-    setFn(current.includes(value) ? current.filter(v => v !== value) : [...current, value]);
+    const updated = current.includes(value)
+      ? current.filter((v) => v !== value)
+      : [...current, value];
+
+    setLocalData((prev) => ({ ...prev, [key]: updated }));
+    onChange({ ...localData, [key]: updated }); // sync immediately
   };
 
   return (
     <div className="space-y-6">
+      {/* Methodologies */}
+      <SelectWithCheckboxTags
+        label="What are the methodologies you use for calculating and reporting your carbon footprint? (select all that apply)"
+        options={[
+          'GHG Protocol',
+          'ISO 14064',
+          'ISO 14067',
+          'ISO 14040 / ISO 14044',
+          'Lifecycle Assessment',
+          'PAS 2050',
+          'PAS 2060',
+        ]}
+        selected={localData.methods || []}
+        onChange={(val) => {
+          setLocalData((prev) => ({ ...prev, methods: val }));
+          onChange({ ...localData, methods: val });
+        }}
+      />
 
-      {/* 1. Carbon footprint methods */}
-      <div>
-        <p className="font-medium mb-2">
-          How do you measure your product&apos;s carbon footprint? <span className="text-xs">(select all that apply)</span>
-        </p>
-        {[
-          'Life Cycle Assessment (LCA) using ISO 14067',
-          'GHG Protocol Corporate Standard',
-          'Default values from regulatory frameworks (RED II, EU ETS, CBAM)',
-          'No formal calculation method yet',
-        ].map(method => (
-          <div key={method} className="ml-8">
-            <label className="block mb-1">
-              <input
-                type="checkbox"
-                checked={methods.includes(method)}
-                onChange={() => toggleFromArray(methods, setMethods, method)}
-                className="mr-2 accent-blue-600"
-              />
-              {method}
-            </label>
-          </div>
-        ))}
-      </div>
+      {/* Regulations */}
+      <SelectWithCheckboxTags
+        label="What are the regulations/directives that you follow or plan to follow for GHG reporting and accounting:"
+        options={[
+          'RED II',
+          'RED III',
+          'CBAM',
+          'Fuel quality Directive',
+          'EU ETS',
+          'EU taxonomy',
+          'PEF',
+          'ESRS',
+          'CRSD',
+        ]}
+        selected={localData.regulations || []}
+        onChange={(val) => {
+          setLocalData((prev) => ({ ...prev, regulations: val }));
+          onChange({ ...localData, regulations: val });
+        }}
+      />
 
-      {/* 2. GHG reduction target (custom component) */}
+      {/* Reduction target */}
       <QuestionWithPercentageInput
         label="What is your current GHG reduction target?"
-        value={reductionTarget}
-        onChange={setReductionTarget}
+        value={localData.reductionTarget || ''}
+        onChange={(val) =>
+          setLocalData((prev) => ({ ...prev, reductionTarget: val }))
+        }
+        onBlur={handleBlur}
       />
 
-      {/* 3. Audit verified? (custom radio) */}
+      {/* Auditor verification */}
       <QuestionWithRadio
         label="Have you verified your product Carbon Footprint (PCF) calculations with a third-party auditor?"
-        checked={auditorVerified}
-        onCheck={setAuditorVerified}
+        checked={localData.auditorVerified ?? null}
+        onCheck={(val) => {
+          const updated = { ...localData, auditorVerified: val };
+          setLocalData(updated);
+          onChange(updated);
+        }}
       />
 
-      {/* 4. Emissions scopes */}
-      {auditorVerified && (
+      {/* Emission scopes if auditor verified */}
+      {localData.auditorVerified && (
         <div className="ml-28">
           <p className="font-medium mb-2">Which emissions accounting methodology do you follow?</p>
-          <div className="ml-36"> 
-            {['Scope 1', 'Scope 2', 'Scope 3'].map(scope => (
+          <div className="ml-36">
+            {['Scope 1', 'Scope 2', 'Scope 3'].map((scope) => (
               <label key={scope} className="block mb-1">
                 <input
                   type="checkbox"
-                  checked={scopes.includes(scope)}
-                  onChange={() => toggleFromArray(scopes, setScopes, scope)}
+                  checked={(localData.scopes || []).includes(scope)}
+                  onChange={() =>
+                    toggleFromArray(localData.scopes || [], scope, 'scopes')
+                  }
                   className="mr-2 accent-blue-600"
                 />
                 {scope}
@@ -80,15 +123,6 @@ const GHGReductionStep: React.FC = () => {
           </div>
         </div>
       )}
-
-
-      {/* 5. Multi-select regulations (custom component) */}
-      <SelectWithCheckboxTags
-        label="What are the regulations/directives that you follow or plan to follow for GHG reporting and accounting:"
-        options={['RED II', 'RED III', 'CBAM', 'Fuel quality Directive', 'EU ETS', 'EU taxonomy', 'PEF', 'ESRS', 'CRSD']}
-        selected={regulations}
-        onChange={setRegulations}
-      />
     </div>
   );
 };
