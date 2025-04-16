@@ -23,6 +23,7 @@ const SpotMarketDetails: React.FC<Props> = ({ data, onChange }) => {
         <FileUpload
           label="Submit"
           onChange={(file) => onChange({ ...data, purchaseFile: file })}
+          fileName={purchaseFile?.name} 
         />
       </div>
 
@@ -34,6 +35,7 @@ const SpotMarketDetails: React.FC<Props> = ({ data, onChange }) => {
         <FileUpload
           label="Submit"
           onChange={(file) => onChange({ ...data, goOFile: file })}
+          fileName={goOFile?.name} 
         />
       </div>
     </div>

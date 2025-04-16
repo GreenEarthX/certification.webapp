@@ -26,7 +26,11 @@ const GoOQuestion: React.FC<Props> = ({
         onCheck={onChange}
       />
       {checked === true && showUpload && (
-        <FileUpload label="Submit" onChange={onUpload} />
+        <FileUpload
+          label="Submit"
+          onChange={onUpload}
+          fileName={file?.name} // ✅ display uploaded file name
+        />
       )}
     </div>
   );
