@@ -14,7 +14,14 @@ import OffTakersStep from '@/components/manage-plants/off-takers/OffTakersStep';
 import CertificationStep from '@/components/manage-plants/certification-preferences/CertificationStep';
 import StepNotice from '@/components/manage-plants/common/StepNotice';
 import FacilityDropdown from '@/components/plantDashboard/FacilityDropdown';
-import { useRouter } from 'next/navigation';
+import {useRouter } from 'next/navigation';
+import { useSearchParams } from "next/navigation";
+
+
+
+
+
+
 
 interface Plant {
   id: string;
@@ -67,11 +74,27 @@ interface FormDataType {
 }
 
 export default function PlantDetailsPage() {
+  const router = useRouter();
+  const [selectedFromQuery, setSelectedFromQuery] = useState('');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const selected = params.get('selected');
+      if (selected) {
+        setSelectedFromQuery(selected);
+      }
+    }
+  }, []);
+
+
   const [currentStep, setCurrentStep] = useState(0);
   const [fuelType, setFuelType] = useState('');
   const [plants, setPlants] = useState<Plant[]>([]);
   const [selectedPlantId, setSelectedPlantId] = useState<string>('');
-  const router = useRouter();
+  const [selectedPlant, setSelectedPlant] = useState<Plant | null>(null);
+
+ 
 
   const [formData, setFormData] = useState<FormDataType>({
     hydrogen: {},
@@ -106,19 +129,34 @@ export default function PlantDetailsPage() {
     const fetchPlants = async () => {
       try {
         const res = await fetch('/api/plants');
-        const data = await res.json();
+        const data: Plant[] = await res.json();
         setPlants(data);
-        if (data.length > 0) {
-          setSelectedPlantId(data[0].id);
-        }
+  
+        // Wait until plants are loaded, then apply selection
+        const defaultId = data[0]?.id || '';
+        const paramId = selectedFromQuery || defaultId;
+        const foundPlant = data.find((p) => p.id === paramId);
+  
+        setSelectedPlantId(paramId);
+        setSelectedPlant(foundPlant || null);
       } catch (err) {
         console.error('Failed to fetch plants:', err);
       }
     };
+  
+    if (selectedFromQuery !== '' || plants.length === 0) {
+      fetchPlants();
+    }
+  }, [selectedFromQuery]);
+  
+  
+  
+  useEffect(() => {
+    const current = plants.find((p) => p.id === selectedPlantId);
+    setSelectedPlant(current || null);
+  }, [selectedPlantId, plants]);
 
-    fetchPlants();
-  }, []);
-
+  
   const handleStepClick = (index: number) => {
     setCurrentStep(index);
   };
@@ -154,10 +192,68 @@ export default function PlantDetailsPage() {
     </div>
   );
 
+  const handleFinish = () => {
+    const filePreview = (file: File | null) =>
+      file ? { name: file.name, size: file.size, type: file.type } : null;
+  
+    const previewFormData = {
+      ...formData,
+      electricity: {
+        plant_id: selectedPlantId, // plant id: we need it to register plant documents in the plant_documents table
+        ...formData.electricity,
+        ppaFile: filePreview(formData.electricity.ppaFile),
+        ppaDetails: {
+          ...formData.electricity.ppaDetails,
+          onSiteFile: filePreview(formData.electricity.ppaDetails?.onSiteFile),
+          offSiteFile: filePreview(formData.electricity.ppaDetails?.offSiteFile),
+          gridFile: filePreview(formData.electricity.ppaDetails?.gridFile),
+        },
+        directGridDetails: {
+          ...formData.electricity.directGridDetails,
+          goOFile: filePreview(formData.electricity.directGridDetails?.goOFile),
+          invoiceFile: filePreview(formData.electricity.directGridDetails?.invoiceFile),
+        },
+        selfGenerationDetails: {
+          ...formData.electricity.selfGenerationDetails,
+          file: filePreview(formData.electricity.selfGenerationDetails?.file),
+        },
+        greenTariffsDetails: {
+          ...formData.electricity.greenTariffsDetails,
+          file: filePreview(formData.electricity.greenTariffsDetails?.file),
+        },
+        spotMarketDetails: {
+          ...formData.electricity.spotMarketDetails,
+          purchaseFile: filePreview(formData.electricity.spotMarketDetails?.purchaseFile),
+          goOFile: filePreview(formData.electricity.spotMarketDetails?.goOFile),
+        },
+        contractDiffDetails: {
+          ...formData.electricity.contractDiffDetails,
+          file: filePreview(formData.electricity.contractDiffDetails?.file),
+        },
+      },
+    };
+  
+    console.log('📦 Full form data with file info:\n', JSON.stringify(previewFormData, null, 2));
+    router.push('/dashboards/manage-plants/loading');
+  };
+  
   return (
     <form className="w-full p-8 min-h-screen" autoComplete="off">
       <div className="flex justify-between items-center p-4 rounded-lg">
-        <FacilityDropdown selectedPlant={selectedPlantId} onChange={(e) => setSelectedPlantId(e.target.value)} />
+      <FacilityDropdown
+  selectedPlant={selectedPlantId} // ✅ FIXED: send the ID (string), not name or object
+  onChange={(e) => {
+    const newId = e.target.value;
+    setSelectedPlantId(newId);
+    router.push(`/dashboards/manage-plants?selected=${newId}`);
+  }}
+/>
+
+
+
+
+
+
       </div>
       <br />
       <div className="flex justify-between items-center pb-4 mb-8 relative">
@@ -270,16 +366,14 @@ export default function PlantDetailsPage() {
           </button>
           
           ) : (
-            <button
-              type="button" // ✅ Prevent reload here too
-              className="px-4 py-2 bg-blue-600 text-white rounded-md shadow hover:bg-blue-700"
-              onClick={() => {
-                console.log('📝 Submitted Form Data:', formData);
-                router.push('/dashboards/manage-plants/loading');
-              }}
-            >
-              Finish
-            </button>
+            
+              <button
+                type="button"
+                className="px-4 py-2 bg-blue-600 text-white rounded-md shadow hover:bg-blue-700"
+                onClick={handleFinish}
+              >
+                Finish
+              </button>
           )}
         </div>
       </div>

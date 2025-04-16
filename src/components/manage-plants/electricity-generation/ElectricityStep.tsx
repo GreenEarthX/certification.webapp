@@ -119,7 +119,9 @@ const ElectricityStep: React.FC<Props> = ({ data, onChange }) => {
                         <FileUpload
                           label="Submit"
                           onChange={(file) => onChange('ppaFile', file)}
+                          fileName={data.ppaFile?.name}
                         />
+
                         <PPADetails
                           data={data.ppaDetails}
                           onChange={(val) => onChange('ppaDetails', val)}

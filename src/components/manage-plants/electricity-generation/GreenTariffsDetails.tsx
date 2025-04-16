@@ -25,6 +25,7 @@ const GreenTariffsDetails: React.FC<Props> = ({ data, onChange }) => {
         <FileUpload
           label="Submit"
           onChange={(file) => onChange({ ...data, file })}
+          fileName={file?.name} // ✅ here!
         />
       )}
     </div>
