@@ -6,7 +6,7 @@ import QuestionWithRadio from '../common/QuestionWithRadio';
 import QuestionWithMultiSelect from '../common/MultiSelectDropdown';
 
 interface SAFData {
-  answers: string[];
+  productionMethod: string;
   feedstock: string[];
   isGasInjected: boolean | null;
   isSAFBlended: boolean | null;
@@ -21,32 +21,27 @@ interface Props {
 const SAFFields: React.FC<Props> = ({ data, onChange }) => {
   const questions = fuelConfigurations.saf;
 
+  const productionQuestion = questions.find(q => q.label === 'Method of production');
   const feedstockQuestion = questions.find(q => q.label === 'What is the feedstock used?');
-  const mainQuestions = questions.filter(q => q.label !== 'What is the feedstock used?');
 
-  const answers: string[] = data.answers ?? Array(mainQuestions.length).fill('');
+  const productionMethod = data.productionMethod ?? '';
   const feedstock = data.feedstock ?? [];
   const isGasInjected = data.isGasInjected ?? null;
   const isSAFBlended = data.isSAFBlended ?? null;
   const isRFNBO = data.isRFNBO ?? null;
 
-  const handleChange = (index: number, value: string) => {
-    const updated = [...answers];
-    updated[index] = value;
-    onChange({ ...data, answers: updated });
-  };
-
   return (
     <>
-      {mainQuestions.map((question, index) => (
+      {/* Production method (e.g. PtL, HEFA, FT Synthesis...) */}
+      {productionQuestion && (
         <QuestionWithSelect
-          key={index}
-          question={question}
-          value={answers[index]}
-          onChange={(val) => handleChange(index, val)}
+          question={productionQuestion}
+          value={productionMethod}
+          onChange={(val) => onChange({ ...data, productionMethod: val })}
         />
-      ))}
+      )}
 
+      {/* Feedstock options */}
       {feedstockQuestion && (
         <QuestionWithMultiSelect
           label={feedstockQuestion.label}
@@ -56,18 +51,21 @@ const SAFFields: React.FC<Props> = ({ data, onChange }) => {
         />
       )}
 
+      {/* Gas injection */}
       <QuestionWithRadio
         label="Is the gas injected into the grid or transported separately?"
         checked={isGasInjected}
         onCheck={(val) => onChange({ ...data, isGasInjected: val })}
       />
 
+      {/* Blending */}
       <QuestionWithRadio
         label="Is the SAF blended with fossil jet fuel?"
         checked={isSAFBlended}
         onCheck={(val) => onChange({ ...data, isSAFBlended: val })}
       />
 
+      {/* RFNBO */}
       <QuestionWithRadio
         label="Is your fuel classified as RFNBO?"
         checked={isRFNBO}

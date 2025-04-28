@@ -18,7 +18,7 @@ const AmmoniaFields: React.FC<Props> = ({ data, onChange }) => {
   const [usesHaberBosch, setUsesHaberBosch] = useState(data.usesHaberBosch ?? null);
   const [usesCCUS, setUsesCCUS] = useState(data.usesCCUS ?? false);
   const [ccusPercentage, setCcusPercentage] = useState(data.ccusPercentage ?? '');
-  const [otherMethod, setOtherMethod] = useState(data.otherMethod ?? '');
+  const [alternativeMethod, setAlternativeMethod] = useState(data.alternativeMethod ?? '');
   const [feedstock, setFeedstock] = useState(data.feedstock ?? []);
   const [isRFNBO, setIsRFNBO] = useState(data.isRFNBO ?? null);
 
@@ -26,7 +26,7 @@ const AmmoniaFields: React.FC<Props> = ({ data, onChange }) => {
     setUsesHaberBosch(data.usesHaberBosch ?? null);
     setUsesCCUS(data.usesCCUS ?? false);
     setCcusPercentage(data.ccusPercentage ?? '');
-    setOtherMethod(data.otherMethod ?? '');
+    setAlternativeMethod(data.alternativeMethod ?? '');
     setFeedstock(data.feedstock ?? []);
     setIsRFNBO(data.isRFNBO ?? null);
   }, [data]);
@@ -35,8 +35,8 @@ const AmmoniaFields: React.FC<Props> = ({ data, onChange }) => {
     onChange({ ...data, ccusPercentage });
   };
 
-  const handleOtherMethodBlur = () => {
-    onChange({ ...data, otherMethod });
+  const handleAlternativeMethodBlur = () => {
+    onChange({ ...data, alternativeMethod });
   };
 
   const handleHaberBoschToggle = (val: boolean) => {
@@ -47,7 +47,7 @@ const AmmoniaFields: React.FC<Props> = ({ data, onChange }) => {
 
   return (
     <>
-      {/* 1. Hober-Bosch */}
+      {/* 1. Haber-Bosch */}
       <QuestionWithRadio
         label="Do you use Hober-Bosch process ?"
         checked={usesHaberBosch}
@@ -71,13 +71,13 @@ const AmmoniaFields: React.FC<Props> = ({ data, onChange }) => {
         </div>
       )}
 
-      {/* 3. Input method if Hober-Bosch not used */}
+      {/* 3. Alternative method if no */}
       {usesHaberBosch === false && (
         <QuestionWithInput
           label="Write down the method used :"
-          value={otherMethod}
-          onChange={(val) => setOtherMethod(val)}
-          onBlur={handleOtherMethodBlur}
+          value={alternativeMethod}
+          onChange={(val) => setAlternativeMethod(val)}
+          onBlur={handleAlternativeMethodBlur}
         />
       )}
 

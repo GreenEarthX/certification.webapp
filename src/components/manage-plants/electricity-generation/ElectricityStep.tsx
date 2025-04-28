@@ -8,71 +8,83 @@ import GreenTariffsDetails from './GreenTariffsDetails';
 import SpotMarketDetails from './SpotMarketDetails';
 import ContractDifferenceDetails from './ContractDifferenceDetails';
 
+interface ElectricitySource {
+  type: string;
+  details: any;
+  file: File | null;
+  uri?: string; 
+}
+
 interface Props {
   data: {
-    selectedSources: string[];
-    ppaFile: File | null;
     energyMix: { type: string; percent: string }[];
-    ppaDetails: any;
-    directGridDetails: any;
-    selfGenerationDetails: any;
-    greenTariffsDetails: any;
-    spotMarketDetails: any;
-    contractDiffDetails: any;
+    sources: ElectricitySource[];
   };
   onChange: (key: keyof Props['data'], value: any) => void;
 }
 
 const ElectricityStep: React.FC<Props> = ({ data, onChange }) => {
-  const { selectedSources = [], ppaFile = null } = data;
-  const [localEnergyMix, setLocalEnergyMix] = useState(data.energyMix || []);
+  const { energyMix = [], sources = [] } = data;
+  const [localEnergyMix, setLocalEnergyMix] = useState(energyMix);
 
   useEffect(() => {
-    setLocalEnergyMix(data.energyMix || []);
-  }, [data.energyMix]);
+    setLocalEnergyMix(energyMix);
+  }, [energyMix]);
 
-  const sources = [
+  const availableSources = [
     'PPA',
     'Direct grid purchase',
     'Self generation (on site renewables)',
     'Green Tariffs',
     'Spot market purchase',
-    'Contract for difference',
+    'Contract for difference'
   ];
 
-  const energyOptions = ['Solar', 'Wind', 'Hydropower', 'Geothermal', 'Other'];
-
-  const toggleSource = (source: string) => {
-    const updated = selectedSources.includes(source)
-      ? selectedSources.filter((s) => s !== source)
-      : [...selectedSources, source];
-    onChange('selectedSources', updated);
+  const toggleSource = (sourceType: string) => {
+    const exists = sources.some((s) => s.type === sourceType);
+    const updated = exists
+      ? sources.filter((s) => s.type !== sourceType)
+      : [...sources, { type: sourceType, details: {}, file: null }];
+    onChange('sources', updated);
   };
 
-  const totalPercentage = localEnergyMix.reduce((sum, entry) => sum + Number(entry.percent || 0), 0);
+  const updateSourceDetails = (type: string, updatedDetails: any) => {
+    const updatedSources = sources.map((s) =>
+      s.type === type ? { ...s, details: updatedDetails } : s
+    );
+    onChange('sources', updatedSources);
+  };
 
-  const updateEntry = (index: number, field: 'type' | 'percent', value: string) => {
+  const updateSourceFile = (type: string, file: File | null) => {
+    const mockUri = file ? `https://example.com/uploads/${encodeURIComponent(file.name)}` : undefined;
+  
+    const updatedSources = sources.map((s) =>
+      s.type === type ? { ...s, file, uri: mockUri } : s
+    );
+  
+    onChange('sources', updatedSources);
+  };
+  
+
+  const totalPercentage = localEnergyMix.reduce((sum, e) => sum + Number(e.percent || 0), 0);
+
+  const updateEnergyEntry = (index: number, field: 'type' | 'percent', value: string) => {
     const updated = [...localEnergyMix];
-
     if (field === 'type') {
       const cleanVal = value.startsWith('Other:') ? 'Other:' : value;
       const isDuplicate = updated.some((e, i) => e.type === cleanVal && i !== index);
       if (isDuplicate && cleanVal !== 'Other:') return;
       updated[index].type = value;
     }
-
     if (field === 'percent') {
       const parsed = Math.max(0, Number(value));
-      const remaining =
-        100 -
-        updated.reduce((sum, e, i) => sum + (i === index ? 0 : Number(e.percent || 0)), 0);
+      const remaining = 100 - updated.reduce((sum, e, i) => sum + (i === index ? 0 : Number(e.percent || 0)), 0);
       updated[index].percent = Math.min(parsed, remaining).toString();
     }
-
     setLocalEnergyMix(updated);
   };
 
-  const saveOnBlur = () => {
+  const saveEnergyMix = () => {
     onChange('energyMix', localEnergyMix);
   };
 
@@ -80,7 +92,7 @@ const ElectricityStep: React.FC<Props> = ({ data, onChange }) => {
     if (totalPercentage < 100) {
       const updated = [...localEnergyMix, { type: '', percent: '' }];
       setLocalEnergyMix(updated);
-      onChange('energyMix', updated); // sync with parent to keep consistency
+      onChange('energyMix', updated);
     }
   };
 
@@ -91,84 +103,62 @@ const ElectricityStep: React.FC<Props> = ({ data, onChange }) => {
     onChange('energyMix', updated);
   };
 
+  const energyOptions = ['Solar', 'Wind', 'Hydropower', 'Geothermal', 'Other'];
+
   return (
     <div className="space-y-6">
       <div>
-        <p className="font-medium mb-2 text-black-900">
-          How do you provide electricity for your plant?
-        </p>
+        <p className="font-medium mb-2 text-black-900">How do you provide electricity for your plant?</p>
         <div className="ml-8">
-          {sources.map((source) => (
-            <div key={source} className="mb-3">
-              <label className="flex items-center font-medium gap-2">
-                <input
-                  type="checkbox"
-                  name="electricity_source"
-                  checked={selectedSources.includes(source)}
-                  onChange={() => toggleSource(source)}
-                  className="accent-blue-600"
-                />
-                {source}
-              </label>
+          {availableSources.map((source) => {
+            const selected = sources.find((s) => s.type === source);
+            return (
+              <div key={source} className="mb-3">
+                <label className="flex items-center font-medium gap-2">
+                  <input
+                    type="checkbox"
+                    checked={!!selected}
+                    onChange={() => toggleSource(source)}
+                    className="accent-blue-600"
+                  />
+                  {source}
+                </label>
 
-              <div className="ml-6 mt-2">
-                {selectedSources.includes(source) && (
-                  <>
+                {selected && (
+                  <div className="ml-6 mt-2">
+                    <FileUpload
+                      label="Attach File"
+                      onChange={(file) => updateSourceFile(source, file)}
+                      fileName={selected.file?.name}
+                    />
+
                     {source === 'PPA' && (
-                      <>
-                        <FileUpload
-                          label="Submit"
-                          onChange={(file) => onChange('ppaFile', file)}
-                          fileName={data.ppaFile?.name}
-                        />
-
-                        <PPADetails
-                          data={data.ppaDetails}
-                          onChange={(val) => onChange('ppaDetails', val)}
-                        />
-                      </>
+                      <PPADetails data={selected.details} onChange={(val) => updateSourceDetails(source, val)} />
                     )}
                     {source === 'Direct grid purchase' && (
-                      <DirectGridDetails
-                        data={data.directGridDetails}
-                        onChange={(val) => onChange('directGridDetails', val)}
-                      />
+                      <DirectGridDetails data={selected.details} onChange={(val) => updateSourceDetails(source, val)} />
                     )}
                     {source === 'Self generation (on site renewables)' && (
-                      <SelfGenerationDetails
-                        data={data.selfGenerationDetails}
-                        onChange={(val) => onChange('selfGenerationDetails', val)}
-                      />
+                      <SelfGenerationDetails data={selected.details} onChange={(val) => updateSourceDetails(source, val)} />
                     )}
                     {source === 'Green Tariffs' && (
-                      <GreenTariffsDetails
-                        data={data.greenTariffsDetails}
-                        onChange={(val) => onChange('greenTariffsDetails', val)}
-                      />
+                      <GreenTariffsDetails data={selected.details} onChange={(val) => updateSourceDetails(source, val)} />
                     )}
                     {source === 'Spot market purchase' && (
-                      <SpotMarketDetails
-                        data={data.spotMarketDetails}
-                        onChange={(val) => onChange('spotMarketDetails', val)}
-                      />
+                      <SpotMarketDetails data={selected.details} onChange={(val) => updateSourceDetails(source, val)} />
                     )}
                     {source === 'Contract for difference' && (
-                      <ContractDifferenceDetails
-                        data={data.contractDiffDetails}
-                        onChange={(val) => onChange('contractDiffDetails', val)}
-                      />
+                      <ContractDifferenceDetails data={selected.details} onChange={(val) => updateSourceDetails(source, val)} />
                     )}
-                  </>
+                  </div>
                 )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
-      {/* Energy Mix Section */}
       <p className="font-medium mb-2 text-black-900">Input your energy mix:</p>
-
       {localEnergyMix.map((entry, index) => (
         <div key={index} className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center mb-2">
           <div className="flex items-center gap-4">
@@ -177,8 +167,8 @@ const ElectricityStep: React.FC<Props> = ({ data, onChange }) => {
               <input
                 type="text"
                 value={entry.type.replace('Other:', '')}
-                onChange={(e) => updateEntry(index, 'type', 'Other:' + e.target.value)}
-                onBlur={saveOnBlur}
+                onChange={(e) => updateEnergyEntry(index, 'type', 'Other:' + e.target.value)}
+                onBlur={saveEnergyMix}
                 placeholder="Enter energy type"
                 className="border px-3 py-1.5 rounded-md text-sm flex-1 bg-white"
               />
@@ -188,12 +178,12 @@ const ElectricityStep: React.FC<Props> = ({ data, onChange }) => {
                 onChange={(e) => {
                   const value = e.target.value;
                   if (value === 'Other') {
-                    updateEntry(index, 'type', 'Other:');
+                    updateEnergyEntry(index, 'type', 'Other:');
                   } else {
-                    updateEntry(index, 'type', value);
+                    updateEnergyEntry(index, 'type', value);
                   }
                 }}
-                onBlur={saveOnBlur}
+                onBlur={saveEnergyMix}
                 className="border px-3 py-1.5 rounded-md text-sm flex-1 bg-white"
               >
                 <option value="">Select</option>
@@ -215,8 +205,8 @@ const ElectricityStep: React.FC<Props> = ({ data, onChange }) => {
               type="number"
               placeholder="%"
               value={entry.percent}
-              onChange={(e) => updateEntry(index, 'percent', e.target.value)}
-              onBlur={saveOnBlur}
+              onChange={(e) => updateEnergyEntry(index, 'percent', e.target.value)}
+              onBlur={saveEnergyMix}
               className="border px-3 py-1.5 rounded-md text-sm w-24"
               max={100 - totalPercentage + Number(entry.percent || 0)}
             />

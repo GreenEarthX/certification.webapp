@@ -15,39 +15,44 @@ const HydrogenFields: React.FC<Props> = ({ data, onChange }) => {
   const questions = fuelConfigurations.hydrogen;
 
   const feedstockQuestion = questions.find(q => q.label === 'What is the feedstock used?');
-  const mainQuestions = questions.filter(q => q.label !== 'What is the feedstock used?');
+  const productionOptions = questions.find(q => q.label === 'Method of production')?.options || [];
 
-  const [answers, setAnswers] = useState(data.answers || Array(mainQuestions.length).fill(''));
-  const [electrolysis, setElectrolysis] = useState(data.electrolysis || '');
-  const [ccusUsed, setCcusUsed] = useState(data.ccusUsed || false);
-  const [ccusPercentage, setCcusPercentage] = useState(data.ccusPercentage || '');
-  const [feedstock, setFeedstock] = useState(data.feedstock || []);
-  const [isRFNBO, setIsRFNBO] = useState(data.isRFNBO ?? null);
+  const [productionMethod, setProductionMethod] = useState<string>(data.productionMethod || '');
+  const [electrolysisTechnology, setElectrolysisTechnology] = useState<string>(data.electrolysisTechnology || '');
+  const [usesCCUS, setUsesCCUS] = useState<boolean>(data.usesCCUS || false);
+  const [ccusPercentage, setCcusPercentage] = useState<string>(data.ccusPercentage || '');
+  const [feedstock, setFeedstock] = useState<string[]>(data.feedstock || []);
+  const [isRFNBO, setIsRFNBO] = useState<boolean>(data.isRFNBO ?? null);
 
   useEffect(() => {
-    setAnswers(data.answers || Array(mainQuestions.length).fill(''));
-    setElectrolysis(data.electrolysis || '');
-    setCcusUsed(data.ccusUsed || false);
+    setProductionMethod(data.productionMethod || '');
+    setElectrolysisTechnology(data.electrolysisTechnology || '');
+    setUsesCCUS(data.usesCCUS || false);
     setCcusPercentage(data.ccusPercentage || '');
     setFeedstock(data.feedstock || []);
     setIsRFNBO(data.isRFNBO ?? null);
   }, [data]);
 
-  const handleChange = (index: number, value: string) => {
-    const updated = [...answers];
-    updated[index] = value;
-    setAnswers(updated);
-    onChange({ ...data, answers: updated });
+  const handleProductionChange = (value: string) => {
+    setProductionMethod(value);
+    // Reset dependent fields when production method changes
+    const update: any = {
+      productionMethod: value,
+      electrolysisTechnology: '',
+      usesCCUS: false,
+      ccusPercentage: '',
+    };
+    onChange({ ...data, ...update });
   };
 
   const handleElectrolysisChange = (value: string) => {
-    setElectrolysis(value);
-    onChange({ ...data, electrolysis: value });
+    setElectrolysisTechnology(value);
+    onChange({ ...data, electrolysisTechnology: value });
   };
 
   const handleCCUSCheck = (val: boolean) => {
-    setCcusUsed(val);
-    onChange({ ...data, ccusUsed: val });
+    setUsesCCUS(val);
+    onChange({ ...data, usesCCUS: val });
   };
 
   const handleCCUSPercentageBlur = () => {
@@ -64,25 +69,22 @@ const HydrogenFields: React.FC<Props> = ({ data, onChange }) => {
     onChange({ ...data, isRFNBO: val });
   };
 
-  const showElectrolysis = answers[0] === 'Electrolysis';
-  const showCCUS = ['Steam Methane Reforming', 'Biomass gasification', 'Coal gasification'].includes(answers[0]);
+  const showElectrolysis = productionMethod === 'Electrolysis';
+  const showCCUS = ['Steam Methane Reforming', 'Biomass gasification', 'Coal gasification'].includes(productionMethod);
 
   return (
     <>
-      {mainQuestions.map((question, index) => (
-        <QuestionWithSelect
-          key={index}
-          question={question}
-          value={answers[index]}
-          onChange={(val) => handleChange(index, val)}
-        />
-      ))}
+      <QuestionWithSelect
+        question={{ label: 'Method of production', options: productionOptions }}
+        value={productionMethod}
+        onChange={handleProductionChange}
+      />
 
       {showElectrolysis && (
         <div className="ml-20">
           <QuestionWithSelect
             question={{ label: 'Technology used:', options: ['PEM', 'Alkaline', 'SOEC'] }}
-            value={electrolysis}
+            value={electrolysisTechnology}
             onChange={handleElectrolysisChange}
           />
         </div>
@@ -92,11 +94,11 @@ const HydrogenFields: React.FC<Props> = ({ data, onChange }) => {
         <div className="ml-20">
           <QuestionWithRadioAndInput
             label="Do you use Carbon Capture Storage Utilization?"
-            checked={ccusUsed}
+            checked={usesCCUS}
             percentage={ccusPercentage}
             onCheck={handleCCUSCheck}
             onPercentageChange={(val) => setCcusPercentage(val)}
-            onPercentageBlur={handleCCUSPercentageBlur} // ✅ trigger sync on blur
+            onPercentageBlur={handleCCUSPercentageBlur}
           />
         </div>
       )}

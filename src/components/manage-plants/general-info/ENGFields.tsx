@@ -6,7 +6,7 @@ import QuestionWithMultiSelect from '../common/MultiSelectDropdown';
 import QuestionWithRadio from '../common/QuestionWithRadio';
 
 interface ENGData {
-  answers: string[];
+  productionMethod: string;
   feedstock: string[];
   isRFNBO: boolean | null;
 }
@@ -17,45 +17,53 @@ interface Props {
 }
 
 const ENGFields: React.FC<Props> = ({ data, onChange }) => {
-  const questions = fuelConfigurations.eng;
+  const config = fuelConfigurations.eng;
 
-  const feedstockQuestion = questions.find(q => q.label === 'What is the feedstock used?');
-  const mainQuestions = questions.filter(q => q.label !== 'What is the feedstock used?');
+  const methodQuestion = config.find(q => q.label === 'Method of production');
+  const feedstockQuestion = config.find(q => q.label === 'What is the feedstock used?');
 
-  const answers = data.answers ?? Array(mainQuestions.length).fill('');
+  const productionMethod = data.productionMethod ?? '';
   const feedstock = data.feedstock ?? [];
   const isRFNBO = data.isRFNBO ?? null;
 
-  const handleChange = (index: number, value: string) => {
-    const updated = [...answers];
-    updated[index] = value;
-    onChange({ ...data, answers: updated });
+  const handleMethodChange = (value: string) => {
+    onChange({ ...data, productionMethod: value });
+  };
+
+  const handleFeedstockChange = (val: string[]) => {
+    onChange({ ...data, feedstock: val });
+  };
+
+  const handleRFNBOChange = (val: boolean) => {
+    onChange({ ...data, isRFNBO: val });
   };
 
   return (
     <>
-      {mainQuestions.map((question, index) => (
+      {/* Method of production */}
+      {methodQuestion && (
         <QuestionWithSelect
-          key={index}
-          question={question}
-          value={answers[index]}
-          onChange={(val) => handleChange(index, val)}
+          question={methodQuestion}
+          value={productionMethod}
+          onChange={handleMethodChange}
         />
-      ))}
+      )}
 
+      {/* Feedstock */}
       {feedstockQuestion && (
         <QuestionWithMultiSelect
           label={feedstockQuestion.label}
           options={feedstockQuestion.options}
           selected={feedstock}
-          onChange={(val) => onChange({ ...data, feedstock: val })}
+          onChange={handleFeedstockChange}
         />
       )}
 
+      {/* RFNBO */}
       <QuestionWithRadio
         label="Is your fuel classified as RFNBO?"
         checked={isRFNBO}
-        onCheck={(val) => onChange({ ...data, isRFNBO: val })}
+        onCheck={handleRFNBOChange}
       />
     </>
   );
