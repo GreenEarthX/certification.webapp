@@ -65,7 +65,8 @@ const PlantsList: React.FC<PlantsListProps> = ({ plants, loading, error, onDelet
                 </div>
               </td>
               <td className="py-4">
-                <Link href={`/dashboards/manage-plants/${plant.id}`}>
+              <Link href={`/dashboards/manage-plants?selected=${plant.id}`}>
+
                   <span className="text-sm font-medium text-blue-600 hover:text-blue-700 cursor-pointer">
                     Manage Plant Details
                   </span>

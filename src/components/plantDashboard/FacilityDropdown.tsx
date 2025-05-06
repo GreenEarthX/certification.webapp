@@ -23,6 +23,7 @@ const FacilityDropdown: React.FC<FacilityDropdownProps> = ({ selectedPlant, onCh
             onChange={onChange}
             className="text-3xl px-4 py-2 pr-10 border-transparent focus:border-transparent focus:ring-0 bg-transparent appearance-none text-[#184162] font-bold"
           >
+            <option value="">Select plant</option>
             {plants.length === 0 ? (
               <option value="">No plants available</option>
             ) : (

@@ -1,13 +1,14 @@
 'use client';
 import React, { useRef } from 'react';
-import { UploadCloud } from 'lucide-react'; // Optional: use any icon
+import { UploadCloud } from 'lucide-react';
 
 interface FileUploadProps {
   label: string;
   onChange: (file: File | null) => void;
+  fileName?: string; // NEW: Optional prop to display filename
 }
 
-const FileUpload: React.FC<FileUploadProps> = ({ label, onChange }) => {
+const FileUpload: React.FC<FileUploadProps> = ({ label, onChange, fileName }) => {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleDrop = (e: React.DragEvent<HTMLLabelElement>) => {
@@ -39,6 +40,12 @@ const FileUpload: React.FC<FileUploadProps> = ({ label, onChange }) => {
           className="hidden"
         />
       </label>
+
+      {fileName && (
+        <p className="text-sm mt-1 text-green-700 font-medium">
+          ✅ Uploaded: <span className="italic">{fileName}</span>
+        </p>
+      )}
     </div>
   );
 };

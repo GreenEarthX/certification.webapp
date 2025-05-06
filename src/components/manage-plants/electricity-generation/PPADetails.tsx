@@ -64,6 +64,7 @@ const PPADetails: React.FC<Props> = ({ data, onChange }) => {
             <FileUpload
               label="Submit"
               onChange={(file) => onChange({ ...data, onSiteFile: file })}
+              fileName={data.onSiteFile?.name}
             />
           )}
         </div>
@@ -86,6 +87,7 @@ const PPADetails: React.FC<Props> = ({ data, onChange }) => {
           <FileUpload
             label="Submit"
             onChange={(file) => onChange({ ...data, gridFile: file })}
+            fileName={data.gridFile?.name}
           />
 
           <div className="flex items-center gap-6 mb-1 mt-2">
@@ -118,6 +120,7 @@ const PPADetails: React.FC<Props> = ({ data, onChange }) => {
             <FileUpload
               label="Submit"
               onChange={(file) => onChange({ ...data, offSiteFile: file })}
+              fileName={data.offSiteFile?.name} 
             />
           )}
         </div>
