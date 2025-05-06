@@ -19,7 +19,13 @@ export class CertificationsService {
       if (!ownership.rowCount) throw new Error("Unauthorized");
 
       const res = await client.query(
-        `SELECT c.certification_id, cs.certification_scheme_name, ib.ib_name AS entity, c.created_at, c.status
+        `SELECT 
+          c.certification_id, 
+          cs.certification_scheme_name, 
+          ib.ib_name AS entity, 
+          c.created_at, 
+          c.status,
+          cs.certification_details->>'framework' AS framework
          FROM certifications c
          JOIN certification_schemes cs ON c.certification_scheme_id = cs.certification_scheme_id
          LEFT JOIN issuing_bodies ib ON c.ib_id = ib.ib_id
@@ -32,7 +38,7 @@ export class CertificationsService {
         name: cert.certification_scheme_name,
         entity: cert.entity || "Unknown Entity",
         date: new Date(cert.created_at).toLocaleDateString(),
-        type: "Regulatory",
+        type: cert.framework || "Unknown",
         status: cert.status,
       }));
     } finally {
