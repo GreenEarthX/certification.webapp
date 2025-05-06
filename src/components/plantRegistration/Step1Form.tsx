@@ -2,7 +2,8 @@ import React from "react";
 import FormInput from "./FormInput";
 import FormSelect from "./FormSelect";
 import CountryInput from "./CountryInput";
-
+import { countryCodeToName  } from "../../utils/countryList";
+import { countryNameToCode } from "../../utils/countryList";
 interface Step1FormProps {
   formData: {
     role: string;
@@ -97,14 +98,14 @@ const Step1Form: React.FC<Step1FormProps> = ({
   {/* 🔹 Row 3: City + State */}
   <div className="mb-4 flex gap-4">
   <div className="w-1/2">
-    <CountryInput
-      value={country}
-      onChange={(val) =>
-        handleChange({
-          target: { name: "country", value: val },
-        } as React.ChangeEvent<HTMLInputElement>)
-      }
-    />
+  <CountryInput
+  value={countryNameToCode[formData.address.country] || ""} // set code here
+  onChange={(val) =>
+    handleChange({
+      target: { name: "country", value: countryCodeToName[val] || val },
+    } as React.ChangeEvent<HTMLInputElement>)
+  }
+/>
     </div>
     <div className="w-1/2">
       <FormInput
