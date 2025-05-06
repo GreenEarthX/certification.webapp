@@ -46,6 +46,7 @@ const DirectGridDetails: React.FC<Props> = ({ data, onChange }) => {
         <FileUpload
           label="Submit"
           onChange={(file) => onChange({ ...data, goOFile: file })}
+          fileName={data.goOFile?.name} 
         />
       )}
 
@@ -80,6 +81,7 @@ const DirectGridDetails: React.FC<Props> = ({ data, onChange }) => {
         <FileUpload
           label="Submit"
           onChange={(file) => onChange({ ...data, invoiceFile: file })}
+          fileName={data.invoiceFile?.name} 
         />
       )}
     </div>

@@ -18,6 +18,7 @@ const SelfGenerationDetails: React.FC<Props> = ({ data, onChange }) => {
       <FileUpload
         label="Submit"
         onChange={(file) => onChange({ ...data, file })}
+        fileName={data.file?.name}
       />
     </div>
   );

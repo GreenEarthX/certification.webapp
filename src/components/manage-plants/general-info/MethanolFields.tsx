@@ -6,7 +6,7 @@ import QuestionWithMultiSelect from '../common/MultiSelectDropdown';
 import QuestionWithRadio from '../common/QuestionWithRadio';
 
 interface MethanolData {
-  mainChoice: 'fossil' | 'renewable' | null;
+  methanolType: 'fossil' | 'renewable' | null;
   ccus: boolean;
   ccusPercentage: string;
   renewableType: string;
@@ -25,11 +25,26 @@ const MethanolFields: React.FC<Props> = ({ data, onChange }) => {
   );
   const subtypeOptions = fuelConfigurations.methanol_subtypes?.[0]?.options || [];
 
-  const [localData, setLocalData] = useState<Partial<MethanolData>>(data);
-  const [ccusPercentInput, setCcusPercentInput] = useState(data.ccusPercentage || '');
+  const [localData, setLocalData] = useState<Partial<MethanolData>>({
+    methanolType: data.methanolType ?? null,
+    ccus: data.ccus ?? false,
+    ccusPercentage: data.ccusPercentage ?? '',
+    renewableType: data.renewableType ?? '',
+    feedstock: data.feedstock ?? [],
+    isRFNBO: data.isRFNBO ?? null,
+  });
+
+  const [ccusPercentInput, setCcusPercentInput] = useState(localData.ccusPercentage || '');
 
   useEffect(() => {
-    setLocalData(data);
+    setLocalData({
+      methanolType: data.methanolType ?? null,
+      ccus: data.ccus ?? false,
+      ccusPercentage: data.ccusPercentage ?? '',
+      renewableType: data.renewableType ?? '',
+      feedstock: data.feedstock ?? [],
+      isRFNBO: data.isRFNBO ?? null,
+    });
     setCcusPercentInput(data.ccusPercentage || '');
   }, [data]);
 
@@ -45,7 +60,7 @@ const MethanolFields: React.FC<Props> = ({ data, onChange }) => {
 
   return (
     <>
-      {/* Main choice */}
+      {/* Methanol Type Choice */}
       <div className="mb-4">
         <label className="flex items-center gap-2 mr-4 font-medium accent-blue-600 whitespace-nowrap">
           Are you producing:
@@ -57,10 +72,10 @@ const MethanolFields: React.FC<Props> = ({ data, onChange }) => {
             <input
               type="radio"
               name="methanol_type"
-              checked={localData.mainChoice === 'fossil'}
+              checked={localData.methanolType === 'fossil'}
               onChange={() =>
                 updateAndSync({
-                  mainChoice: 'fossil',
+                  methanolType: 'fossil',
                   renewableType: '',
                 })
               }
@@ -69,15 +84,15 @@ const MethanolFields: React.FC<Props> = ({ data, onChange }) => {
             Fossil fuel-based Methanol
           </label>
 
-          {localData.mainChoice === 'fossil' && (
+          {localData.methanolType === 'fossil' && (
             <div className="ml-6">
               <QuestionWithRadioAndInput
                 label="Do you use Carbon Capture Storage Utilization CCUS?"
                 checked={localData.ccus || false}
                 percentage={ccusPercentInput}
                 onCheck={(val) => updateAndSync({ ccus: val })}
-                onPercentageChange={(val) => setCcusPercentInput(val)} // local only
-                onPercentageBlur={handleCCUSPercentageBlur} // sync on blur
+                onPercentageChange={(val) => setCcusPercentInput(val)}
+                onPercentageBlur={handleCCUSPercentageBlur}
               />
             </div>
           )}
@@ -87,10 +102,10 @@ const MethanolFields: React.FC<Props> = ({ data, onChange }) => {
             <input
               type="radio"
               name="methanol_type"
-              checked={localData.mainChoice === 'renewable'}
+              checked={localData.methanolType === 'renewable'}
               onChange={() =>
                 updateAndSync({
-                  mainChoice: 'renewable',
+                  methanolType: 'renewable',
                   ccus: false,
                   ccusPercentage: '',
                 })
@@ -100,7 +115,7 @@ const MethanolFields: React.FC<Props> = ({ data, onChange }) => {
             Renewable and low carbon methanol
           </label>
 
-          {localData.mainChoice === 'renewable' && (
+          {localData.methanolType === 'renewable' && (
             <div className="ml-6 flex flex-col gap-1">
               {subtypeOptions.map((option, idx) => (
                 <label key={idx} className="flex font-medium items-center gap-2">
