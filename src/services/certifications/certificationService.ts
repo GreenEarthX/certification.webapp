@@ -12,7 +12,7 @@ class CertificationService {
       const query = `
         SELECT 
             cs.certification_scheme_name AS "Certification",
-            cs.framework AS "Type",
+            cs.certification_details->>'framework' AS "Type",
             ib.ib_name AS "Entity",
             p.plant_name AS "Plant Name",
             TO_CHAR(c.created_at, 'DD Mon YYYY') AS "Submission Date",
