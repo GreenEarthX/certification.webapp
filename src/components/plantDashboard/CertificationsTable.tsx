@@ -37,7 +37,7 @@ const CertificationsTable: React.FC<CertificationsTableProps> = ({ certification
         <table className="min-w-full">
           <thead>
             <tr className="text-left text-gray-500 text-sm uppercase border-b border-gray-200">
-              <th className="pb-3 font-medium">Name</th>
+              <th className="pb-3 font-medium w-80">Name</th>
               <th className="pb-3 font-medium">Issuing Body</th>
               <th className="pb-3 font-medium">Submission Date</th>
               <th className="pb-3 font-medium">Type</th>
@@ -48,7 +48,7 @@ const CertificationsTable: React.FC<CertificationsTableProps> = ({ certification
           <tbody className="text-gray-700">
             {certifications.map(({ id, name, entity, date, type, status }) => (
               <tr key={id} className="border-t border-gray-100 hover:bg-gray-50">
-                <td className="py-4 font-medium">{name}</td>
+                <td className="py-4 font-medium w-80">{name}</td>
                 <td className="py-4">{entity}</td>
                 <td className="py-4">{date}</td>
                 <td className="py-4">{type}</td>
