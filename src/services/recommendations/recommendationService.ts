@@ -12,7 +12,7 @@ class RecommendationService {
           COALESCE(cs.overview->'recommendation_overview'->>'description', '') AS overview,
           COALESCE(cs.overview->'recommendation_overview'->'features', '[]'::jsonb) AS details,
           STRING_AGG(DISTINCT cb.cb_name, ', ') AS "certifyingEntity",  
-          cs.validity AS validity,
+          cs.certification_details->>'validity' AS validity,
           r.compliance_score AS "compliancePercentage",
           p.plant_id AS "plantId",
           p.plant_name AS "plantName"
@@ -23,7 +23,7 @@ class RecommendationService {
         JOIN certification_schemes_certification_bodies cscb ON cs.certification_scheme_id = cscb.certification_scheme_id
         JOIN certification_bodies cb ON cscb.cb_id = cb.cb_id
         WHERE u.auth0sub = $1
-        GROUP BY r.recommendation_id, cs.certification_scheme_name, cs.overview, cs.validity, r.compliance_score, p.plant_id, p.plant_name;
+        GROUP BY r.recommendation_id, cs.certification_scheme_name, cs.overview, cs.certification_details->>'validity', r.compliance_score, p.plant_id, p.plant_name;
         `,
         [userSub]
       );
