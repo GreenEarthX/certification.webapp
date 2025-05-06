@@ -116,6 +116,13 @@ const SchemeDetailsPage = () => {
     );
   };
 
+  const getComplianceColor = (score: number) => {
+    if (score < 40) return "bg-red-500";
+    if (score < 75) return "bg-yellow-400";
+    return "bg-green-500";
+  };
+  
+
   return (
     <section className="p-6 rounded-lg">
       {/* Scheme title and compliance score */}
@@ -124,12 +131,16 @@ const SchemeDetailsPage = () => {
         <div className="flex items-center space-x-3">
           <span className="font-medium text-gray-700">Your Compliance Score</span>
           <div className="w-40 h-3 bg-gray-200 rounded-full overflow-hidden">
-            <div
-              className="bg-green-500 h-full"
-              style={{ width: `${complianceScore}%` }}
-            ></div>
+          <div
+            className={`h-full ${getComplianceColor(complianceScore)}`}
+            style={{ width: `${complianceScore}%` }}
+          ></div>
+
           </div>
-          <span className="font-bold text-green-600">{complianceScore}%</span>
+          <span className={`font-bold ${getComplianceColor(complianceScore).replace("bg", "text")}`}>
+            {complianceScore}%
+          </span>
+
         </div>
       </div>
 
