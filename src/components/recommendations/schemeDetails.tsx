@@ -147,13 +147,19 @@ const SchemeDetailsPage = () => {
       {/* Card with tabs and content */}
       <div className="bg-white rounded-lg shadow-sm p-6">
         <div className="mb-6 flex justify-center items-center">
-          <Image
-            src={schemeName === "REDcert-EU" ? "/RedcertLogo.jpg" : "/certifhyScheme.png"}
-            alt="Scheme Logo"
-            width={200}
-            height={100}
-            className="object-contain"
-          />
+        <Image
+          src={
+            schemeName === "REDcert-EU"
+              ? "/RedcertLogo.jpg"
+              : schemeName === "Green Hydrogen Certification Scheme of India (GHCI)"
+              ? "/GHCSIndia.png"
+              : "/certifhyScheme.png"
+          }
+          alt="Scheme Logo"
+          width={200}
+          height={100}
+          className="object-contain"
+        />
         </div>
 
         <div className="flex items-center justify-between border-b border-gray-200 mb-4">
