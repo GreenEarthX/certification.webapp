@@ -22,9 +22,9 @@ const PlantsList: React.FC<PlantsListProps> = ({ plants, loading, error, onDelet
   if (error) return <p className="text-red-500">{error}</p>;
 
   const getRiskScoreColor = (score: number): string => {
-    if (score >= 70) return "bg-red-500";
-    if (score >= 40) return "bg-orange-500";
-    return "bg-green-500";
+    if (score >= 70) return "bg-green-500";
+    if (score <= 40) return "bg-orange-500";
+    return "bg-red-500";
   };
 
   const getRiskScoreText = (score: number): string => `${score}%`;
@@ -38,7 +38,7 @@ const PlantsList: React.FC<PlantsListProps> = ({ plants, loading, error, onDelet
             <th className="pb-3 font-medium">Name</th>
             <th className="pb-3 font-medium">Type</th>
             <th className="pb-3 font-medium">Address</th>
-            <th className="pb-3 font-medium">Risk Score</th>
+            <th className="pb-3 font-medium">Maturity SCORE</th>
             <th className="pb-3 font-medium">Actions</th>
             <th className="pb-3 font-medium"></th>
           </tr>

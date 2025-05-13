@@ -22,8 +22,8 @@ const Navbar: React.FC = () => {
       setTitle(
         pathname.match(/^\/dashboards\/recommendations\/[^/]+\/gantt-tracking\/?$/)
           ? "Certification Timeline"
-          : pathname.match(/^\/dashboards\/recommendations\/\d+\/tracking$/)
-          ? "Tracking Recommendation"
+          : pathname.match(/^\/dashboards\/recommendations\/\d+\/startTracking$/)
+          ? "Certification Tracking"
           : pathname.match(/^\/dashboards\/recommendations\/\d+$/)
           ? "Recommendation"
           : "Recommendations"

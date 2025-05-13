@@ -15,15 +15,17 @@ const DashboardStats: React.FC<DashboardStatsProps> = ({ stats, loading, error }
 
   return (
     <div className="p-4 rounded-lg">
-      <h2 style={{ color: "#17598d" }} className="text-xl font-semibold">Certifications</h2>
-      <br/>
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <StatCard title="Active" value={stats.active} icon={<FaCheckCircle />} iconColor="lightblue" bgColor="lightblue" />
-        <StatCard title="Pending" value={stats.pending} icon={<FaClock />} iconColor="lightblue" bgColor="lightblue" />
-        <StatCard title="Expired" value={stats.expired} icon={<FaExclamationCircle />} iconColor="lightblue" bgColor="lightblue" />
-        <StatCard title="Rejected" value={stats.rejected} icon={<FaTimesCircle />} iconColor="lightblue" bgColor="lightblue" />
-      </div>
+  <h2 style={{ color: "#17598d" }} className="text-xl font-semibold">Certifications</h2>
+  <br />
+  <div className="flex justify-center">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl">
+      <StatCard title="Valid" value={stats.active} icon={<FaCheckCircle />} iconColor="lightblue" bgColor="lightblue" />
+      <StatCard title="Pending" value={stats.pending} icon={<FaClock />} iconColor="lightblue" bgColor="lightblue" />
+      <StatCard title="Non Valid" value={+stats.rejected + +stats.expired} icon={<FaTimesCircle />} iconColor="lightblue" bgColor="lightblue" />
     </div>
+  </div>
+</div>
+
   );
 };
 

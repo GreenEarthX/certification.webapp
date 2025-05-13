@@ -73,15 +73,6 @@ const CertificationGantt = () => {
           label: "Duration",
           width: 60,
           align: "center"
-        },
-        {
-          name: "progress",
-          label: "Progress",
-          width: 80,
-          align: "center",
-          template: function (task: { progress?: number }) {
-            return Math.round((task.progress || 0) * 100) + "%";
-          }
         }
       ];
 

@@ -49,7 +49,7 @@ export default function PlantDashboard() {
           <FacilityDropdown selectedPlant={selectedPlant} onChange={handlePlantChange} />
         )}
         {loadingRisk ? (
-          <p className="text-gray-500 text-sm">Loading risk score...</p>
+          <p className="text-gray-500 text-sm">Loading Maturity score...</p>
         ) : (
           <RiskScore score={riskScore ?? 0} />
         )}
@@ -64,7 +64,7 @@ export default function PlantDashboard() {
         <section className="col-span-12 lg:col-span-8 bg-white rounded-lg p-6 shadow-sm h-full">
           <div className="flex justify-between items-center mb-4">
             <h2 style={{ color: "#17598d" }} className="text-xl font-semibold">
-              Certification Requests
+              Certification Submissions
             </h2>
             <Link href="/dashboards/certifications/add">
               <button className="bg-blue-600 text-white px-5 py-1 rounded-lg hover:bg-blue-700">
