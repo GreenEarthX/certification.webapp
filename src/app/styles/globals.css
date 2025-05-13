@@ -71,3 +71,104 @@ body {
 .task-pending .gantt_cell {
   background-color: #f8d7da !important;
 }
+
+
+
+
+
+.gantt_task_line {
+  border-radius: 4px;
+}
+.gantt_task_line[data-text*="Final Certificate"] {
+  background-color: #007acc;
+}
+.gantt_task_line[data-text*="Provisional"] {
+  background-color: #e67e22;
+}
+.gantt_task_line[data-text*="Verification"] {
+  background-color: #16a085;
+}
+.gantt_task_line[data-text*="Review"] {
+  background-color: #8e44ad;
+}
+.gantt_task_line[data-text*="Application"] {
+  background-color: #d35400;
+}
+
+
+
+.phase-consent .gantt_task_content {
+  background-color: #27ae60 !important; /* Green */
+  color: white;
+}
+.phase-cert1 .gantt_task_content {
+  background-color: #e74c3c !important; /* Red */
+  color: white;
+}
+.phase-provisional .gantt_task_content {
+  background-color: #f39c12 !important; /* Orange */
+  color: white;
+}
+.phase-final .gantt_task_content {
+  background-color: #8e44ad !important; /* Violet */
+  color: white;
+}
+
+
+
+.gantt-wrapper {
+  width: 100%;
+}
+
+.gantt-toolbar {
+  display: flex;
+  gap: 10px;
+  padding: 8px 16px;
+  background-color: #f7f7f7;
+  border-bottom: 1px solid #ddd;
+  margin-bottom: 4px;
+}
+
+.gantt-toolbar button {
+  background-color: #007acc;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.gantt-toolbar button:hover {
+  background-color: #005fa3;
+}
+
+.gantt-container {
+  height: 600px;
+  width: 100%;
+}
+
+
+.phase-consent .gantt_task_line,
+.phase-consent .gantt_grid_row {
+  background-color: #27ae60 !important; /* Green */
+  color: white;
+}
+
+.phase-cert1 .gantt_task_line,
+.phase-cert1 .gantt_grid_row {
+  background-color: #e74c3c !important; /* Red */
+  color: white;
+}
+
+.phase-provisional .gantt_task_line,
+.phase-provisional .gantt_grid_row {
+  background-color: #f39c12 !important; /* Orange */
+  color: white;
+}
+
+.phase-final .gantt_task_line,
+.phase-final .gantt_grid_row {
+  background-color: #8e44ad !important; /* Violet */
+  color: white;
+}
