@@ -17,7 +17,7 @@ const SchemeDetailsPage = () => {
 
   
   const handleStartTracking = () => {
-    router.push(`/dashboards/recommendations/${schemeName}/gantt-tracking`); 
+    router.push(`/dashboards/recommendations/${schemeName}/startTracking`); 
   };
 
   const renderContent = (activeTab: string, content: Record<string, any> | null) => {
@@ -153,13 +153,13 @@ const SchemeDetailsPage = () => {
               ? "/RedcertLogo.jpg"
               : schemeName === "Green Hydrogen Certification Scheme of India (GHCI)"
               ? "/GHCSIndia.png"
-              : schemeName === "Concept Certificate"
+              : schemeName === "GHCI-Concept Certificate"
               ? "/conceptCertificate.png"
-              : schemeName === "Facility-Level Certificate"
+              : schemeName === "GHCI-Facility-Level Certificate"
               ? "/facilityCertificate.png"
-              : schemeName === "Provisional Certificate"
+              : schemeName === "GHCI-Provisional Certificate"
               ? "/provisionalCertificate.png"
-              : schemeName === "Final Certificate"
+              : schemeName === "GHCI-Final Certificate"
               ? "/finalCertificate.png"
               : "/certifhyScheme.png"
           }
