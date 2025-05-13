@@ -57,3 +57,17 @@ body {
 .stat-card {
   @apply bg-white p-4 rounded-lg flex items-center justify-between shadow-sm;
 }
+
+
+
+.task-complete .gantt_cell {
+  background-color: #d4edda !important;
+}
+
+.task-in-progress .gantt_cell {
+  background-color: #fff3cd !important;
+}
+
+.task-pending .gantt_cell {
+  background-color: #f8d7da !important;
+}

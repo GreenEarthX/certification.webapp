@@ -17,6 +17,7 @@
     "@mui/x-data-grid": "^7.27.3",
     "axios": "^1.8.1",
     "country-list": "^2.3.0",
+    "dhtmlx-gantt": "^9.0.10",
     "dotenv": "^16.4.7",
     "formidable": "^3.5.2",
     "framer-motion": "^12.4.7",
