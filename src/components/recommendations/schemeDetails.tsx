@@ -3,6 +3,10 @@
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useServiceDetails } from "@/hooks/useSchemeDetails";
+import { Tooltip } from "@mui/material";
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography } from "@mui/material";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import { useState } from "react";
 
 const SchemeDetailsPage = () => {
   const router = useRouter();
@@ -14,6 +18,22 @@ const SchemeDetailsPage = () => {
     activeTab,
     setActiveTab,
   } = useServiceDetails(); 
+
+
+  const [showComplianceModal, setShowComplianceModal] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [hoverTimeout, setHoverTimeout] = useState<NodeJS.Timeout | null>(null);
+
+  const handleMouseEnter = () => {
+    if (hoverTimeout) clearTimeout(hoverTimeout);
+    setHovered(true);
+  };
+
+  const handleMouseLeave = () => {
+    const timeout = setTimeout(() => setHovered(false), 200); // slight delay
+    setHoverTimeout(timeout);
+  };
+
 
   
   const handleStartTracking = () => {
@@ -128,20 +148,53 @@ const SchemeDetailsPage = () => {
       {/* Scheme title and compliance score */}
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-800">{schemeName}</h1>
-        <div className="flex items-center space-x-3">
-          <span className="font-medium text-gray-700">Your Compliance Score</span>
-          <div className="w-40 h-3 bg-gray-200 rounded-full overflow-hidden">
-          <div
-            className={`h-full ${getComplianceColor(complianceScore)}`}
-            style={{ width: `${complianceScore}%` }}
-          ></div>
+        <div
+  className="relative flex items-center space-x-3"
+  onMouseEnter={handleMouseEnter}
+  onMouseLeave={handleMouseLeave}
+>
 
-          </div>
-          <span className={`font-bold ${getComplianceColor(complianceScore).replace("bg", "text")}`}>
-            {complianceScore}%
-          </span>
+  <span className="font-medium text-gray-700">Your Compliance Score</span>
 
-        </div>
+  <div className="w-40 h-3 bg-gray-200 rounded-full overflow-hidden">
+    <div
+      className={`h-full ${getComplianceColor(complianceScore)}`}
+      style={{ width: `${complianceScore}%` }}
+    ></div>
+  </div>
+
+  <span className={`font-bold ${getComplianceColor(complianceScore).replace("bg", "text")}`}>
+    {complianceScore}%
+  </span> 
+
+
+  {hovered && (
+  <div
+    className="absolute top-10 left-0 z-10 w-96 bg-white border border-blue-300 rounded-lg shadow-lg p-4 text-sm text-gray-700 transition-all duration-200"
+    onMouseEnter={handleMouseEnter}
+    onMouseLeave={handleMouseLeave}
+  >
+
+      <p className="font-semibold mb-2">Compliance Score calculation includes:</p>
+      <ul className="list-disc pl-5 space-y-1">
+        <li><span className="font-medium">Plant Details</span></li>
+        <li><span className="font-medium">Trading Market & Usage Sector</span></li>
+        <li><span className="font-medium">Carbon Footprint & GHG Emissions</span></li>
+        <li><span className="font-medium">Traceability & Supply Chain</span></li>
+      </ul>
+      <div className="flex justify-center mt-4">
+        <button
+          onClick={() => setShowComplianceModal(true)}
+          className="bg-blue-600 text-white text-xs font-medium px-4 py-1.5 rounded-full hover:bg-blue-700 flex items-center gap-1 transition"
+        >
+          <InfoOutlinedIcon fontSize="small" />
+          View Full Calculation Process
+        </button>
+      </div>
+    </div>
+  )}
+</div>
+
       </div>
 
       {/* Card with tabs and content */}
@@ -202,6 +255,57 @@ const SchemeDetailsPage = () => {
           renderContent(activeTab, content)
         )}
       </div>
+
+      <Dialog
+  open={showComplianceModal}
+  onClose={() => setShowComplianceModal(false)}
+  maxWidth="md"
+  fullWidth
+  PaperProps={{
+    sx: {
+      backgroundColor: "#f7fbff",
+      borderRadius: 3,
+      p: 3,
+      maxHeight: "95vh",
+      overflowY: "auto",
+    },
+  }}
+>
+  <DialogContent sx={{ backgroundColor: "#f1f7fd", px: 2, py: 3 }}>
+    <div className="bg-white border border-blue-200 rounded-xl p-6 text-gray-800">
+      <Typography variant="h6" sx={{ fontWeight: 600, color: "#17598d", textAlign: "center", mb: 2 }}>
+        Compliance Score Calculation Process
+      </Typography>
+
+      <ul className="list-disc pl-6 space-y-3 text-sm">
+        <li><strong>Evaluate each requirement</strong> from the certification scheme.</li>
+        <li><strong>Check alignment</strong> between submitted data and scheme criteria.</li>
+        <li><strong>Assign weights</strong> based on importance of each compliance item.</li>
+        <li><strong>Calculate total fulfillment</strong> to generate a score as a percentage.</li>
+      </ul>
+    </div>
+  </DialogContent>
+
+  <DialogActions sx={{ justifyContent: "center", pb: 2 }}>
+    <Button
+      onClick={() => setShowComplianceModal(false)}
+      variant="contained"
+      sx={{
+        backgroundColor: "#1976d2",
+        px: 3,
+        py: 1,
+        borderRadius: "6px",
+        fontWeight: 500,
+        fontSize: "0.85rem",
+        textTransform: "none",
+        "&:hover": { backgroundColor: "#1565c0" },
+      }}
+    >
+      Close
+    </Button>
+  </DialogActions>
+</Dialog>
+
     </section>
   );
 };

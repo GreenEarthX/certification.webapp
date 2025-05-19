@@ -75,8 +75,8 @@ export default function PlantDashboard() {
           <br/>
           <CertificationRequests
             requests={[
-              { name: "PosHYdon Certification", entity: "DNV", progress: 50 },
-              { name: "GHG Reduction Certificate", entity: "Verra", progress: 75 },
+              { name: "REDcert-EU", entity: "DNV", progress: 50 },
+              { name: "GHCI-Concept Certificate", entity: "N/A", progress: 75 },
               { name: "SÜD CMS 70", entity: "TÜV SÜD", progress: 25 },
             ]}
           />
