@@ -27,6 +27,8 @@ interface WaterData {
   waterConsumption: string;
   waterSources: string[];
   trackWaterUsage: boolean | null;
+  treatmentLocation: { [source: string]: string[] }; 
+  monitoringFile?: File | null;
 }
 
 
@@ -62,6 +64,7 @@ export function usePlantDetails() {
         waterConsumption: '',
         waterSources: [],
         trackWaterUsage: null,
+        treatmentLocation: {}, 
       },
       ghg: {},
       traceability: {},

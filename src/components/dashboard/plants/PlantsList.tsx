@@ -23,7 +23,7 @@ const PlantsList: React.FC<PlantsListProps> = ({ plants, loading, error, onDelet
 
   const getRiskScoreColor = (score: number): string => {
     if (score >= 70) return "bg-green-500";
-    if (score <= 40) return "bg-orange-500";
+    if (score >= 40) return "bg-orange-500";
     return "bg-red-500";
   };
 
@@ -65,7 +65,7 @@ const PlantsList: React.FC<PlantsListProps> = ({ plants, loading, error, onDelet
                 </div>
               </td>
               <td className="py-4">
-              <Link href={`/dashboards/manage-plants?selected=${plant.id}`}>
+              <Link href={`/dashboards/manage-plants-indian?selected=${plant.id}`}>
 
                   <span className="text-sm font-medium text-blue-600 hover:text-blue-700 cursor-pointer">
                     Manage Plant Details
