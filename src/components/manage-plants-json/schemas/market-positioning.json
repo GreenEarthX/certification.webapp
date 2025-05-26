@@ -1,0 +1,100 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Off-Takers & Market Positioning",
+  "sectionKey": "marketAndOfftakers",
+  "sections": [
+    {
+  "title": "Market Positioning",
+  "key": "marketPositioning",
+  "fields": [
+    {
+      "type": "radio",
+      "key": "hasAgreements",
+      "label": "Do you already have offtake agreements or interested buyers",
+      "required": true
+    },
+    {
+      "type": "locationPortion",
+      "key": "locationPortionWithAgreements",
+      "label": "Where are your offtakers located?\nFrom your overall production, what portion is allocated to this location?",
+      "condition": {
+        "field": "marketAndOfftakers.marketPositioning.hasAgreements",
+        "value": true
+      }
+    },
+    {
+      "type": "locationPortion",
+      "key": "locationPortionWithoutAgreements",
+      "label": "Where do you intend to sell/use your product?\nFrom your overall production, what portion is allocated to this location?",
+      "condition": {
+        "field": "marketAndOfftakers.marketPositioning.hasAgreements",
+        "value": false
+      },
+      "validation": {
+        "maxTotal": 100,
+        "errorMessage": "Total portion cannot exceed 100%"
+      }
+    }
+  ]
+},
+    {
+      "title": "Off-Takers",
+      "key": "offTakers",
+      "fields": [
+        {
+          "type": "multiSelect",
+          "key": "offTakers",
+          "label": "Who are your primary Off-Takers ? (select all that apply)",
+          "options": [
+            "Refineries", "Chemical Manufacturers", "Steel Industry", "Glass Industry",
+            "Electronics and Semiconductor Industry", "Heavy Duty Transport", "Aviation",
+            "Automotive Industry", "Power Plants", "Energy Storage and Grid Balancing",
+            "Natural Gas Infrastructure", "Public Sector Infrastructure", "Fertilizer Producers",
+            "Agricultural Industry", "Shipping Industry", "Methanol Producers",
+            "Petrochemical Industry", "Pharmaceuticals and Cosmetics", "Marine Shipping",
+            "Cogeneration Plants", "Fuel Retailers", "Regulatory Bodies",
+            "Government and Municipal Offtakers", "Public Sector Fleets", "Power Generation",
+            "Gas Utilities", "Industrial Heat Applications", "Maritime Shipping",
+            "Gas Suppliers and Retailers", "Energy Utilities", "Private Jet Operators",
+            "Cargo Airlines", "Airport Operators", "Aviation Fuel Suppliers",
+            "Methanol-Based Fuel Cell Developers", "E-fuel Production Companies",
+            "Heavy Duty Transport Manufacturers", "International Shipping Organizations",
+            "Renewable Energy"
+          ]
+        },
+        {
+          "type": "radio",
+          "key": "needSubsidies",
+          "label": "Do your offtakers need to access market-based incentives or subsidies ?"
+        },
+        {
+          "type": "radio",
+          "key": "requiresLabel",
+          "label": "Do they require a specific label ?",
+          "condition": {
+            "field": "marketAndOfftakers.offTakers.needSubsidies",
+            "value": true
+          }
+        },
+        {
+          "type": "text",
+          "key": "labelRequirementsYes",
+          "label": "Specify:",
+          "condition": {
+            "field": "marketAndOfftakers.offTakers.requiresLabel",
+            "value": true
+          }
+        },
+        {
+          "type": "text",
+          "key": "labelRequirementsNo",
+          "label": "What are their requirements ?",
+          "condition": {
+            "field": "marketAndOfftakers.offTakers.requiresLabel",
+            "value": false
+          }
+        }
+      ]
+    }
+  ]
+}

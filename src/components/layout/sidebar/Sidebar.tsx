@@ -81,7 +81,7 @@ const Sidebar: React.FC = () => {
       <List sx={{ paddingTop: '16px' }}>
         {[
           { text: 'Dashboard', icon: <FaHome />, path: '/dashboards/dashboard' }, // Add leading slash
-          { text: 'Manage Plants', icon: <FaSitemap />, path: '/dashboards/manage-plants-indian' }, // Add leading slash
+          { text: 'Manage Plants', icon: <FaSitemap />, path: '/dashboards/manage-plants-json' }, // Add leading slash
           { text: 'Certifications', icon: <FaFileAlt />, path: '/dashboards/certifications' }, // Add leading slash
           { text: 'Recommendations', icon: <FaFileMedical />, path: '/dashboards/recommendations' }, // Add leading slash
         ].map((item) => (
