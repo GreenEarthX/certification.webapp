@@ -1,0 +1,214 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "General Information",
+  "sectionKey": "generalInfo",
+  "sections": [
+    {
+      "title": "Plant details",
+      "key": "plantDetails",
+      "fields": [
+        {
+          "type": "select",
+          "key": "plantStage",
+          "label": "Plant stage",
+          "options": [
+            "Project Initiation (Before Pre-FEED)",
+            "Project Foundation-Pre-FEED",
+            "FEED",
+            "Pre-FID",
+            "FID",
+            "EPC",
+            "Pre-Commissionnig & Commissionnig",
+            "Start-Up & Initial Production (COD)"
+          ],
+          "required": true
+        },
+        {
+          "type": "date",
+          "key": "reachedDate",
+          "label": "When did you reach this stage?",
+          "required": true
+        },
+        {
+          "type": "radioGroup",
+          "key": "subsidyStatus",
+          "label": "Did you receive or intend to receive subsidies and/or incentives from the government?",
+          "options": ["Yes, I received", "Yes, I intend to", "no"],
+          "required": true
+        },
+        {
+          "type": "radioGroup",
+          "key": "govSource",
+          "label": "Did you receive it from",
+          "options": ["state government", "central government"],
+          "condition": {
+            "field": "generalInfo.plantDetails.subsidyStatus",
+            "value": "Yes, I received"
+          }
+        },
+        {
+          "type": "select",
+          "key": "stateName",
+          "label": "Specify the state",
+          "options": [
+            "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa",
+            "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala",
+            "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland",
+            "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura",
+            "Uttar Pradesh", "Uttarakhand", "West Bengal"
+          ],
+          "condition": {
+            "field": "generalInfo.plantDetails.govSource",
+            "value": "state government"
+          }
+        },
+        {
+          "type": "select",
+          "key": "govContribution",
+          "label": "Specify the government contribution",
+          "options": ["Award", "Incentive", "Subsidy"],
+          "condition": {
+            "field": "generalInfo.plantDetails.subsidyStatus",
+            "value": "Yes, I received"
+          }
+        },
+        {
+          "type": "text",
+          "key": "awardeeScheme",
+          "label": "Specify the Awardees scheme",
+          "condition": {
+            "field": "generalInfo.plantDetails.govContribution",
+            "value": "Award"
+          }
+        }
+      ]
+    },
+    {
+      "title": "Technology",
+      "key": "technology",
+      "fields": [
+        {
+          "type": "disabledSelect",
+          "key": "mainProduct",
+          "label": "Specify the Main Product",
+          "options": ["hydrogen", "ammonia", "methanol", "saf", "biofuels", "e-ng"],
+          "required": true
+        },
+        
+        {
+          "type": "select",
+          "key": "coProduct",
+          "label": "Specify the Co-product",
+          "options": ["hydrogen", "ammonia", "saf", "methanol", "e-ng", "biofuel"]
+        }
+      ],
+      "subsections": [
+        {
+          "title": "Hydrogen-specific details",
+          "key": "hydrogenDetails",
+          "condition": {
+            "field": "generalInfo.technology.mainProduct",
+            "value": "hydrogen"
+          },
+          "fields": [
+            {
+              "type": "select",
+              "key": "productionMethod",
+              "label": "Method of production",
+              "options": [
+                "Electrolysis",
+                "Steam Methane Reforming",
+                "Biomass gasification",
+                "Coal gasification"
+              ],
+              "required": true
+            },
+            {
+              "type": "select",
+              "key": "electrolysisTechnology",
+              "label": "Technology used",
+              "options": ["PEM", "Alkaline", "SOEC"],
+              "required": true,
+              "condition": {
+                "field": "generalInfo.technology.hydrogenDetails.productionMethod",
+                "value": "Electrolysis"
+              }
+            },
+            {
+              "type": "radioWithInput",
+              "key": "usesCCUS",
+              "label": "Do you use Carbon Capture Storage Utilization?",
+              "withInputKey": "ccusPercentage",
+              "withInputLabel": "Percentage",
+              "required": false,
+              "condition": {
+                "field": "generalInfo.technology.hydrogenDetails.productionMethod",
+                "value": ["Steam Methane Reforming", "Biomass gasification", "Coal gasification"]
+              }
+            }
+          ]
+        },
+        {
+          "title": "Ammonia-specific details",
+          "key": "ammoniaDetails",
+          "condition": {
+            "field": "generalInfo.technology.mainProduct",
+            "value": "ammonia"
+          },
+          "fields": [
+            {
+              "type": "radio",
+              "key": "usesHaberBosch",
+              "label": "Do you use Haber-Bosch process?"
+            },
+            {
+              "type": "radioWithInput",
+              "key": "usesCCUS",
+              "label": "Do you use Carbon Capture Storage Utilization?",
+              "withInputKey": "ccusPercentage",
+              "withInputLabel": "Percentage",
+              "condition": {
+                "field": "generalInfo.technology.ammoniaDetails.usesHaberBosch",
+                "value": true
+              }
+            },
+            {
+              "type": "text",
+              "key": "alternativeMethod",
+              "label": "Write down the method used:",
+              "condition": {
+                "field": "generalInfo.technology.ammoniaDetails.usesHaberBosch",
+                "value": false
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Feedstock",
+      "key": "feedstock",
+      "fields": [
+        {
+          "type": "number",
+          "key": "monthlyProduction",
+          "label": "Monthly fuel production (Average in tons)"
+        },
+        {
+          "type": "multiSelect",
+          "key": "feedstockList",
+          "label": "Feedstock list",
+          "options": [
+            "Renewable electricity", "Water", "Natural gas", "Coal or lignite", "Biogas",
+            "Oil-based reforming processes", "Biomass gasification"
+          ]
+        },
+        {
+          "type": "number",
+          "key": "feedstockAmount",
+          "label": "Feedstock average quantity used monthly (tons)"
+        }
+      ]
+    }
+  ]
+}

@@ -50,6 +50,7 @@ export function usePlantDetails() {
 
   function getEmptyFormData(): FormDataType {
     return {
+      generalInfo: {},
       hydrogen: {},
       ammonia: {},
       biofuels: {},
