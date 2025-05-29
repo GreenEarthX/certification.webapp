@@ -8,6 +8,7 @@ interface WaterData {
   waterSources: string[];
   trackWaterUsage: boolean | null;
   monitoringNotes?: string;
+  treatmentLocation: { [source: string]: string[]; };
 }
 
 interface Props {
