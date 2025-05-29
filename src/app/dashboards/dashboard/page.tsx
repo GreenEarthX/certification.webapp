@@ -40,7 +40,7 @@ export default function Dashboard() {
 
       <div className="col-span-12 grid grid-cols-12 gap-6">
         <section className="col-span-12 lg:col-span-8 bg-white rounded-lg p-6 shadow-sm">
-          <h2 style={{ color: "#17598d" }} className="text-xl font-semibold">Risk Profile</h2>
+          <h2 style={{ color: "#17598d" }} className="text-xl font-semibold">Maturity Profile</h2>
           <br/>
           <Chart data={chartData} />
         </section>

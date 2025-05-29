@@ -14,6 +14,8 @@ export interface FormDataType {
     waterConsumption: string;
     waterSources: string[];
     trackWaterUsage: boolean | null;
+    treatmentLocation: { [source: string]: string[] }; 
+    monitoringFile?: File | null; 
   };
   ghg: any;
   traceability: any;
