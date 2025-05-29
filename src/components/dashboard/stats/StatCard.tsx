@@ -11,12 +11,12 @@ const iconBgClasses: { [key: string]: string } = {
 
 const StatCard: React.FC<StatCardProps> = ({ title, value, icon, iconColor }) => {
   return (
-    <div className="p-5 rounded-lg shadow-md bg-white">
+    <div className="p-5 rounded-lg shadow-md bg-white w-[250px]">
       <div className="flex items-center space-x-4">
         <div className={`p-3 rounded-full ${iconBgClasses[iconColor] || "bg-gray-200 text-gray-700"}`}>
           {icon}
         </div>
-        <div>
+        <div className="text-center">
           <p className="text-sm text-gray-400">{title}</p> 
           <p className="text-2xl font-bold" style={{ color: "#17598D" }}>{value}</p>
         </div>
@@ -24,5 +24,6 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon, iconColor }) =>
     </div>
   );
 };
+
 
 export default StatCard;

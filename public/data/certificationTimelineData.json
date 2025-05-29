@@ -1,0 +1,79 @@
+{
+    "data": [
+      {
+        "id": 1,
+        "text": "Registration as an account holder",
+        "start_date": "2025-05-01",
+        "duration": 2,
+        "progress": 1,
+        "open": true
+      },
+      {
+        "id": 2,
+        "text": "Registration of production device",
+        "start_date": "2025-05-03",
+        "duration": 4,
+        "progress": 0.25,
+        "open": true
+      },
+      {
+        "id": 3,
+        "text": "Submit registration forms",
+        "start_date": "2025-05-03",
+        "duration": 1,
+        "progress": 1,
+        "parent": 2
+      },
+      {
+        "id": 4,
+        "text": "Undergo Certifi-ly audit",
+        "start_date": "2025-05-04",
+        "duration": 2,
+        "parent": 2
+      },
+      {
+        "id": 5,
+        "text": "Approve device registration",
+        "start_date": "2025-05-06",
+        "duration": 1,
+        "parent": 2
+      },
+      {
+        "id": 6,
+        "text": "Registration of production batches",
+        "start_date": "2025-05-07",
+        "duration": 3
+      },
+      {
+        "id": 7,
+        "text": "Request for certificate issuance",
+        "start_date": "2025-05-10",
+        "duration": 2
+      },
+      {
+        "id": 8,
+        "text": "Information verification",
+        "start_date": "2025-05-12",
+        "duration": 2
+      },
+      {
+        "id": 9,
+        "text": "Production batch audit",
+        "start_date": "2025-05-14",
+        "duration": 3
+      },
+      {
+        "id": 10,
+        "text": "Certifi-ly Reviews Audit Report",
+        "start_date": "2025-05-17",
+        "duration": 2
+      },
+      {
+        "id": 11,
+        "text": "Certifi-ly Issues Certificate",
+        "start_date": "2025-05-19",
+        "duration": 1
+      }
+    ]
+  }
+  

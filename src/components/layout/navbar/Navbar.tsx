@@ -20,8 +20,10 @@ const Navbar: React.FC = () => {
   useEffect(() => {
     if (pathname.includes("/recommendations")) {
       setTitle(
-        pathname.match(/^\/dashboards\/recommendations\/\d+\/tracking$/)
-          ? "Tracking Recommendation"
+        pathname.match(/^\/dashboards\/recommendations\/[^/]+\/gantt-tracking\/?$/)
+          ? "Certification Timeline"
+          :pathname.match(/^\/dashboards\/recommendations\/[^/]+\/startTracking$/)
+          ? "Certification Tracking"
           : pathname.match(/^\/dashboards\/recommendations\/\d+$/)
           ? "Recommendation"
           : "Recommendations"

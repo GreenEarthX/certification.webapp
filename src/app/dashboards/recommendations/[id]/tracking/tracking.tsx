@@ -32,60 +32,34 @@ const TrackingPage = () => {
   const tasks = [
     {
       id: 'task-1',
-      name: 'Registration as an account holder',
+      name: 'Submit data for verification',
       status: 'Done',
       deadline: 'Add date',
       subtasks: [],
     },
     {
       id: 'task-2',
-      name: 'Registration of production device',
+      name: 'Undergo Data Verification by ACV',
       status: 'Pending',
       deadline: 'Add date',
-      subtasks: [
-        { id: 'subtask-2-1', name: 'Submit production device registration forms' },
-        { id: 'subtask-2-2', name: 'Undergo an audit by a Certifi-ly™-certified body' },
-        { id: 'subtask-2-3', name: 'Approve device registration' },
-      ],
     },
     {
       id: 'task-3',
-      name: 'Registration of production batches',
+      name: 'Prepare Evidence & Documentation',
       status: 'Pending',
       deadline: 'Add date',
       subtasks: [],
     },
     {
       id: 'task-4',
-      name: 'Request for certificate issuance',
+      name: 'Submit Application',
       status: 'Pending',
       deadline: 'Add date',
       subtasks: [],
     },
     {
       id: 'task-5',
-      name: 'Information verification',
-      status: 'Pending',
-      deadline: 'Add date',
-      subtasks: [],
-    },
-    {
-      id: 'task-6',
-      name: 'Production batch audit',
-      status: 'Pending',
-      deadline: 'Add date',
-      subtasks: [],
-    },
-    {
-      id: 'task-7',
-      name: 'Certifi-ly™ Reviews Audit Report',
-      status: 'Pending',
-      deadline: 'Add date',
-      subtasks: [],
-    },
-    {
-      id: 'task-8',
-      name: 'Certifi-ly™ Issues Certificate',
+      name: 'Final Review & Certificate Issuance',
       status: 'Pending',
       deadline: 'Add date',
       subtasks: [],
@@ -150,28 +124,7 @@ const TrackingPage = () => {
                 <td className="py-3 px-4 text-gray-500"></td>
               </tr>
 
-              {/* Subtasks Row */}
-              {expandedTasks[task.id] && (
-                <tr className="border-b">
-                  <td colSpan={4} className="py-3 px-4">
-                    <ul className="list-disc list-inside pl-8">
-                      {task.subtasks.map((subtask) => (
-                        <li key={subtask.id} className="flex items-center">
-                          <input
-                            type="checkbox"
-                            checked={checkedSubtasks[subtask.id] || false}
-                            onChange={() => toggleSubtask(subtask.id)}
-                            className="mr-2"
-                          />
-                          <span className={checkedSubtasks[subtask.id] ? 'line-through text-gray-400' : ''}>
-                            {subtask.name}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </td>
-                </tr>
-              )}
+            
             </React.Fragment>
           ))}
         </tbody>
