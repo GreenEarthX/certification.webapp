@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PlantRegistrationService } from "@/services/plantRegistration/plantRegistrationService";
+import { getSessionFullUser } from "@/lib/auth";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  
   try {
+    const user = await getSessionFullUser(req);
+
     const data = await PlantRegistrationService.fetchFormData();
     return NextResponse.json(data);
   } catch (error) {
