@@ -9,7 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@auth0/nextjs-auth0": "^3.0.0",
+    "@auth0/nextjs-auth0": "^3.7.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@headlessui/react": "^2.2.4",
@@ -28,6 +28,7 @@
     "formidable": "^3.5.2",
     "framer-motion": "^12.4.7",
     "is-extglob": "^2.1.1",
+    "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.482.0",
     "next": "^15.2.3",
     "openai": "^4.103.0",
@@ -52,8 +53,9 @@
     "@types/formidable": "^3.4.5",
     "@types/jest": "^29.5.14",
     "@types/json-schema": "^7.0.15",
+    "@types/jsonwebtoken": "^9.0.9",
     "@types/lodash.debounce": "^4.0.9",
-    "@types/node": "^20.17.52",
+    "@types/node": "^20.17.57",
     "@types/pdf-parse": "^1.1.5",
     "@types/pg": "^8.11.12",
     "@types/react": "^19",
