@@ -55,6 +55,7 @@ interface WaterData {
   waterConsumption: string;
   waterSources: string[];
   trackWaterUsage: boolean | null;
+  treatmentLocation: { [source: string]: string[]; };
 }
 
 interface FormDataType {
@@ -248,7 +249,18 @@ export default function PlantDetailsPage() {
           </StepContainer>
           <br />
           <StepContainerNoNotice title={'Water Consumption'}>
-            <WaterStep data={formData.water} onChange={(updated) => setFormData(prev => ({ ...prev, water: updated }))} />
+            <WaterStep
+              data={formData.water}
+              onChange={(updated) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  water: {
+                    ...prev.water,
+                    ...updated,
+                  },
+                }))
+              }
+            />
           </StepContainerNoNotice>
         </div>
       )}
@@ -281,7 +293,7 @@ export default function PlantDetailsPage() {
         <div>
           {currentStep > 0 && (
             <button
-            type="button" // 🔴 This line prevents form submission!
+            type="button" 
             className="px-4 py-2 bg-blue-100 text-blue-600 rounded-md shadow hover:bg-blue-200"
             onClick={prevStep}
           >
@@ -292,7 +304,7 @@ export default function PlantDetailsPage() {
         <div>
           {currentStep < steps.length - 1 ? (
             <button
-            type="button" // 🔴 Same here!
+            type="button" 
             className="px-4 py-2 bg-blue-600 text-white rounded-md shadow hover:bg-blue-700"
             onClick={nextStep}
           >

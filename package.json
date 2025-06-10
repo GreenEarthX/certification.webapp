@@ -30,6 +30,7 @@
     "is-extglob": "^2.1.1",
     "lucide-react": "^0.482.0",
     "next": "^15.2.3",
+    "parent-module": "^3.1.0",
     "pg": "^8.13.3",
     "react": "^19.0.0",
     "react-country-flag": "^3.1.0",
