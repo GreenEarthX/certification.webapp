@@ -19,9 +19,9 @@ import { usePlantDetails } from '@/hooks/managePlants/usePlantDetails';
 import SchemaFormRenderer from '@/components/manage-plants-json/SchemaFormRenderer';
 
 // JSON-based schema imports
-import generalInfoSchema from './schemas/general-info.json';
-import facilityInfoSchema from './schemas/facility-info.json';
-import marketPositioningSchema from './schemas/market-positioning.json';
+//import generalInfoSchema from './schemas/general-info.json';
+//import facilityInfoSchema from './schemas/facility-info.json';
+//import marketPositioningSchema from './schemas/market-positioning.json';
 
 // Types for internal data structures
 interface Plant {
@@ -99,6 +99,22 @@ export default function PlantDetailsPage() {
     lastSaved,
     router
   } = usePlantDetails();
+
+  const [schemas, setSchemas] = useState<any | null>(null);
+
+  useEffect(() => {
+    const fetchSchemas = async () => {
+      try {
+        const res = await fetch('/api/manage-plants/schemas');
+        const data = await res.json();
+        setSchemas(data);
+      } catch (err) {
+        console.error('Failed to fetch schemas:', err);
+      }
+    };
+
+    fetchSchemas();
+  }, []);
   
 
   // Automatically update the `mainProduct` when `fuelType` changes
@@ -230,32 +246,32 @@ export default function PlantDetailsPage() {
 
  
       {/* Step Content Rendering */}
-      {currentStep === 0 && (
+      {currentStep === 0 && schemas?.section_general_info && (
         <div>
-            <StepNotice />
-            <h2 className="text-lg font-semibold text-blue-900 mb-2">{steps[0]}</h2>
-            <br/>
-            <SchemaFormRenderer
-              schema={generalInfoSchema}
-              formData={formData}
-              onChange={setFormData}
-            />
+          <StepNotice />
+          <h2 className="text-lg font-semibold text-blue-900 mb-2">{steps[0]}</h2>
+          <br/>
+          <SchemaFormRenderer
+            schema={schemas.section_general_info}
+            formData={formData}
+            onChange={setFormData}
+          />
         </div>
       )}
 
-      {currentStep === 1 && (
+      {currentStep === 1 && schemas?.section_market_and_offtakers && (
         <div>
-            <StepNotice />
-            <h2 className="text-lg font-semibold text-blue-900 mb-2">{steps[1]}</h2>
-            <br/>
-            <SchemaFormRenderer
-              schema={marketPositioningSchema}
-              formData={formData}
-              onChange={setFormData}
-            />
-        </div>  
-
+          <StepNotice />
+          <h2 className="text-lg font-semibold text-blue-900 mb-2">{steps[1]}</h2>
+          <br/>
+          <SchemaFormRenderer
+            schema={schemas.section_market_and_offtakers}
+            formData={formData}
+            onChange={setFormData}
+          />
+        </div>
       )}
+
 
       {currentStep === 2 && (
         <div>
@@ -279,7 +295,19 @@ export default function PlantDetailsPage() {
           <div>
           <h3 className="text-md font-semibold text-gray-800 mb-4"> Water Consumption</h3>
           <StepContainerNoNotice title={""}>
-            <WaterStep data={formData.water} onChange={(updated) => setFormData(prev => ({ ...prev, water: updated }))} />
+            <WaterStep
+  data={formData.water}
+  onChange={(updated: WaterData) =>
+    setFormData((prev) => ({
+      ...prev,
+      water: {
+        ...prev.water,
+        ...updated, // ensure merging rather than replacing
+      },
+    }))
+  }
+/>
+
           </StepContainerNoNotice>
           </div>
         </div>
