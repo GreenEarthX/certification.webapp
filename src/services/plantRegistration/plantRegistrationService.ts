@@ -1,5 +1,5 @@
 import pool from "@/lib/db";
-import { getSessionUser } from "@/lib/auth";
+import { getSessionUser,  getSessionFullUser, requireRole  } from "@/lib/auth";
 import { NextRequest } from "next/server";
 
 export class PlantRegistrationService {
@@ -17,6 +17,9 @@ export class PlantRegistrationService {
   }
 
   static async registerPlant(req: NextRequest): Promise<any> {
+    const user = await getSessionFullUser(req);
+    requireRole(user, ['PlantOperator']);
+
     const auth0Sub = await getSessionUser(req);
     const { plantName, fuelType, address, plantStage } = await req.json();
 
