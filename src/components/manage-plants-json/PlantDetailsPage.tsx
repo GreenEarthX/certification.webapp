@@ -1,23 +1,29 @@
 'use client';
-import React, { useState } from 'react';
-import HydrogenFields from '@/components/manage-plants/general-info/HydrogenFields';
-import AmmoniaFields from '@/components/manage-plants/general-info/AmmoniaFields';
-import ENGFields from '@/components/manage-plants/general-info/ENGFields';
-import SAFFields from '@/components/manage-plants/general-info/SAFFields';
-import BiofuelFields from '@/components/manage-plants/general-info/BiofuelFields';
-import MethanolFields from '@/components/manage-plants/general-info/MethanolFields';
-import ElectricityStep from '@/components/manage-plants/electricity-generation/ElectricityStep';
-import WaterStep from '@/components/manage-plants/electricity-generation/WaterStep';
-import GHGReductionStep from '@/components/manage-plants/ghg-reduction/GHGReductionStep';
-import TraceabilityStep from '@/components/manage-plants/traceability/TraceabilityStep';
-import OffTakersStep from '@/components/manage-plants/off-takers/OffTakersStep';
-import CertificationStep from '@/components/manage-plants/certification-preferences/CertificationStep';
-import StepNotice from '@/components/manage-plants/common/StepNotice';
+
+import React, { useState, useEffect } from 'react';
+import { produce } from 'immer';
+
+// Field step components by category
+import ElectricityStep from '@/components/manage-plants-indian/electricity-generation/ElectricityStep';
+import WaterStep from '@/components/manage-plants-indian/electricity-generation/WaterStep';
+import GHGReductionStep from '@/components/manage-plants-indian/ghg-reduction/GHGReductionStep';
+import TraceabilityStep from '@/components/manage-plants-indian/traceability/TraceabilityStep';
+import CertificationStep from '@/components/manage-plants-indian/certification-preferences/CertificationStep';
+import StepNotice from '@/components/manage-plants-indian/common/StepNotice';
 import FacilityDropdown from '@/components/plantDashboard/FacilityDropdown';
+
+// Hook
 import { usePlantDetails } from '@/hooks/managePlants/usePlantDetails';
 
+// Renderer
+import SchemaFormRenderer from '@/components/manage-plants-json/SchemaFormRenderer';
 
+// JSON-based schema imports
+//import generalInfoSchema from './schemas/general-info.json';
+//import facilityInfoSchema from './schemas/facility-info.json';
+//import marketPositioningSchema from './schemas/market-positioning.json';
 
+// Types for internal data structures
 interface Plant {
   id: number;
   name: string;
@@ -26,16 +32,6 @@ interface Plant {
   riskScore: number;
   fuel_id: number;
 }
-
-const steps = [
-  'General informations',
-  'Electricity Generation & Water Consumption',
-  'GHG Reduction & Carbon Footprint (PCF)',
-  'Traceability & Chain Custody',
-  'Off-Takers & Market Positioning',
-  'Certification Preferences'
-];
-
 
 interface ElectricitySource {
   type: string;
@@ -50,15 +46,16 @@ interface ElectricityData {
   sources: ElectricitySource[];
 }
 
-
 interface WaterData {
   waterConsumption: string;
   waterSources: string[];
   trackWaterUsage: boolean | null;
-  treatmentLocation: { [source: string]: string[]; };
+  treatmentLocation: { [source: string]: string[] };  
+  monitoringFile?: File | null;
 }
 
 interface FormDataType {
+  generalInfo: any;
   hydrogen: any;
   ammonia: any;
   biofuels: any;
@@ -73,9 +70,22 @@ interface FormDataType {
   certifications: any;
 }
 
+
+// Step labels for progress tracker
+const steps = [
+  'General information',
+  'Off -Takers & Market positioning',
+  'Electricity  & Water Consumption',
+  'GHG Reduction & Carbon Footprint',
+  'Traceability & Chain of Custody',
+  'Preferences'
+];
+
+
 export default function PlantDetailsPage() { 
   const [currentStep, setCurrentStep] = useState(0);
   
+  // Custom hook for managing plant and form state
   const {
     plants,
     selectedPlantId,
@@ -89,21 +99,50 @@ export default function PlantDetailsPage() {
     lastSaved,
     router
   } = usePlantDetails();
+
+  const [schemas, setSchemas] = useState<any | null>(null);
+
+  useEffect(() => {
+    const fetchSchemas = async () => {
+      try {
+        const res = await fetch('/api/manage-plants/schemas');
+        const data = await res.json();
+        setSchemas(data);
+      } catch (err) {
+        console.error('Failed to fetch schemas:', err);
+      }
+    };
+
+    fetchSchemas();
+  }, []);
+  
+
+  // Automatically update the `mainProduct` when `fuelType` changes
+  useEffect(() => {
+  if (!fuelType || !selectedPlant) return;
+
+    setFormData(prev =>
+      produce(prev, (draft: any) => {
+        if (!draft.generalInfo) draft.generalInfo = {};
+        if (!draft.generalInfo.technology) draft.generalInfo.technology = {};
+        draft.generalInfo.technology.mainProduct = fuelType;
+      })
+    );
+  }, [fuelType, selectedPlant]);
   
   
-  
+  // Step navigation logic
   const handleStepClick = (index: number) => {
     setCurrentStep(index);
   };
-
   const nextStep = () => {
     if (currentStep < steps.length - 1) setCurrentStep(currentStep + 1);
   };
-
   const prevStep = () => {
     if (currentStep > 0) setCurrentStep(currentStep - 1);
   };
 
+  // Step wrappers
   const StepContainer: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
     <div>
       <StepNotice />
@@ -127,6 +166,8 @@ export default function PlantDetailsPage() {
     </div>
   );
 
+
+  // Final submission logic — adds file preview and routes forward
   const handleFinish = () => {
     const filePreview = (file: File | null, uri?: string) =>
       file
@@ -159,16 +200,19 @@ export default function PlantDetailsPage() {
     console.log('📦 Full form data with file info:\n', JSON.stringify(previewFormData, null, 2));
     router.push('/dashboards/manage-plants/loading');
   };
+
+  
   
   return (
     <form className="w-full p-8 min-h-screen" autoComplete="off">
       <div className="flex justify-between items-center p-4 rounded-lg">
+      {/* Header: Plant Selector and Save Status */}
       <FacilityDropdown
         selectedPlant={selectedPlantId !== null ? String(selectedPlantId) : ''}
         onChange={(e) => {
           const newId = Number(e.target.value);
           setSelectedPlantId(newId);
-          router.push(`/dashboards/manage-plants?selected=${newId}`);
+          router.push(`/dashboards/manage-plants-json?selected=${newId}`);
         }}
       />
       <div className="text-sm text-gray-500 ml-4">
@@ -186,9 +230,12 @@ export default function PlantDetailsPage() {
         </div>
 
       </div>
+
       <br />
+
+      {/* Step Progress Bar */}
       <div className="flex justify-between items-center pb-4 mb-8 relative">
-        <div className="absolute top-[5px] left-[6%] right-[7%] h-[1px] bg-gray-400 z-0"></div>
+        <div className="absolute top-[5px] left-[6%] right-[3%] h-[1px] bg-gray-400 z-0"></div>
         {steps.map((step, index) => (
           <div key={step} className="flex flex-col items-center cursor-pointer z-10" onClick={() => handleStepClick(index)}>
             <div className={`w-3 h-3 rounded-full ${currentStep === index ? 'bg-blue-500' : 'bg-gray-500'}`}></div>
@@ -197,43 +244,40 @@ export default function PlantDetailsPage() {
         ))}
       </div>
 
-      {/* Steps */}
-      {currentStep === 0 && (
-        <StepContainer title={steps[0]}>
-          <div className="flex items-center mb-4">
-          <label className="block accent-blue-600 mr-4 font-medium whitespace-nowrap">
-            What type of fuel does your plant produce?
-          </label>
-          <select
-            className={`border rounded-md px-3 py-1.5 outline-none shadow-sm text-sm flex-1 ${
-              selectedPlant ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-white'
-            }`}
-            value={fuelType}
-            onChange={(e) => setFuelType(e.target.value)}
-            disabled={!!selectedPlant}
-          >
-            <option value="">Select</option>
-            <option value="hydrogen">Hydrogen</option>
-            <option value="ammonia">Ammonia</option>
-            <option value="methanol">Methanol</option>
-            <option value="saf">Sustainable Aviation Fuel (SAF)</option>
-            <option value="biofuels">Biofuels</option>
-            <option value="e-ng">e-NG</option>
-          </select>
+ 
+      {/* Step Content Rendering */}
+      {currentStep === 0 && schemas?.section_general_info && (
+        <div>
+          <StepNotice />
+          <h2 className="text-lg font-semibold text-blue-900 mb-2">{steps[0]}</h2>
+          <br/>
+          <SchemaFormRenderer
+            schema={schemas.section_general_info}
+            formData={formData}
+            onChange={setFormData}
+          />
         </div>
-
-          {fuelType === 'hydrogen' && <HydrogenFields data={formData.hydrogen} onChange={(updated) => setFormData(prev => ({ ...prev, hydrogen: updated }))} />}
-          {fuelType === 'ammonia' && <AmmoniaFields data={formData.ammonia} onChange={(updated) => setFormData(prev => ({ ...prev, ammonia: updated }))} />}
-          {fuelType === 'e-ng' && <ENGFields data={formData.eng} onChange={(updated) => setFormData(prev => ({ ...prev, eng: updated }))} />}
-          {fuelType === 'saf' && <SAFFields data={formData.saf} onChange={(updated) => setFormData(prev => ({ ...prev, saf: updated }))} />}
-          {fuelType === 'biofuels' && <BiofuelFields data={formData.biofuels} onChange={(updated) => setFormData(prev => ({ ...prev, biofuels: updated }))} />}
-          {fuelType === 'methanol' && <MethanolFields data={formData.methanol} onChange={(updated) => setFormData(prev => ({ ...prev, methanol: updated }))} />}
-        </StepContainer>
       )}
 
-      {currentStep === 1 && (
+      {currentStep === 1 && schemas?.section_market_and_offtakers && (
         <div>
-          <StepContainer title={steps[1]}>
+          <StepNotice />
+          <h2 className="text-lg font-semibold text-blue-900 mb-2">{steps[1]}</h2>
+          <br/>
+          <SchemaFormRenderer
+            schema={schemas.section_market_and_offtakers}
+            formData={formData}
+            onChange={setFormData}
+          />
+        </div>
+      )}
+
+
+      {currentStep === 2 && (
+        <div>
+            <StepNotice />
+          <h2 className="text-lg font-semibold text-blue-900 mb-2">{steps[2]}</h2>
+          <br/>
             <ElectricityStep
               data={formData.electricity}
               onChange={(key, value) =>
@@ -246,41 +290,45 @@ export default function PlantDetailsPage() {
                 }))
               }
             />
-          </StepContainer>
+          
           <br />
-          <StepContainerNoNotice title={'Water Consumption'}>
+          <div>
+          <h3 className="text-md font-semibold text-gray-800 mb-4"> Water Consumption</h3>
+          <StepContainerNoNotice title={""}>
             <WaterStep
-              data={formData.water}
-              onChange={(updated) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  water: {
-                    ...prev.water,
-                    ...updated,
-                  },
-                }))
-              }
-            />
+  data={formData.water}
+  onChange={(updated: WaterData) =>
+    setFormData((prev) => ({
+      ...prev,
+      water: {
+        ...prev.water,
+        ...updated, // ensure merging rather than replacing
+      },
+    }))
+  }
+/>
+
           </StepContainerNoNotice>
+          </div>
         </div>
       )}
 
-      {currentStep === 2 && (
-        <StepContainer title={steps[2]}>
-          <GHGReductionStep data={formData.ghg} onChange={(updated) => setFormData(prev => ({ ...prev, ghg: updated }))} />
-        </StepContainer>
-      )}
-
       {currentStep === 3 && (
-        <StepContainer title={steps[3]}>
-          <TraceabilityStep data={formData.traceability} onChange={(updated) => setFormData(prev => ({ ...prev, traceability: updated }))} />
-        </StepContainer>
+        <div>
+        <StepNotice />
+        <h2 className="text-lg font-semibold text-blue-900 mb-2">{steps[3]}</h2>
+        <br/>
+          <GHGReductionStep data={formData.ghg} onChange={(updated) => setFormData(prev => ({ ...prev, ghg: updated }))} />
+        </div>
       )}
 
       {currentStep === 4 && (
-        <StepContainer title={steps[4]}>
-          <OffTakersStep data={formData.offtakers} onChange={(updated) => setFormData(prev => ({ ...prev, offtakers: updated }))} />
-        </StepContainer>
+        <div>
+          <StepNotice />
+          <h2 className="text-lg font-semibold text-blue-900 mb-2">{steps[4]}</h2>
+          <br/>
+          <TraceabilityStep data={formData.traceability} onChange={(updated) => setFormData(prev => ({ ...prev, traceability: updated }))} />
+        </div>
       )}
 
       {currentStep === 5 && (
@@ -289,37 +337,38 @@ export default function PlantDetailsPage() {
         </StepContainersplited>
       )}
 
+      {/* Navigation Buttons */}
       <div className="flex justify-between mt-6">
         <div>
           {currentStep > 0 && (
             <button
-            type="button" 
-            className="px-4 py-2 bg-blue-100 text-blue-600 rounded-md shadow hover:bg-blue-200"
-            onClick={prevStep}
-          >
-            Back
+              type="button" 
+              className="px-4 py-2 bg-blue-100 text-blue-600 rounded-md shadow hover:bg-blue-200"
+              onClick={prevStep}
+            >
+              Back
           </button>
           )}
         </div>
         <div>
           {currentStep < steps.length - 1 ? (
             <button
-            type="button" 
-            className="px-4 py-2 bg-blue-600 text-white rounded-md shadow hover:bg-blue-700"
-            onClick={nextStep}
-          >
-            Next
-          </button>
+              type="button" 
+              className="px-4 py-2 bg-blue-600 text-white rounded-md shadow hover:bg-blue-700"
+              onClick={nextStep}
+            >
+              Next
+            </button>
           
           ) : (
             
-              <button
-                type="button"
-                className="px-4 py-2 bg-blue-600 text-white rounded-md shadow hover:bg-blue-700"
-                onClick={handleFinish}
-              >
-                Finish
-              </button>
+                <button
+                  type="button"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md shadow hover:bg-blue-700"
+                  onClick={handleFinish}
+                >
+                  Finish
+                </button>
           )}
         </div>
       </div>
