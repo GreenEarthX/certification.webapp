@@ -76,6 +76,73 @@ class PlantService {
       throw new Error("Failed to update plant details");
     }
   }
+
+  async upsertPlantForm(data: {
+    coverage_id: number;
+    section_general_info: any;
+    section_market_and_offtakers: any;
+    section_electricity_water: any;
+    section_ghg_reduction: any;
+    section_traceability: any;
+    section_certifications: any;
+  }): Promise<void> {
+    const {
+      coverage_id,
+      section_general_info,
+      section_market_and_offtakers,
+      section_electricity_water,
+      section_ghg_reduction,
+      section_traceability,
+      section_certifications,
+    } = data;
+
+    try {
+      await pool.query(
+        `INSERT INTO manage_plants_forms (
+          coverage_id,
+          section_general_info,
+          section_market_and_offtakers,
+          section_electricity_water,
+          section_ghg_reduction,
+          section_traceability,
+          section_certifications
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7)
+        ON CONFLICT (coverage_id) DO UPDATE SET
+          section_general_info = EXCLUDED.section_general_info,
+          section_market_and_offtakers = EXCLUDED.section_market_and_offtakers,
+          section_electricity_water = EXCLUDED.section_electricity_water,
+          section_ghg_reduction = EXCLUDED.section_ghg_reduction,
+          section_traceability = EXCLUDED.section_traceability,
+          section_certifications = EXCLUDED.section_certifications`,
+        [
+          coverage_id,
+          section_general_info,
+          section_market_and_offtakers,
+          section_electricity_water,
+          section_ghg_reduction,
+          section_traceability,
+          section_certifications,
+        ]
+      );
+    } catch (error) {
+      console.error("Error upserting plant form:", error);
+      throw new Error("Failed to save plant form");
+    }
+  }
+
+  async getPlantFormByCoverageId(coverageId: string): Promise<any | null> {
+    try {
+      const result = await pool.query(
+        'SELECT * FROM manage_plants_forms WHERE coverage_id = $1',
+        [coverageId]
+      );
+      return result.rows[0] || null;
+    } catch (error) {
+      console.error("Error fetching plant form:", error);
+      throw new Error("Failed to fetch plant form");
+    }
+  }
+
 }
 
 export const plantService = new PlantService();
