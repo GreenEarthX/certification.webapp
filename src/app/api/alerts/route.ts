@@ -1,4 +1,3 @@
-// src/app/api/alerts/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth";
 import { alertService } from "@/services/alerts/alertService";

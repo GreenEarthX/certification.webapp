@@ -51,27 +51,27 @@ const Navbar: React.FC = () => {
     // Operator routes
     else if (pathname.includes("/recommendations")) {
       setTitle(
-        pathname.match(/^\/dashboards\/recommendations\/[^/]+\/gantt-tracking\/?$/)
+        pathname.match(/^\/plant-operator\/recommendations\/[^/]+\/gantt-tracking\/?$/)
           ? "Certification Timeline"
-          : pathname.match(/^\/dashboards\/recommendations\/[^/]+\/startTracking$/)
+          : pathname.match(/^\/plant-operator\/recommendations\/[^/]+\/startTracking$/)
           ? "Certification Tracking"
-          : pathname.match(/^\/dashboards\/recommendations\/\d+$/)
+          : pathname.match(/^\/plant-operator\/recommendations\/\d+$/)
           ? "Recommendation"
           : "Recommendations"
       );
     } else if (pathname.includes("/certifications")) {
       setTitle(
-        pathname.match(/^\/dashboards\/certifications\/\d+$/)
+        pathname.match(/^\/plant-operator\/certifications\/\d+$/)
           ? "Certification"
           : "Certifications"
       );
-    } else if (pathname.startsWith("/dashboards/plants/add")) {
+    } else if (pathname.startsWith("/plant-operator/plants/add")) {
       setTitle("Add Plant");
-    } else if (pathname.includes("/dashboards/manage-plants")) {
+    } else if (pathname.includes("/plant-operator/manage-plants")) {
       setTitle("Manage Plant Details");  
-    } else if (pathname.startsWith("/dashboards/dashboard")) {
+    } else if (pathname.startsWith("/plant-operator/dashboard")) {
       setTitle(
-        pathname.match(/^\/dashboards\/dashboard\/\d+\/plantDashboard$/)
+        pathname.match(/^\/plant-operator\/dashboard\/\d+\/plant-dashboard$/)
           ? "Plant Dashboard"
           : "Dashboard"
       );

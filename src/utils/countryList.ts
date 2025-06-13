@@ -92,7 +92,6 @@ export const countryCodeToName: Record<string, string> = {
     IR: "Iran",
     IQ: "Iraq",
     IE: "Ireland",
-    IL: "Israel",
     IT: "Italy",
     CI: "Ivory Coast",
     JM: "Jamaica",

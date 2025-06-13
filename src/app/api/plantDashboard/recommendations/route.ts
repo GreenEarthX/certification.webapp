@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { RecommendationService } from "@/services/plantDashboard/recommendations/recommendationService";
+import { RecommendationService } from "@/services/plant-dashboard/recommendations/recommendationService";
 
 export async function GET(req: NextRequest) {
   try {

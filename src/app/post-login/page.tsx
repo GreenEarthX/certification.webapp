@@ -18,7 +18,7 @@ export default function PostLoginPage() {
     if (roles.includes('Admin')) {
       router.replace('/admin/certifications');
     } else if (roles.includes('PlantOperator')) {
-      router.replace('/dashboards/dashboard');
+      router.replace('/plant-operator/dashboard');
     } else if (roles.length > 0) {
       router.replace('/unauthorized');
     }
