@@ -85,7 +85,7 @@ const Sidebar: React.FC = () => {
         {[
           { text: 'Dashboard', icon: <FaHome />, path: '/admin/dashboard' },
           { text: 'Users', icon: <FaUsers />, path: '/admin/users' },
-          { text: 'Plants', icon: <FaLeaf />, path: '/admin/plants' },
+          { text: 'Plants Details', icon: <FaLeaf />, path: '/admin/manage-plants-details' },
           { text: 'Certifications', icon: <FaCertificate />, path: '/admin/certifications' },
           { text: 'Reports', icon: <FaChartBar />, path: '/admin/reports' },
           { text: 'Settings', icon: <FaCog />, path: '/admin/settings' },
