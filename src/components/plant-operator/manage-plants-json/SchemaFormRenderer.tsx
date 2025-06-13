@@ -417,13 +417,6 @@ const SchemaFormRenderer: React.FC<Props> = ({ schema, formData, onChange}) => {
 
         </div>
       ))}
-
-      <div className="bg-gray-100 p-4 rounded-md mt-6">
-        <h3 className="text-sm font-bold mb-2 text-gray-700">📦 Form Output </h3>
-        <pre className="text-xs text-gray-800 whitespace-pre-wrap break-all overflow-x-auto max-h-[300px] bg-white p-3 rounded border border-gray-300">
-          {JSON.stringify(normalizeFormData(), null, 2)}
-        </pre>
-      </div>
     </div>
   );
 };
