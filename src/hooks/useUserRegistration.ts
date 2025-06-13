@@ -36,7 +36,7 @@ export const useUserForm = () => {
       const success = await submitUserProfile(formData);
       if (success) {
         alert('Profile completed!');
-        window.location.href = '/dashboards/dashboard';
+        window.location.href = '/plant-operator/dashboard';
       } else {
         alert('Something went wrong.');
       }

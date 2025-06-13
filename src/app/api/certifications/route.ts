@@ -1,4 +1,3 @@
-// src/app/api/certifications/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth";
 import { certificationService } from "@/services/certifications/certificationService";
