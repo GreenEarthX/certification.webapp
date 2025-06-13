@@ -26,13 +26,13 @@ const Navbar: React.FC = () => {
             ? "User Details"
             : "Users Management"
         );
-      } else if (pathname.includes("/plants")) {
+      } else if (pathname.includes("/manage-plants-details")) {
         setTitle(
           pathname.match(/^\/admin\/plants\/\d+$/)
             ? "Plant Details"
             : pathname.match(/^\/admin\/plants\/add$/)
             ? "Add Plant"
-            : "Plants Management"
+            : "Plants Details Management"
         );
       } else if (pathname.includes("/certifications")) {
         setTitle(
