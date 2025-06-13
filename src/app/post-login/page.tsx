@@ -2,6 +2,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@auth0/nextjs-auth0/client';
+import { Box, CircularProgress } from '@mui/material';
 
 export default function PostLoginPage() {
   const { user, isLoading } = useUser();
@@ -24,9 +25,15 @@ export default function PostLoginPage() {
   }, [user, isLoading, router]);
 
   return (
-    <div style={{ padding: '2rem' }}>
-      <h2>Redirecting based on role...</h2>
-      <pre>user: {JSON.stringify(user, null, 2)}</pre>
-    </div>
+    <Box
+      sx={{
+        height: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <CircularProgress />
+    </Box>
   );
 }
