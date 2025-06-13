@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PlantRegistrationService } from "@/services/plantRegistration/plantRegistrationService";
+import { PlantRegistrationService } from "@/services/plant-registration/plantRegistrationService";
 import { getSessionFullUser } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {

@@ -76,6 +76,33 @@ class PlantService {
       throw new Error("Failed to update plant details");
     }
   }
+
+
+  async getManagePlantFormSchema(): Promise<any> {
+    try {
+      const result = await pool.query(`
+        SELECT 
+          section_general_info,
+          section_market_and_offtakers,
+          section_electricity_water,
+          section_ghg_reduction,
+          section_traceability,
+          section_certifications
+        FROM manage_plants_forms
+        WHERE id = 1
+        LIMIT 1
+      `);
+
+      if (result.rows.length === 0) {
+        throw new Error('No schema found in DB');
+      }
+
+      return result.rows[0];
+    } catch (error) {
+      console.error("Error fetching form schema:", error);
+      throw new Error("Failed to fetch form schema");
+    }
+  }
 }
 
 export const plantService = new PlantService();

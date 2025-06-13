@@ -22,7 +22,7 @@ export async function middleware(req: NextRequest) {
   // 📜 Define access rules
   const accessRules = [
     { pathPrefix: '/admin', allowedRoles: ['Admin'] },
-    { pathPrefix: '/dashboards', allowedRoles: ['PlantOperator'] }
+    { pathPrefix: '/plant-operator', allowedRoles: ['PlantOperator'] }
   ];
 
   // 🔍 Check if user has permission to access the path

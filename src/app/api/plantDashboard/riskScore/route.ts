@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { RiskProfileService } from "@/services/plantDashboard/riskScore/riskProfileService";
+import { RiskProfileService } from "@/services/plant-dashboard/riskScore/riskProfileService";
 
 export async function GET(req: NextRequest) {
   try {

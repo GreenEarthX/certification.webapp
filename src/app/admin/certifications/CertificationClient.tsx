@@ -5,14 +5,13 @@ import UploadCertificationDocuments from "@/components/admin/certifications/Uplo
 import AIPromptConfiguration from "@/components/admin/certifications/AIPromptConfiguration";
 import CertificationJSONGeneration from "@/components/admin/certifications/CertificationJSONGeneration";
 import promptsData from '@/data/promptsData.json';
-import { Prompt } from '@/models/prompt';
 
 const CertificationClient = () => {
   const [files, setFiles] = useState<File[]>([]);
   const [currentPromptId, setCurrentPromptId] = useState<number>(1);
 
   const selectedPrompt = promptsData.find(p => p.id === currentPromptId);
-  const selectedFile = files[0]; // Limit to first file for simplicity
+  const selectedFile = files[0]; 
 
   return (
     <div className="p-6 space-y-10">

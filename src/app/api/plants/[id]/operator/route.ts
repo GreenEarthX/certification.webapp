@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getOperatorByPlantId } from "@/services/plantRegistration/getOperatorByPlantId";
+import { getOperatorByPlantId } from "@/services/plant-registration/getOperatorByPlantId";
 
 export async function GET(
   req: NextRequest,
