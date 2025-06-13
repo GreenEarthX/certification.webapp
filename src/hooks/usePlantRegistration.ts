@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { fetchFormData, submitPlantRegistration } from "@/services/plantRegistration/fetchPlantAPI";
+import { fetchFormData, submitPlantRegistration } from "@/services/plant-registration/fetchPlantAPI";
 import { UploadedData } from "@/models/certificationUploadedData";
 import { PlantFormData } from "@/models/plantRegistration";
 
