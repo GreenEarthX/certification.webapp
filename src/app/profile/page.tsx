@@ -13,11 +13,38 @@ import {
   Divider,
   Stack,
 } from '@mui/material';
+import { useEffect, useState } from 'react';
+
 
 export default function Home() {
   const { user, isLoading, error } = useUser();
+  
+  const [checking, setChecking] = useState(true);
 
-  if (isLoading) {
+  useEffect(() => {
+    const checkUser = async () => {
+      if (!user) return;
+
+      try {
+        const res = await fetch('/api/users/me');
+        if (res.status === 404) {
+          // 🚨 User not in DB → redirect to post-signup
+          window.location.href = '/post-signup';
+        } else {
+          // ✅ User exists
+          setChecking(false);
+        }
+      } catch (err) {
+        console.error("Error checking user:", err);
+        setChecking(false);
+      }
+    };
+
+    checkUser();
+  }, [user]);
+
+
+  if (isLoading || checking) {
     return (
       <Box
         height="100vh"
@@ -29,6 +56,7 @@ export default function Home() {
       </Box>
     );
   }
+
 
   if (error) {
     return (
@@ -44,7 +72,7 @@ export default function Home() {
     if (roles?.includes('Admin')) {
       window.location.href = '/admin/dashboard';
     } else if (roles?.includes('PlantOperator')) {
-      window.location.href = '/dashboards/dashboard';
+      window.location.href = '/plant-operator/dashboard';
     } else {
       window.location.href = '/unauthorized';
     }

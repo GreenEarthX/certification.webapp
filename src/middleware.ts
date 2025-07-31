@@ -6,31 +6,38 @@ export async function middleware(req: NextRequest) {
   const session = await getSession(req, res);
   const user = session?.user;
 
-  // 🔐 Redirect to login if not authenticated
+  // 🧠 Read the request path
+  const path = req.nextUrl.pathname;
+
+  // 👤 Not authenticated
   if (!user) {
     const loginUrl = req.nextUrl.clone();
     loginUrl.pathname = '/api/auth/login';
-    loginUrl.searchParams.set('returnTo', '/post-login');
+
+    // 👇 Use hint from the path or cookie/query to detect signup intent
+    if (path.startsWith('/register')) {
+      loginUrl.searchParams.set('screen_hint', 'signup');      // show signup form
+      loginUrl.searchParams.set('returnTo', '/post-signup');   // go here after signup
+    } else {
+      loginUrl.searchParams.set('returnTo', '/post-login');    // default for login
+    }
+
     return NextResponse.redirect(loginUrl);
   }
 
-  // ✅ Get user roles from custom claim
+    // ✅ Get roles
   const roles = (user['https://your-app.com/roles'] as string[]) || [];
-  const path = req.nextUrl.pathname;
 
-  
-  // 📜 Define access rules
+  // 📜 Define protected routes
   const accessRules = [
     { pathPrefix: '/admin', allowedRoles: ['Admin'] },
-    { pathPrefix: '/plant-operator', allowedRoles: ['PlantOperator'] }
+    { pathPrefix: '/plant-operator', allowedRoles: ['PlantOperator', 'Default'] },
   ];
 
-  // 🔍 Check if user has permission to access the path
+
+  // 🔒 Check role-based access
   for (const rule of accessRules) {
-    if (
-      path.startsWith(rule.pathPrefix) &&
-      !rule.allowedRoles.some(role => roles.includes(role))
-    ) {
+    if (path.startsWith(rule.pathPrefix) && !rule.allowedRoles.some(role => roles.includes(role))) {
       return redirectUnauthorized(req);
     }
   }
@@ -48,7 +55,6 @@ function redirectUnauthorized(req: NextRequest) {
 // ⚙️ Middleware config
 export const config = {
   matcher: [
-    '/((?!api/auth|api/test-session|login|post-login|unauthorized|_next/static|_next/image|favicon.ico).*)',
+    '/((?!api/auth|api/test-session|login|post-login|post-signup|unauthorized|_next/static|_next/image|favicon.ico).*)',
   ],
 };
-
