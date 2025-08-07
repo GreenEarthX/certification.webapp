@@ -25,7 +25,7 @@ import {
   FaCog
 } from 'react-icons/fa';
 
-import styles from '/home/asus/hydro-e/webapp/src/app/styles/sidebar.module.css'; // Adjust the path as necessary
+import styles from "../../../../../src/app/styles/sidebar.module.css"; // Adjust the path as necessary
 
 const Sidebar: React.FC = () => {
   const pathname = usePathname();
