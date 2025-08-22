@@ -46,47 +46,65 @@ interface Criteria {
   targetMarkets: string[];
 }
 
+interface RecommendationEngineOptions {
+  logCallback?: (message: string) => void;
+}
+
 const RecommendationEngine = {
   generateRecommendations(
     certificationSchemes: CertificationScheme[],
     criteria: Criteria,
-    maxResults: number = 5
+    maxResults: number = 5,
+    options?: RecommendationEngineOptions
   ): Recommendation[] {
+    const log = options?.logCallback || console.log; // fallback to console.log
     const recommendations: Recommendation[] = [];
 
-    console.log('=== Running Recommendation Engine ===');
-    console.log('Criteria:', criteria);
-    console.log('Certification Schemes:', certificationSchemes);
+    log('=== Running Recommendation Engine ===');
+    log(`Criteria: ${JSON.stringify(criteria)}`);
+    log(`Total schemes to check: ${certificationSchemes.length}`);
 
     for (const scheme of certificationSchemes) {
-      console.log(`\nChecking scheme: ${scheme.certification_scheme_name}`);
+      log(`\n[CHECK] Scheme: ${scheme.certification_scheme_name}`);
 
-      // Allow all fuel types if scheme.fuel_types is empty
-      const productMatch = scheme.fuel_types.length === 0 || scheme.fuel_types.some(
-        (f) => f.toLowerCase() === criteria.productType.toLowerCase()
-      );
-      console.log('  Product Match:', productMatch, 'Fuel Types:', scheme.fuel_types);
-      if (!productMatch) continue;
+      // Product Match
+      const productMatch =
+        scheme.fuel_types.length === 0 ||
+        scheme.fuel_types.some(f => f.toLowerCase() === criteria.productType.toLowerCase());
+      log(`  Product Match: ${productMatch} (Fuel Types: ${scheme.fuel_types.join(', ')})`);
+      if (!productMatch) {
+        log(`  -> Skipped: Product type does not match`);
+        continue;
+      }
 
+      // Manufacturing Match
       const manufacturingMatch =
         scheme.geographic_coverage === 'Global' ||
         scheme.coverage_countries.includes('*') ||
         scheme.coverage_countries.some(
-          (c) => c.toLowerCase() === criteria.manufacturingCountry.toLowerCase()
+          c => c.toLowerCase() === criteria.manufacturingCountry.toLowerCase()
         );
-      console.log('  Manufacturing Match:', manufacturingMatch, 'Coverage Countries:', scheme.coverage_countries);
-      if (!manufacturingMatch) continue;
+      log(`  Manufacturing Match: ${manufacturingMatch} (Coverage Countries: ${scheme.coverage_countries.join(', ')})`);
+      if (!manufacturingMatch) {
+        log(`  -> Skipped: Manufacturing country not covered`);
+        continue;
+      }
 
+      // Target Market Coverage Match
       const coverageMatch =
         scheme.geographic_coverage === 'Global' ||
         scheme.coverage_countries.includes('*') ||
-        criteria.targetMarkets.some((target) =>
-          scheme.coverage_countries.some((c) => c.toLowerCase() === target.toLowerCase())
+        criteria.targetMarkets.some(target =>
+          scheme.coverage_countries.some(c => c.toLowerCase() === target.toLowerCase())
         );
-      console.log('  Coverage Match (target markets):', coverageMatch, 'Target Markets:', criteria.targetMarkets);
-      if (!coverageMatch) continue;
+      log(`  Coverage Match (target markets): ${coverageMatch} (Target Markets: ${criteria.targetMarkets.join(', ')})`);
+      if (!coverageMatch) {
+        log(`  -> Skipped: No target markets covered`);
+        continue;
+      }
 
-      const score = 100; // All three matched
+      // All matched -> create recommendation
+      const score = 100;
       const rec: Recommendation = {
         certification_scheme_id: scheme.certification_scheme_id,
         scheme_name: scheme.certification_scheme_name,
@@ -101,11 +119,12 @@ const RecommendationEngine = {
         compliance_requirements: ['Standard certification procedures'],
       };
 
+      log(`  -> Scheme ${scheme.certification_scheme_name} PASSED all checks`);
       recommendations.push(rec);
     }
 
-    console.log('\n=== Final Recommendations ===');
-    console.log(JSON.stringify(recommendations, null, 2));
+    log('\n=== Final Recommendations ===');
+    log(JSON.stringify(recommendations, null, 2));
 
     return recommendations.slice(0, maxResults);
   },
@@ -181,26 +200,24 @@ export default function RecommendationsPage() {
     }
   };
 
-  const handleRunEngine = () => {
-    setLog([]);
-    const criteria: Criteria = {
-      productType,
-      manufacturingCountry,
-      targetMarkets,
-    };
-
-    const recs = RecommendationEngine.generateRecommendations(
-      certificationSchemes,
-      criteria,
-      maxResults
-    );
-    setRecommendations(recs);
-    logMessage('=== Running Recommendation Engine ===');
-    logMessage(`Criteria: ${JSON.stringify(criteria)}`);
-    recs.forEach((rec) => {
-      logMessage(`Recommendation: ${rec.scheme_name} (Score: ${rec.score})`);
-    });
+const handleRunEngine = () => {
+  setLog([]);
+  const criteria: Criteria = {
+    productType,
+    manufacturingCountry,
+    targetMarkets,
   };
+
+  const recs = RecommendationEngine.generateRecommendations(
+    certificationSchemes,
+    criteria,
+    maxResults,
+    { logCallback: logMessage } // logs to UI
+  );
+
+  setRecommendations(recs); // <-- THIS WAS MISSING
+};
+
 
   const handleSampleCriteria = () => {
     setProductType('Ammonia');
