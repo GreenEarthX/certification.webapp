@@ -41,49 +41,46 @@ export async function GET(request: Request) {
         return NextResponse.json(fuelTypesResult.rows);
 
       case 'certification-schemes':
-        const schemesResult = await pool.query(`
-          SELECT 
-            cs.certification_scheme_id,
-            cs.certification_scheme_name,
-            cs.framework,
-            cs.certificate_type,
-            cs.rfnbo_check,
-            cs.lifecycle_coverage,
-            cs.pcf_approach,
-            cs.geographic_coverage,
-            cs.coverage,
-            COALESCE(
-              (SELECT array_agg(ft.fuel_name)
-               FROM certification_schemes_fuel_types csft
-               JOIN fuel_types ft ON csft.fuel_id = ft.fuel_id
-               WHERE csft.certification_scheme_id = cs.certification_scheme_id),
-              ARRAY[]::text[]
-            ) AS fuel_types
-          FROM certification_schemes cs
-        `);
-        console.log('Certification Schemes Query Result:', schemesResult.rows);
-        return NextResponse.json(
-          schemesResult.rows.map((scheme) => {
-            let coverage_countries: string[] = [];
-            if (scheme.geographic_coverage === 'Global') {
-              coverage_countries = ['*'];
-            } else if (scheme.coverage) {
-              coverage_countries = scheme.coverage.split(',').map((c: string) => c.trim()).filter((c: string) => c);
-            }
-            return {
-              certification_scheme_id: scheme.certification_scheme_id,
-              certification_scheme_name: scheme.certification_scheme_name,
-              framework: scheme.framework || 'Unknown',
-              certificate_type: scheme.certificate_type || 'Unknown',
-              rfnbo_check: scheme.rfnbo_check === true ? 'Yes' : 'No',
-              lifecycle_coverage: scheme.lifecycle_coverage || 'Unknown',
-              pcf_approach: scheme.pcf_approach || 'Unknown',
-              geographic_coverage: scheme.geographic_coverage || 'Unknown',
-              coverage_countries,
-              fuel_types: scheme.fuel_types || [],
-            };
-          })
-        );
+const schemesResult = await pool.query(`
+  SELECT 
+    cs.certification_scheme_id,
+    cs.certification_scheme_name,
+    cs.framework,
+    cs.certificate_type,
+    cs.rfnbo_check,
+    cs.lifecycle_coverage,
+    cs.pcf_approach,
+    cs.geographic_coverage,
+    COALESCE(c.countries, ARRAY[]::text[]) AS coverage_countries,
+    COALESCE(
+      (SELECT array_agg(ft.fuel_name)
+       FROM certification_schemes_fuel_types csft
+       JOIN fuel_types ft ON csft.fuel_id = ft.fuel_id
+       WHERE csft.certification_scheme_id = cs.certification_scheme_id
+      ), ARRAY[]::text[]
+    ) AS fuel_types
+  FROM certification_schemes cs
+  LEFT JOIN coverage c ON c.coverage_id::text = cs.coverage
+`);
+
+
+
+
+  return NextResponse.json(
+    schemesResult.rows.map((scheme) => ({
+      certification_scheme_id: scheme.certification_scheme_id,
+      certification_scheme_name: scheme.certification_scheme_name,
+      framework: scheme.framework || 'Unknown',
+      certificate_type: scheme.certificate_type || 'Unknown',
+      rfnbo_check: scheme.rfnbo_check === true ? 'Yes' : 'No',
+      lifecycle_coverage: scheme.lifecycle_coverage || 'Unknown',
+      pcf_approach: scheme.pcf_approach || 'Unknown',
+      geographic_coverage: scheme.geographic_coverage || 'Unknown',
+      coverage_countries: scheme.coverage_countries || [],
+      fuel_types: scheme.fuel_types || [],
+    }))
+  );
+
 
       case 'countries':
         // Fetch all countries from the coverage table (explode the text[])
