@@ -1,4 +1,7 @@
 // types.ts - Updated
+
+export type Position = { x: number; y: number };  // ADD THIS
+
 export interface UserDetails {
   name: string;
   email: string;

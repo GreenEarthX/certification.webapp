@@ -1,3 +1,5 @@
+'use client';
+
 import { useState } from "react";
 import {
   Dialog,
@@ -10,8 +12,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { Connection, PlacedComponent } from "./Canvas";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import type { Connection, PlacedComponent } from "../../app/plant-builder/types"; // CORRECT PATH
 
 type ConnectionDetailDialogProps = {
   connection: Connection;
@@ -42,21 +50,22 @@ const ConnectionDetailDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md p-6">
         <DialogHeader>
-          <DialogTitle>Connection Details</DialogTitle>
-          <DialogDescription>
-            From: {getComponentName(connection.from)} to {getComponentName(connection.to)}
+          <DialogTitle className="text-xl font-semibold text-gray-900">
+            Connection Details
+          </DialogTitle>
+          <DialogDescription className="text-sm text-gray-600">
+            From: <span className="font-medium">{getComponentName(connection.from)}</span> →{" "}
+            <span className="font-medium">{getComponentName(connection.to)}</span>
           </DialogDescription>
         </DialogHeader>
+
         <div className="py-4 space-y-4">
           <div className="space-y-2">
-            <Label>Connection Type</Label>
-            <Select
-              value={type}
-              onValueChange={setType}
-            >
-              <SelectTrigger>
+            <Label htmlFor="connection-type">Connection Type</Label>
+            <Select value={type} onValueChange={setType}>
+              <SelectTrigger id="connection-type">
                 <SelectValue placeholder="Select connection type" />
               </SelectTrigger>
               <SelectContent>
@@ -70,20 +79,29 @@ const ConnectionDetailDialog = ({
               </SelectContent>
             </Select>
           </div>
+
           <div className="space-y-2">
-            <Label>Reason</Label>
+            <Label htmlFor="connection-reason">Reason</Label>
             <Input
+              id="connection-reason"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder="Enter reason for connection"
+              className="w-full"
             />
           </div>
         </div>
-        <DialogFooter>
+
+        <DialogFooter className="flex justify-end gap-3 mt-4">
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={handleSave}>Save</Button>
+          <Button
+            onClick={handleSave}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            Save
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

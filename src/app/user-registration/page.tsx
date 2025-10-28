@@ -6,7 +6,6 @@ import {
   Box,
   Typography,
   Container,
-  Grid,
   Paper,
 } from '@mui/material';
 import dynamic from 'next/dynamic';
@@ -166,8 +165,15 @@ const UserRegistrationPage = () => {
         </Typography>
 
         <form onSubmit={handleSubmit}>
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
+          {/* Use CSS grid via Box to avoid Grid typing mismatches */}
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+              gap: 2,
+            }}
+          >
+            <Box>
               <TextField
                 fullWidth
                 label="First Name"
@@ -177,8 +183,9 @@ const UserRegistrationPage = () => {
                 margin="normal"
                 size="small"
               />
-            </Grid>
-            <Grid item xs={12} sm={6}>
+            </Box>
+
+            <Box>
               <TextField
                 fullWidth
                 label="Last Name"
@@ -188,11 +195,9 @@ const UserRegistrationPage = () => {
                 margin="normal"
                 size="small"
               />
-            </Grid>
-          </Grid>
+            </Box>
 
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
+            <Box>
               <TextField
                 fullWidth
                 label="Company"
@@ -202,8 +207,9 @@ const UserRegistrationPage = () => {
                 margin="normal"
                 size="small"
               />
-            </Grid>
-            <Grid item xs={12} sm={6}>
+            </Box>
+
+            <Box>
               <TextField
                 fullWidth
                 label="Position"
@@ -213,11 +219,9 @@ const UserRegistrationPage = () => {
                 margin="normal"
                 size="small"
               />
-            </Grid>
-          </Grid>
+            </Box>
 
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
+            <Box>
               <TextField
                 fullWidth
                 label="Email"
@@ -228,32 +232,31 @@ const UserRegistrationPage = () => {
                 margin="normal"
                 size="small"
               />
-            </Grid>
-            <Grid item xs={12} sm={6}>
+            </Box>
+
+            <Box>
               <PhoneNumberInput
                 value={formData.phoneNumber}
                 onChange={handleChange('phoneNumber')}
               />
-            </Grid>
-          </Grid>
+            </Box>
 
-          <Grid container spacing={2}>
-            <Grid item xs={12}>
+            {/* Address spans full width */}
+            <Box sx={{ gridColumn: '1 / -1' }}>
               <AddressInput
                 value={formData.address}
                 onChange={handleChange('address')}
               />
-            </Grid>
-          </Grid>
+            </Box>
 
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
+            <Box>
               <CountryInput
                 value={formData.country}
                 onChange={handleChange('country')}
               />
-            </Grid>
-            <Grid item xs={12} sm={6}>
+            </Box>
+
+            <Box>
               <TextField
                 fullWidth
                 label="State"
@@ -263,11 +266,9 @@ const UserRegistrationPage = () => {
                 margin="normal"
                 size="small"
               />
-            </Grid>
-          </Grid>
+            </Box>
 
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
+            <Box>
               <TextField
                 fullWidth
                 label="City"
@@ -277,8 +278,9 @@ const UserRegistrationPage = () => {
                 margin="normal"
                 size="small"
               />
-            </Grid>
-            <Grid item xs={12} sm={6}>
+            </Box>
+
+            <Box>
               <TextField
                 fullWidth
                 label="Postal Code"
@@ -288,8 +290,8 @@ const UserRegistrationPage = () => {
                 margin="normal"
                 size="small"
               />
-            </Grid>
-          </Grid>
+            </Box>
+          </Box>
 
           <Box sx={{ mt: 4, display: 'flex', justifyContent: 'space-between' }}>
           <Button

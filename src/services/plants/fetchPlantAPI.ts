@@ -1,5 +1,5 @@
 export interface FormDataType {
-  generalInfo: {};
+  generalInfo: Record<string, unknown>;
   hydrogen: any;
   ammonia: any;
   biofuels: any;

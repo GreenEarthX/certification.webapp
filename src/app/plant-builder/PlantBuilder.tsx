@@ -151,10 +151,10 @@ export const PlantBuilder = () => {
       const component: PlacedComponent = {
         id: `comp-${Date.now()}`,
         name: newComponent.name,
-        type: newComponent.type as "equipment" | "carrier" | "gate",
+        type: newComponent.type,
         category: newComponent.category,
         position: { x: 100, y: 100 },
-        data: {},
+        data: { technicalData: {} }, // REQUIRED
         certifications: [],
       };
       setComponents((prev) => [...prev, component]);
@@ -345,12 +345,14 @@ export const PlantBuilder = () => {
                     )}
                     {type === "carrier" && (
                       <>
-                        <TableCell className="text-gray-900 text-sm">{c.data?.fuelType || "N/A"}</TableCell>
                         <TableCell className="text-gray-900 text-sm">
-                          {c.data?.temperature ? `${c.data.temperature}°C` : "N/A"}
+                          {c.data?.fuelType || "N/A"}
                         </TableCell>
                         <TableCell className="text-gray-900 text-sm">
-                          {c.data?.pressure ? `${c.data.bar} bar` : "N/A"}
+                          {c.data?.temperature != null ? `${c.data.temperature}°C` : "N/A"}
+                        </TableCell>
+                        <TableCell className="text-gray-900 text-sm">
+                          {c.data?.pressure != null ? `${c.data.pressure} bar` : "N/A"}
                         </TableCell>
                       </>
                     )}
@@ -508,20 +510,21 @@ export const PlantBuilder = () => {
           </div>
         ) : step === "builder" ? (
           <div className="h-full flex relative">
+            {/* Sidebar Container */}
             <div
               className={`flex transition-all duration-300 ease-in-out ${
-                showComponentLibrary ? "w-full sm:w-64" : "w-8"
+                showComponentLibrary ? "w-full sm:w-96" : "w-10"
               } bg-white border-r border-gray-200 shadow-sm overflow-hidden`}
             >
               {showComponentLibrary && (
-                <div className="flex-1 overflow-y-auto overflow-x-hidden">
+                <div className="flex-1 overflow-y-auto">
                   <ComponentLibrary />
                 </div>
               )}
               <div
-                className="w-8 bg-gray-100 hover:bg-[#4F8FF7]/10 cursor-pointer flex items-center justify-center transition-colors duration-200"
+                className="w-10 bg-gray-100 hover:bg-[#4F8FF7]/10 cursor-pointer flex items-center justify-center transition-colors duration-200"
                 onClick={toggleComponentLibrary}
-                title={showComponentLibrary ? "Close Library" : "Open Library"}
+                title={showComponentLibrary ? "Hide Library" : "Show Library"}
               >
                 {showComponentLibrary ? (
                   <ChevronLeft className="h-5 w-5 text-[#4F8FF7]" />
@@ -536,6 +539,7 @@ export const PlantBuilder = () => {
                 setComponents={setComponents}
                 connections={connections}
                 setConnections={setConnections}
+                onConnect={onConnect}  // PASSED
               />
             </div>
           </div>
@@ -621,12 +625,13 @@ export const PlantBuilder = () => {
                   Add Component
                 </Button>
                 <div className="h-[300px] overflow-y-auto">
-                  <Canvas
-                    components={components}
-                    setComponents={setComponents}
-                    connections={connections}
-                    setConnections={setConnections}
-                  />
+                 <Canvas
+                  components={components}
+                  setComponents={setComponents}
+                  connections={connections}
+                  setConnections={setConnections}
+                  onConnect={onConnect}  // PASSED
+                />
                 </div>
               </div>
             </div>

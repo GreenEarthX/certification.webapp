@@ -1,4 +1,11 @@
-import { CertificationScheme } from "./types";
+'use client';
+
+import {
+  CertificationScheme,
+  ProductInfo,
+  PlacedComponent,
+  PlantInfo,
+} from "./types";
 
 export const certificationSchemes: CertificationScheme[] = [
   {
@@ -47,8 +54,10 @@ export const certificationSchemes: CertificationScheme[] = [
   },
 ];
 
+// FIXED: Use `offtakeLocations: []` instead of `offtakeLocation: undefined`
 export const hardcodedProducts: ProductInfo[] = [
   {
+    productId: "P001", // REQUIRED
     productName: "Hydrogen",
     productType: "Fuel",
     productionCapacity: "1000",
@@ -57,11 +66,12 @@ export const hardcodedProducts: ProductInfo[] = [
     fuelClass: "RFNBO",
     feedstock: "Wind",
     carbonFootprint: { value: 2.5, unit: "gCO2e/MJ" },
-    offtakeLocation: undefined,
+    offtakeLocations: [], // ARRAY, NOT `offtakeLocation`
     downstreamOperations: "",
     verified: true,
   },
   {
+    productId: "P002",
     productName: "Biodiesel",
     productType: "Fuel",
     productionCapacity: "5000",
@@ -70,11 +80,12 @@ export const hardcodedProducts: ProductInfo[] = [
     fuelClass: "Advanced Biofuel",
     feedstock: "Used Cooking Oil",
     carbonFootprint: { value: 4.0, unit: "gCO2e/MJ" },
-    offtakeLocation: undefined,
+    offtakeLocations: [],
     downstreamOperations: "",
     verified: true,
   },
   {
+    productId: "P003",
     productName: "SAF",
     productType: "Fuel",
     productionCapacity: "2000",
@@ -83,7 +94,7 @@ export const hardcodedProducts: ProductInfo[] = [
     fuelClass: "Advanced Biofuel",
     feedstock: "Biomass",
     carbonFootprint: { value: 5.5, unit: "gCO2e/MJ" },
-    offtakeLocation: undefined,
+    offtakeLocations: [],
     downstreamOperations: "",
     verified: false,
   },

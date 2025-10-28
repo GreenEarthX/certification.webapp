@@ -689,12 +689,6 @@ export default function PlausibilityCheckPage() {
                     <h3 className="font-bold text-lg mb-3">Proof Summary</h3>
                     <p className="text-sm text-gray-700 whitespace-pre-line">{plausibilityResult.proof}</p>
                   </div>
-
-                  <div className="flex justify-center pt-6">
-                    <button onClick={() => router.push(`/plant/${selectedPlantId}/history`)} className="px-10 py-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-bold text-lg hover:from-green-700 hover:to-emerald-700 shadow-lg transition transform hover:scale-105">
-                      View Full History
-                    </button>
-                  </div>
                 </div>
               )}
             </div>
