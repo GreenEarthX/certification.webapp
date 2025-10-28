@@ -1,4 +1,5 @@
-import type { Position } from "./Canvas";
+// ConnectionArrow.tsx
+import type { Position } from "../../app/plant-builder/types";  // CORRECT SOURCE
 
 type ConnectionArrowProps = {
   from: Position;
@@ -7,51 +8,57 @@ type ConnectionArrowProps = {
 };
 
 const ConnectionArrow = ({ from, to, onClick }: ConnectionArrowProps) => {
-  // Adjust for component center (assuming 200px width, 80px height for components)
+  // Adjust for component center (200px width, 80px height)
   const startX = from.x + 100;
   const startY = from.y + 40;
   const endX = to.x + 100;
   const endY = to.y + 40;
 
-  // Calculate control points for curved path
+  // Curved path with quadratic Bézier
   const controlX = (startX + endX) / 2;
   const pathData = `M ${startX} ${startY} Q ${controlX} ${startY}, ${controlX} ${(startY + endY) / 2} T ${endX} ${endY}`;
 
-  // Calculate arrow angle
+  // Arrow angle
   const angle = Math.atan2(endY - startY, endX - startX) * (180 / Math.PI);
 
   return (
-    <g className="cursor-pointer hover:opacity-80" onClick={onClick}>
-      {/* Path */}
+    <g
+      style={{ cursor: "pointer" }}
+      onClick={onClick}
+      onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.7")}
+      onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+    >
+      {/* Main Path */}
       <path
         d={pathData}
-        stroke="hsl(var(--primary))"
+        stroke="#4F8FF7"
         strokeWidth="2"
         fill="none"
         markerEnd="url(#arrowhead)"
+        style={{ transition: "opacity 0.2s" }}
       />
-      {/* Interactive hitbox */}
+
+      {/* Clickable Hitbox */}
       <path
         d={pathData}
         stroke="transparent"
-        strokeWidth="12"
+        strokeWidth="16"
         fill="none"
-        className="pointer-events-auto"
+        style={{ pointerEvents: "auto" }}
       />
-      {/* Arrowhead marker definition */}
+
+      {/* Arrowhead */}
       <defs>
         <marker
           id="arrowhead"
-          markerWidth="10"
-          markerHeight="10"
-          refX="9"
-          refY="3"
+          markerWidth="12"
+          markerHeight="12"
+          refX="10"
+          refY="3.5"
           orient="auto"
+          style={{ overflow: "visible" }}
         >
-          <polygon
-            points="0 0, 10 3, 0 6"
-            fill="hsl(var(--primary))"
-          />
+          <polygon points="0,0 12,3.5 0,7" fill="#4F8FF7" />
         </marker>
       </defs>
     </g>

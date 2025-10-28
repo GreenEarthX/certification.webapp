@@ -1,3 +1,4 @@
+// src/components/plant-builder/ComponentLibrary.tsx
 import { useState } from "react";
 import { Building2, Zap, ArrowRightLeft, ChevronDown, ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -57,41 +58,48 @@ export type ComponentData = {
   gateData?: GateData;
 };
 
+// === TAILWIND COLORS ===
+const layerStyles = {
+  equipment: { dot: "bg-blue-500", border: "border-blue-300", hover: "hover:border-blue-500 hover:bg-blue-50" },
+  carrier:   { dot: "bg-green-500", border: "border-green-300", hover: "hover:border-green-500 hover:bg-green-50" },
+  gate:      { dot: "bg-purple-500", border: "border-purple-300", hover: "hover:border-purple-500 hover:bg-purple-50" },
+};
+
 const equipmentComponents: ComponentData[] = [
-  { id: "electrolyzer", type: "equipment", name: "Electrolyzer (PEM, Alkaline, SOEC)", category: "Power-to-X", icon: "Building2", technicalData: { input: [{ name: "Water", quantity: 0, unit: "Ton/h" }, { name: "Electricity", quantity: 0, unit: "MWh/h" }], output: [{ name: "Hydrogen", quantity: 0, unit: "Ton/h" }, { name: "Oxygen", quantity: 0, unit: "Ton/h" }], efficiency: 0, capacity: { value: 0, unit: "MWh/h" } }, metadata: {} },
-  { id: "dac", type: "equipment", name: "Direct Air Capture (DAC)", category: "Power-to-X", icon: "Building2", technicalData: { input: [{ name: "Air", quantity: 0, unit: "Ton/h" }], output: [{ name: "CO₂", quantity: 0, unit: "Ton/h" }], efficiency: 0, capacity: { value: 0, unit: "MWh/h" } }, metadata: {} },
-  { id: "methanol-synthesis", type: "equipment", name: "Methanol Synthesis Reactor", category: "Power-to-X", icon: "Building2", technicalData: { input: [{ name: "CO₂", quantity: 0, unit: "Ton/h" }, { name: "Hydrogen", quantity: 0, unit: "Ton/h" }], output: [{ name: "Methanol", quantity: 0, unit: "Ton/h" }], efficiency: 0, capacity: { value: 0, unit: "Ton/h" } }, metadata: {} },
-  { id: "hydrotreating", type: "equipment", name: "Hydrotreating (Deoxygenation)", category: "Lipid-to-Fuels", icon: "Building2", technicalData: { input: [{ name: "Triglycerides", quantity: 0, unit: "Ton/h" }], output: [{ name: "Paraffins", quantity: 0, unit: "Ton/h" }], efficiency: 0, capacity: { value: 0, unit: "Ton/h" } }, metadata: {} },
-  { id: "gasifier", type: "equipment", name: "Gasifier", category: "Gasification", icon: "Building2", technicalData: { input: [{ name: "Biomass", quantity: 0, unit: "Ton/h" }], output: [{ name: "Syngas", quantity: 0, unit: "Ton/h" }], efficiency: 0, capacity: { value: 0, unit: "Ton/h" } }, metadata: {} },
-  { id: "anaerobic-digester", type: "equipment", name: "Anaerobic Digester", category: "Anaerobic Digestion", icon: "Building2", technicalData: { input: [{ name: "Wet Organics", quantity: 0, unit: "Ton/h" }], output: [{ name: "Biogas", quantity: 0, unit: "Ton/h" }], efficiency: 0, capacity: { value: 0, unit: "Ton/h" } }, metadata: {} },
-  { id: "co2-liquefaction", type: "equipment", name: "CO₂ Liquefaction & Storage", category: "CO₂ Management", icon: "Building2", technicalData: { input: [{ name: "CO₂", quantity: 0, unit: "Ton/h" }], output: [{ name: "Liquid CO₂", quantity: 0, unit: "Ton/h" }], efficiency: 0, capacity: { value: 0, unit: "Ton/h" } }, metadata: {} },
-  { id: "compressor", type: "equipment", name: "Compressor", category: "Balance-of-Plant", icon: "Building2", technicalData: { input: [{ name: "Gas", quantity: 0, unit: "Ton/h" }], output: [{ name: "Compressed Gas", quantity: 0, unit: "Ton/h" }], efficiency: 0, capacity: { value: 0, unit: "Ton/h" } }, metadata: {} },
+  { id: "electrolyzer", type: "equipment", name: "Electrolyzer", category: "Power-to-X", icon: "Building2" },
+  { id: "dac", type: "equipment", name: "DAC", category: "Power-to-X", icon: "Building2" },
+  { id: "methanol-synthesis", type: "equipment", name: "Methanol Synth", category: "Power-to-X", icon: "Building2" },
+  { id: "hydrotreating", type: "equipment", name: "Hydrotreating", category: "Lipid-to-Fuels", icon: "Building2" },
+  { id: "gasifier", type: "equipment", name: "Gasifier", category: "Gasification", icon: "Building2" },
+  { id: "anaerobic-digester", type: "equipment", name: "Anaerobic Digester", category: "Anaerobic Digestion", icon: "Building2" },
+  { id: "co2-liquefaction", type: "equipment", name: "CO₂ Liquefaction", category: "CO₂ Management", icon: "Building2" },
+  { id: "compressor", type: "equipment", name: "Compressor", category: "Balance-of-Plant", icon: "Building2" },
 ];
 
 const carrierComponents: ComponentData[] = [
-  { id: "hydrogen", type: "carrier", name: "Hydrogen (H₂)", category: "Gas", icon: "Zap", carrierData: { product: "Hydrogen", fuelType: "Hydrogen", fuelClass: "Renewable fuels of non-biological origin (RFNBO)", certificationStatus: "Pre-certification" } },
-  { id: "co2", type: "carrier", name: "Carbon Dioxide (CO₂)", category: "Gas", icon: "Zap", carrierData: { product: "CO₂", fuelType: "CO₂", fuelClass: "Recycled carbon fuels", certificationStatus: "Pre-certification" } },
-  { id: "methanol", type: "carrier", name: "Methanol (CH₃OH)", category: "Liquid", icon: "Zap", carrierData: { product: "Methanol", fuelType: "Methanol", fuelClass: "Renewable fuels of non-biological origin (RFNBO)", certificationStatus: "Pre-certification" } },
-  { id: "ammonia", type: "carrier", name: "Ammonia (NH₃)", category: "Gas/Liquid", icon: "Zap", carrierData: { product: "Ammonia", fuelType: "Ammonia", fuelClass: "Renewable fuels of non-biological origin (RFNBO)", certificationStatus: "Pre-certification" } },
-  { id: "electricity", type: "carrier", name: "Electricity", category: "Energy", icon: "Zap", carrierData: { product: "Electricity", fuelType: "Renewable electricity", fuelClass: "Renewable electricity", certificationStatus: "Pre-certification" } },
-  { id: "syngas", type: "carrier", name: "Syngas", category: "Gas", icon: "Zap", carrierData: { product: "Syngas", fuelType: "Syngas", fuelClass: "Recycled carbon fuels", certificationStatus: "Pre-certification" } },
+  { id: "hydrogen", type: "carrier", name: "Hydrogen", category: "Gas", icon: "Zap" },
+  { id: "co2", type: "carrier", name: "CO₂", category: "Gas", icon: "Zap" },
+  { id: "methanol", type: "carrier", name: "Methanol", category: "Liquid", icon: "Zap" },
+  { id: "ammonia", type: "carrier", name: "Ammonia", category: "Gas/Liquid", icon: "Zap" },
+  { id: "electricity", type: "carrier", name: "Electricity", category: "Energy", icon: "Zap" },
+  { id: "syngas", type: "carrier", name: "Syngas", category: "Gas", icon: "Zap" },
 ];
 
 const gateComponents: ComponentData[] = [
-  { id: "input-grid", type: "gate", name: "Grid Input", category: "Input", icon: "ArrowRightLeft", gateData: { inputOrOutput: "input", product: "Electricity", input: [{ name: "Electricity", quantity: 0, unit: "MWh/h" }], sourceType: "Market", sourceOrigin: "Grid", sourceCertification: "GoO" } },
-  { id: "input-renewable", type: "gate", name: "Renewable Input", category: "Input", icon: "ArrowRightLeft", gateData: { inputOrOutput: "input", product: "Electricity", input: [{ name: "Electricity", quantity: 0, unit: "MWh/h" }], sourceType: "PPA", sourceOrigin: "Solar", sourceCertification: "GoO" } },
-  { id: "output-product", type: "gate", name: "Product Output", category: "Output", icon: "ArrowRightLeft", gateData: { inputOrOutput: "output", product: "Methanol", output: [{ name: "Methanol", quantity: 0, unit: "Ton/h" }], endUse: "Shipping Industry", sinkType: "Market" } },
-  { id: "valve", type: "gate", name: "Control Valve", category: "Control", icon: "ArrowRightLeft", gateData: { inputOrOutput: "input", product: "Hydrogen", input: [{ name: "Hydrogen", quantity: 0, unit: "Ton/h" }], sourceType: "Market", sourceOrigin: "Electrolyzer", sourceCertification: "Feedstock certification" } },
+  { id: "input-grid", type: "gate", name: "Grid Input", category: "Input", icon: "ArrowRightLeft" },
+  { id: "input-renewable", type: "gate", name: "Renewable Input", category: "Input", icon: "ArrowRightLeft" },
+  { id: "output-product", type: "gate", name: "Product Output", category: "Output", icon: "ArrowRightLeft" },
+  { id: "valve", type: "gate", name: "Control Valve", category: "Control", icon: "ArrowRightLeft" },
 ];
 
 const ComponentLibrary = () => {
   const [openSections, setOpenSections] = useState({
-    equipment: false,
+    equipment: true,
     carrier: false,
     gate: false,
   });
 
-  const handleDragStart = (e: React.DragEvent, component: ComponentData) => {
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, component: ComponentData) => {
     e.dataTransfer.setData("component", JSON.stringify(component));
   };
 
@@ -109,38 +117,43 @@ const ComponentLibrary = () => {
   const renderLayer = (
     title: string,
     icon: React.ReactNode,
-    colorClass: string,
-    components: ComponentData[],
     type: ComponentType,
+    components: ComponentData[],
     sectionKey: keyof typeof openSections
   ) => {
+    const style = layerStyles[type];
     const grouped = groupByCategory(components);
 
     return (
       <Collapsible open={openSections[sectionKey]} onOpenChange={() => toggleSection(sectionKey)}>
-        <CollapsibleTrigger className="flex items-center gap-2 mb-3 w-full text-left hover:bg-muted/50 p-2 rounded-md transition-colors">
-          <div className={`w-3 h-3 rounded-full bg-${colorClass}`} />
-          <h3 className="font-medium text-foreground flex items-center gap-2 flex-1">
+        <CollapsibleTrigger className="flex items-center gap-2 w-full text-left hover:bg-muted/40 p-2 rounded transition-colors text-sm font-medium">
+          <div className={`w-2.5 h-2.5 rounded-full ${style.dot}`} />
+          <span className="flex items-center gap-1.5 flex-1">
             {icon}
             {title}
-          </h3>
-          {openSections[sectionKey] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          </span>
+          {openSections[sectionKey] ? (
+            <ChevronDown className="h-4 w-4" />
+          ) : (
+            <ChevronRight className="h-4 w-4" />
+          )}
         </CollapsibleTrigger>
-        <CollapsibleContent className="space-y-4 pl-5 border-l-2 border-muted ml-1.5">
+
+        <CollapsibleContent className="space-y-3 pl-5 border-l border-muted/50 ml-2">
           {Object.entries(grouped).map(([category, items]) => (
             <div key={category} className="space-y-2">
-              <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
                 {category}
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {items.map((component) => (
                   <Card
                     key={component.id}
                     draggable
                     onDragStart={(e) => handleDragStart(e, component)}
-                    className={`p-3 cursor-move border-2 border-${colorClass}/20 hover:border-${colorClass} hover:bg-${colorClass}-light transition-colors`}
+                    className={`p-2 cursor-move border ${style.border} ${style.hover} transition-all text-sm rounded-md shadow-sm`}
                   >
-                    <div className="font-medium text-sm text-foreground truncate" title={component.name}>
+                    <div className="font-medium truncate" title={component.name}>
                       {component.name}
                     </div>
                   </Card>
@@ -154,42 +167,20 @@ const ComponentLibrary = () => {
   };
 
   return (
-    <div className="w-64 border-r border-border bg-card shrink-0 flex flex-col">
-      <div className="p-4 border-b border-border">
-        <h2 className="font-semibold text-lg text-foreground">Component Library</h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          Drag components to the canvas
-        </p>
+    // WIDE: 320px
+    <div className="w-80 border-r border-border bg-card flex flex-col">
+      <div className="p-3 border-b border-border">
+        <h2 className="font-bold text-base">Component Library</h2>
+        <p className="text-xs text-muted-foreground mt-0.5">Drag to canvas</p>
       </div>
 
-      <ScrollArea className="flex-1 overflow-x-hidden">
-        <div className="p-4 space-y-6">
-          {renderLayer(
-            "Equipment Layer",
-            <Building2 className="h-4 w-4" />,
-            "layer-equipment",
-            equipmentComponents,
-            "equipment",
-            "equipment"
-          )}
-          <Separator />
-          {renderLayer(
-            "Carrier Layer",
-            <Zap className="h-4 w-4" />,
-            "layer-carrier",
-            carrierComponents,
-            "carrier",
-            "carrier"
-          )}
-          <Separator />
-          {renderLayer(
-            "Gate Layer",
-            <ArrowRightLeft className="h-4 w-4" />,
-            "layer-gate",
-            gateComponents,
-            "gate",
-            "gate"
-          )}
+      <ScrollArea className="flex-1">
+        <div className="p-3 space-y-4">
+          {renderLayer("Equipment", <Building2 className="h-4 w-4" />, "equipment", equipmentComponents, "equipment")}
+          <Separator className="my-1" />
+          {renderLayer("Carriers", <Zap className="h-4 w-4" />, "carrier", carrierComponents, "carrier")}
+          <Separator className="my-1" />
+          {renderLayer("Gates", <ArrowRightLeft className="h-4 w-4" />, "gate", gateComponents, "gate")}
         </div>
       </ScrollArea>
     </div>

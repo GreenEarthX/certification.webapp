@@ -206,7 +206,7 @@ export const FilterCertifications = ({
           </Button>
           <Button
             className="bg-[#3c83f6] hover:bg-[#3c83f6]/90 text-white font-semibold px-8 py-3 rounded-lg shadow-md"
-            onClick={() => window.location.href = "/recommendations"}
+            onClick={() => window.location.href = "/plant-builder/recommendations"}
           >
             View Recommendations →
           </Button>

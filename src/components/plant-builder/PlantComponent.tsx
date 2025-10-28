@@ -1,11 +1,14 @@
 // src/components/plant-builder/PlantComponent.tsx
 import { useState, useRef, useEffect } from "react";
-import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Cable, Building2, Zap, ArrowRightLeft } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import type { Position, PlacedComponent } from "./Canvas";
+import { Building2, Zap, ArrowRightLeft } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import type { Position, PlacedComponent } from "./../../app/plant-builder/types";
 
 interface PlantComponentProps {
   component: PlacedComponent;
@@ -16,45 +19,46 @@ interface PlantComponentProps {
   isConnecting: boolean;
 }
 
+/* ─────────────────────── REAL TAILWIND COLORS ─────────────────────── */
 const layerColors: Record<
   string,
   { bg: string; border: string; text: string; fill: string }
 > = {
   equipment: {
-    bg: "bg-layer-equipment-light",
-    border: "border-layer-equipment",
-    text: "text-layer-equipment",
-    fill: "fill-layer-equipment",
+    bg: "bg-blue-50",
+    border: "border-blue-500",
+    text: "text-blue-700",
+    fill: "fill-blue-600",
   },
   carrier: {
-    bg: "bg-layer-carrier-light",
-    border: "border-layer-carrier",
-    text: "text-layer-carrier",
-    fill: "fill-layer-carrier",
+    bg: "bg-green-50",
+    border: "border-green-500",
+    text: "text-green-700",
+    fill: "fill-green-600",
   },
   gate: {
-    bg: "bg-layer-gate-light",
-    border: "border-layer-gate",
-    text: "text-layer-gate",
-    fill: "fill-layer-gate",
+    bg: "bg-purple-50",
+    border: "border-purple-500",
+    text: "text-purple-700",
+    fill: "fill-purple-600",
   },
 };
 
-// Helper to get icon based on type
-const getTypeIcon = (type: string): React.ReactElement | null => {
+/* ─────────────────────── ICON (always returns element) ─────────────────────── */
+const getTypeIcon = (type: string, colorClass: string) => {
   switch (type) {
     case "equipment":
-      return <Building2 className="h-6 w-6 mb-1" />;
+      return <Building2 className={`h-6 w-6 mb-1 ${colorClass}`} />;
     case "carrier":
-      return <Zap className="h-6 w-6 mb-1" />;
+      return <Zap className={`h-6 w-6 mb-1 ${colorClass}`} />;
     case "gate":
-      return <ArrowRightLeft className="h-6 w-6 mb-1 rotate-90" />;
+      return <ArrowRightLeft className={`h-6 w-6 mb-1 rotate-90 ${colorClass}`} />;
     default:
-      return null;
+      return <div className={`h-6 w-6 mb-1 ${colorClass}`} />;
   }
 };
 
-// Helper to determine base shape classes
+/* ─────────────────────── SHAPE ─────────────────────── */
 const getBaseShapeClasses = (type: string) => {
   switch (type) {
     case "equipment":
@@ -68,6 +72,7 @@ const getBaseShapeClasses = (type: string) => {
   }
 };
 
+/* ─────────────────────── COMPONENT ─────────────────────── */
 const PlantComponent = ({
   component,
   onClick,
@@ -78,7 +83,8 @@ const PlantComponent = ({
 }: PlantComponentProps) => {
   const [position, setPosition] = useState(component.position);
   const cardRef = useRef<HTMLDivElement>(null);
-  const colors = layerColors[component.type] || {
+
+  const colors = layerColors[component.type] ?? {
     bg: "bg-gray-100",
     border: "border-gray-300",
     text: "text-gray-700",
@@ -86,57 +92,39 @@ const PlantComponent = ({
   };
 
   const isGate = component.type === "gate";
-  const baseShapeClasses = getBaseShapeClasses(component.type);
-  const shapeClasses = isGate ? `${baseShapeClasses} rounded-md rotate-90 origin-center` : baseShapeClasses;
-  const typeIcon = getTypeIcon(component.type); // ← Now typed as React.ReactElement | null
-
+  const baseShape = getBaseShapeClasses(component.type);
+  const shapeClasses = isGate
+    ? `${baseShape} rounded-md rotate-90 origin-center`
+    : baseShape;
   const contentClasses = isGate ? "rotate-[-90deg] w-full" : "";
 
-  useEffect(() => {
-    setPosition(component.position);
-  }, [component.position]);
+  const typeIcon = getTypeIcon(component.type, colors.text);
 
+  /* ───── drag ───── */
   const handleMouseDown = (e: React.MouseEvent) => {
     e.stopPropagation();
     const startX = e.clientX - position.x;
     const startY = e.clientY - position.y;
-
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      setPosition({
-        x: moveEvent.clientX - startX,
-        y: moveEvent.clientY - startY,
-      });
+    const move = (ev: MouseEvent) => {
+      setPosition({ x: ev.clientX - startX, y: ev.clientY - startY });
     };
-
-    const handleMouseUp = () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
+    const up = () => {
+      document.removeEventListener("mousemove", move);
+      document.removeEventListener("mouseup", up);
       onMove(component.id, position);
     };
-
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
+    document.addEventListener("mousemove", move);
+    document.addEventListener("mouseup", up);
   };
 
-  const handleNodeClick = (e: React.MouseEvent, isOutput: boolean) => {
+  /* ───── ports ───── */
+  const handleNodeClick = (e: React.MouseEvent, out: boolean) => {
     e.stopPropagation();
-    if (isOutput) {
-      onConnectStart(component.id);
-    } else if (isConnecting) {
-      onConnectEnd(component.id);
-    }
+    out ? onConnectStart(component.id) : isConnecting && onConnectEnd(component.id);
   };
 
-  const inputNodeClasses = isGate
-    ? "absolute -left-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
-    : "absolute -left-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity";
-
-  const outputNodeClasses = isGate
-    ? "absolute -right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
-    : "absolute -right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity";
-
-  const tooltipSideInput = isGate ? "top" : "left";
-  const tooltipSideOutput = isGate ? "bottom" : "right";
+  const nodeCls = (side: "left" | "right") =>
+    `absolute -${side}-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity`;
 
   return (
     <div
@@ -149,18 +137,23 @@ const PlantComponent = ({
       <Card
         className={`${shapeClasses} border-2 ${colors.border} ${colors.bg} shadow-md hover:shadow-lg transition-shadow relative group flex flex-col items-center justify-center p-2 overflow-visible`}
       >
-        <CardContent className={`p-2 flex flex-col items-center justify-center text-center ${contentClasses} max-w-full`}>
-          {typeIcon && (
-            <div className={`${colors.text} opacity-80`}>
-              {React.cloneElement(typeIcon, {
-                className: `${typeIcon.props.className} ${colors.text}`,
-              })}
-            </div>
-          )}
-          <div className={`font-semibold text-sm truncate max-w-full mt-1 ${isGate ? 'whitespace-normal' : ''}`}>
+        <CardContent
+          className={`p-2 flex flex-col items-center justify-center text-center ${contentClasses} max-w-full`}
+        >
+          <div className="opacity-80">{typeIcon}</div>
+
+          <div
+            className={`font-semibold text-sm truncate max-w-full mt-1 ${
+              isGate ? "whitespace-normal" : ""
+            }`}
+          >
             {component.name}
           </div>
-          <div className={`text-xs text-muted-foreground truncate max-w-full ${isGate ? 'whitespace-normal' : ''}`}>
+          <div
+            className={`text-xs text-muted-foreground truncate max-w-full ${
+              isGate ? "whitespace-normal" : ""
+            }`}
+          >
             {component.category}
           </div>
 
@@ -174,41 +167,58 @@ const PlantComponent = ({
                 onConnectStart(component.id);
               }}
             >
-              <Cable className="h-3 w-3 mr-1" />
+              <svg className="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 10V3L4 14h7v7l9-11h-7z"
+                />
+              </svg>
               Connect
             </Button>
           )}
 
-          {/* Input Port */}
+          {/* Input */}
           <Tooltip>
             <TooltipTrigger asChild>
               <svg
-                className={`${inputNodeClasses} cursor-pointer z-10`}
+                className={`${nodeCls("left")} cursor-pointer z-10`}
                 width="12"
                 height="12"
                 onClick={(e) => handleNodeClick(e, false)}
               >
-                <circle cx="6" cy="6" r="5" className={`${colors.fill} fill-opacity-60 hover:fill-opacity-80`} />
+                <circle
+                  cx="6"
+                  cy="6"
+                  r="5"
+                  className={`${colors.fill} fill-opacity-60 hover:fill-opacity-80`}
+                />
               </svg>
             </TooltipTrigger>
-            <TooltipContent side={tooltipSideInput}>
+            <TooltipContent side={isGate ? "top" : "left"}>
               Click to connect input
             </TooltipContent>
           </Tooltip>
 
-          {/* Output Port */}
+          {/* Output */}
           <Tooltip>
             <TooltipTrigger asChild>
               <svg
-                className={`${outputNodeClasses} cursor-pointer z-10`}
+                className={`${nodeCls("right")} cursor-pointer z-10`}
                 width="12"
                 height="12"
                 onClick={(e) => handleNodeClick(e, true)}
               >
-                <circle cx="6" cy="6" r="5" className={`${colors.fill} fill-opacity-60 hover:fill-opacity-80`} />
+                <circle
+                  cx="6"
+                  cy="6"
+                  r="5"
+                  className={`${colors.fill} fill-opacity-60 hover:fill-opacity-80`}
+                />
               </svg>
             </TooltipTrigger>
-            <TooltipContent side={tooltipSideOutput}>
+            <TooltipContent side={isGate ? "bottom" : "right"}>
               Click to connect output
             </TooltipContent>
           </Tooltip>
