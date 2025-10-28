@@ -4,20 +4,25 @@ import { recommendationService } from "@/services/recommendations/recommendation
 
 export async function GET(req: NextRequest) {
   try {
-    const { payload } = await requireRole(req, ['PlantOperator']);
-
-    if (!payload.sub) {
-      return NextResponse.json({ error: "User ID missing in token" }, { status: 400 });
+    // FIXED: Check if requireRole returns a result
+    const authResult = await requireRole(req, ['PlantOperator']);
+    
+    if (!authResult || !authResult.payload?.sub) {
+      return NextResponse.json(
+        { error: "Unauthorized or invalid token" },
+        { status: 401 }
+      );
     }
 
-    const userSub: string = payload.sub; 
+    const userSub: string = authResult.payload.sub;
     const recommendations = await recommendationService.getAllRecommendations(userSub);
 
     return NextResponse.json(recommendations);
   } catch (error: any) {
     console.error("API error:", error);
-    return error instanceof Response
-      ? error
-      : NextResponse.json({ error: "Failed to fetch recommendations" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }
