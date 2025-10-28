@@ -286,7 +286,7 @@ export default function PlausibilityCheckPage() {
       const form = new FormData();
       form.append("file", file);
       const endpoint = type;
-      const res = await fetch(`${process.env.NEXT_PUBLIC_OCR_SERVICE_URL}/api/v1/ocr/${endpoint}`, {
+      const res = await fetch(`${process.env.OCR_SERVICE_URL}/api/v1/ocr/${endpoint}`, {
         method: "POST",
         body: form,
       });
@@ -373,7 +373,7 @@ export default function PlausibilityCheckPage() {
     const input = buildPlausibilityInput();
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_PLAUSIBILITY_SERVICE_URL}/api/v1/plausibility/check`, {
+      const res = await fetch(`${process.env.PLAUSIBILITY_SERVICE_URL}/api/v1/plausibility/check`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(input),
