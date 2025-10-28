@@ -236,6 +236,12 @@ export default function PlausibilityCheckPage() {
   const router = useRouter();
   const { toast, showToast } = useToast();
 
+  // Client should call our local server APIs — these proxies will use
+  // non-public env vars (OCR_SERVICE_URL, PLAUSIBILITY_SERVICE_URL) so the
+  // external service addresses remain server-side and work in cloud builds.
+  const OCR_BASE = '/api/ocr';
+  const PLAUSIBILITY_BASE = '/api/plausibility';
+
   const initPlant = (id: string) => {
     if (!uploads[id]) {
       setUploads((prev) => ({
@@ -286,12 +292,28 @@ export default function PlausibilityCheckPage() {
       const form = new FormData();
       form.append("file", file);
       const endpoint = type;
-      const res = await fetch(`${process.env.OCR_SERVICE_URL}/api/v1/ocr/${endpoint}`, {
+      // Call the local OCR proxy at /api/ocr/{endpoint}
+      const res = await fetch(`${OCR_BASE}/${endpoint}`, {
         method: "POST",
         body: form,
       });
-      const data = await res.json();
-      if (data.status === "success") results[type] = data.data;
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        console.error('OCR proxy error', res.status, text);
+        return;
+      }
+
+      // Only try to parse JSON if content-type is JSON
+      const ct = res.headers.get('content-type') || '';
+      if (ct.includes('application/json')) {
+        const data = await res.json();
+        if (data.status === "success") results[type] = data.data;
+      } else {
+        // Unexpected content-type: log and skip
+        const text = await res.text().catch(() => '');
+        console.warn('OCR response not JSON', ct, text);
+      }
     };
 
     const tasks = [];
@@ -373,13 +395,26 @@ export default function PlausibilityCheckPage() {
     const input = buildPlausibilityInput();
 
     try {
-      const res = await fetch(`${process.env.PLAUSIBILITY_SERVICE_URL}/api/v1/plausibility/check`, {
+      // Call the local plausibility proxy at /api/plausibility/check
+      const res = await fetch(`${PLAUSIBILITY_BASE}/check`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(input),
       });
 
-      const result: PlausibilityResult = await res.json();
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(`Plausibility proxy returned ${res.status}: ${text}`);
+      }
+
+      const ct = res.headers.get('content-type') || '';
+      let result: PlausibilityResult;
+      if (ct.includes('application/json')) {
+        result = await res.json();
+      } else {
+        const text = await res.text().catch(() => '');
+        throw new Error(`Unexpected response from plausibility service: ${text}`);
+      }
       console.log("PLAUSIBILITY RESULT →", result);
 
       setPlausibilityResult(result);
