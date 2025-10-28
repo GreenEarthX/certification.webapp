@@ -1,3 +1,4 @@
+// tsconfig.json (Updated)
 {
   "compilerOptions": {
     "target": "ES2017",
@@ -20,8 +21,11 @@
     ],
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+    // 👇 ADD THIS SECTION to resolve 'estree' and 'node'
+    "types": ["node", "estree"]
+    // 👆 ADD THIS SECTION
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "src/types"],
   "exclude": ["node_modules"]
 }

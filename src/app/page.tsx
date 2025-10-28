@@ -12,9 +12,9 @@ export default function HomePage() {
       const data = await res.json();
 
       if (data.needsCompletion) {
-        router.push('/userRegistration');
+        router.push('/user-registration');
       } else {
-        router.push('/dashboards/dashboard'); // or wherever
+        router.push('/plant-operator/dashboard');
       }
     }
 
