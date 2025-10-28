@@ -41,9 +41,10 @@ type PlausibilityResult = {
 };
 
 const mockUserPlants = [
-  { id: "PLANT-001", name: "Berlin Hydrogen Plant" },
-  { id: "PLANT-002", name: "Munich Solar Facility" },
-  { id: "PLANT-003", name: "Hamburg Wind Park" },
+  { id: "PLANT-001", name: "JetNova Fuels" },
+  { id: "PLANT-002", name: "MethoClear Energy" },
+  { id: "PLANT-003", name: "EcoHydro One " },
+  
 ];
 
 const useToast = () => {
@@ -281,11 +282,11 @@ export default function PlausibilityCheckPage() {
     const results: any = {};
     const current = uploads[selectedPlantId];
 
-    const process = async (file: File, type: "pos" | "invoice" | "ppa" | "termsheet") => {
+      const processFile = async (file: File, type: "pos" | "invoice" | "ppa" | "termsheet") => {
       const form = new FormData();
       form.append("file", file);
       const endpoint = type;
-      const res = await fetch(`http://localhost:8000/api/v1/ocr/${endpoint}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_OCR_SERVICE_URL}/api/v1/ocr/${endpoint}`, {
         method: "POST",
         body: form,
       });
@@ -294,10 +295,10 @@ export default function PlausibilityCheckPage() {
     };
 
     const tasks = [];
-    if (current.proof.length) tasks.push(process(current.proof[0], "pos"));
-    if (current.invoice.length) tasks.push(process(current.invoice[0], "invoice"));
-    if (current.ppa.length) tasks.push(process(current.ppa[0], "ppa"));
-    if (current.termsheet.length) tasks.push(process(current.termsheet[0], "termsheet"));
+    if (current.proof.length) tasks.push(processFile(current.proof[0], "pos"));
+    if (current.invoice.length) tasks.push(processFile(current.invoice[0], "invoice"));
+    if (current.ppa.length) tasks.push(processFile(current.ppa[0], "ppa"));
+    if (current.termsheet.length) tasks.push(processFile(current.termsheet[0], "termsheet"));
 
     await Promise.all(tasks);
     setOcrResults(results);
@@ -372,7 +373,7 @@ export default function PlausibilityCheckPage() {
     const input = buildPlausibilityInput();
 
     try {
-      const res = await fetch("http://localhost:8001/api/v1/plausibility/check", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_PLAUSIBILITY_SERVICE_URL}/api/v1/plausibility/check`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(input),
