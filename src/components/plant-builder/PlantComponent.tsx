@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Building2, Zap, ArrowRightLeft } from "lucide-react";
+import { Building2, Zap, ArrowRightLeft, X } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -17,6 +17,7 @@ interface PlantComponentProps {
   onConnectStart: (id: string) => void;
   onConnectEnd: (id: string) => void;
   isConnecting: boolean;
+  onDelete: (id: string) => void;   // ⬅️ NEW
 }
 
 /* ─────────────────────── REAL TAILWIND COLORS ─────────────────────── */
@@ -80,6 +81,7 @@ const PlantComponent = ({
   onConnectStart,
   onConnectEnd,
   isConnecting,
+  onDelete,
 }: PlantComponentProps) => {
   const [position, setPosition] = useState(component.position);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -156,6 +158,17 @@ const PlantComponent = ({
       <Card
         className={`${shapeClasses} border-2 ${colors.border} ${colors.bg} shadow-md hover:shadow-lg transition-shadow relative group flex flex-col items-center justify-center p-2 overflow-visible`}
       >
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();       // don't open the detail dialog
+            onDelete(component.id);    // call parent handler
+          }}
+          className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+        >
+          <X className="w-3 h-3" />
+        </button>
+        
         <CardContent
           className={`p-2 flex flex-col items-center justify-center text-center ${contentClasses} max-w-full`}
         >

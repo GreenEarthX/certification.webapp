@@ -81,6 +81,8 @@ export const PlantBuilder = () => {
   const [sortBy, setSortBy] = useState<"product" | "scheme" | "confidence" | "fuelClass">("confidence");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [error, setError] = useState<string | null>(null);
+  const [plantModelJson, setPlantModelJson] = useState<string>("");
+
 
   useEffect(() => {
     setError(null);
@@ -259,6 +261,31 @@ export const PlantBuilder = () => {
     },
     [setConnections]
   );
+
+  const handleCanvasModelChange = (model: {
+  components: PlacedComponent[];
+  connections: Connection[];
+}) => {
+  // 🔁 Normalize to examplePlant.json-like structure
+  const normalized = {
+    components: model.components.map((c) => ({
+      id: c.id,
+      type: c.type,
+      name: c.name,
+      category: c.category,
+      position: c.position,
+      data: c.data || {},
+    })),
+    connections: model.connections.map((conn) => ({
+      id: conn.id,
+      from: conn.from,
+      to: conn.to,
+      data: conn.data || {},
+    })),
+  };
+
+  setPlantModelJson(JSON.stringify(normalized, null, 2));
+};
 
   const toggleComponentLibrary = () => {
     setShowComponentLibrary((prev) => !prev);
@@ -540,6 +567,7 @@ export const PlantBuilder = () => {
                 connections={connections}
                 setConnections={setConnections}
                 onConnect={onConnect}  // PASSED
+                onModelChange={handleCanvasModelChange}
               />
             </div>
           </div>
@@ -631,6 +659,7 @@ export const PlantBuilder = () => {
                   connections={connections}
                   setConnections={setConnections}
                   onConnect={onConnect}  // PASSED
+                  onModelChange={handleCanvasModelChange}
                 />
                 </div>
               </div>

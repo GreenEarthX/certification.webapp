@@ -1,17 +1,35 @@
-// Canvas.tsx
+// src/components/plant-builder/Canvas.tsx
 'use client';
+
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Plus, ZoomIn, ZoomOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
 import PlantComponent from "./PlantComponent";
 import ComponentDetailDialog from "./ComponentDetailDialog";
 import ConnectionArrow from "./ConnectionArrow";
 import ConnectionDetailDialog from "./ConnectionDetailDialog";
-import { PlacedComponent as PlacedComponentType, Connection as ConnectionType } from "../../app/plant-builder/types";
+
+import {
+  PlacedComponent as PlacedComponentType,
+  Connection as ConnectionType,
+} from "../../app/plant-builder/types";
 
 type CanvasProps = {
   components: PlacedComponentType[];
@@ -19,6 +37,10 @@ type CanvasProps = {
   connections: ConnectionType[];
   setConnections: React.Dispatch<React.SetStateAction<ConnectionType[]>>;
   onConnect: (params: { source: string; target: string }) => void;
+  onModelChange?: (model: {
+    components: PlacedComponentType[];
+    connections: ConnectionType[];
+  }) => void;
 };
 
 const Canvas = ({
@@ -27,9 +49,12 @@ const Canvas = ({
   connections,
   setConnections,
   onConnect,
+  onModelChange,
 }: CanvasProps) => {
-  const [selectedComponent, setSelectedComponent] = useState<PlacedComponentType | null>(null);
-  const [selectedConnection, setSelectedConnection] = useState<ConnectionType | null>(null);
+  const [selectedComponent, setSelectedComponent] =
+    useState<PlacedComponentType | null>(null);
+  const [selectedConnection, setSelectedConnection] =
+    useState<ConnectionType | null>(null);
   const [connectingFrom, setConnectingFrom] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
   const [showAddComponent, setShowAddComponent] = useState(false);
@@ -38,29 +63,48 @@ const Canvas = ({
     type: "" as "equipment" | "carrier" | "gate",
     category: "",
   });
+
   const canvasRef = useRef<HTMLDivElement>(null);
 
+  // ⬇️ Load starter JSON examplePlant.json once
   useEffect(() => {
     let mounted = true;
+
     (async () => {
       try {
         const data = await import("@/data/examplePlant.json");
         if (!mounted || components.length > 0 || connections.length > 0) return;
+
         setComponents((data.default.components || []) as PlacedComponentType[]);
         setConnections((data.default.connections || []) as ConnectionType[]);
       } catch (e) {
         console.warn("Could not load example plant", e);
       }
     })();
+
     return () => {
       mounted = false;
     };
   }, [components.length, connections.length, setComponents, setConnections]);
 
+  // ⬇️ Notify parent ANY time components / connections change
+  useEffect(() => {
+    if (!onModelChange) return;
+
+    onModelChange({
+      components,
+      connections,
+    });
+  }, [components, connections, onModelChange]);
+
+  // ⬇️ Drag & drop from ComponentLibrary
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
-      const componentData = JSON.parse(e.dataTransfer.getData("component"));
+      const raw = e.dataTransfer.getData("component");
+      if (!raw) return;
+
+      const componentData = JSON.parse(raw);
       const rect = canvasRef.current?.getBoundingClientRect();
       if (!rect) return;
 
@@ -76,6 +120,7 @@ const Canvas = ({
         },
         certifications: componentData.certifications || [],
       };
+
       setComponents((prev) => [...prev, newComp]);
     },
     [zoom, setComponents]
@@ -100,7 +145,10 @@ const Canvas = ({
     }
   };
 
-  const handleComponentMove = (id: string, position: { x: number; y: number }) => {
+  const handleComponentMove = (
+    id: string,
+    position: { x: number; y: number }
+  ) => {
     setComponents((prev) =>
       prev.map((c) => (c.id === id ? { ...c, position } : c))
     );
@@ -130,7 +178,8 @@ const Canvas = ({
   };
 
   const handleAddNewComponent = () => {
-    if (!newComponent.name || !newComponent.type || !newComponent.category) return;
+    if (!newComponent.name || !newComponent.type || !newComponent.category)
+      return;
 
     const comp: PlacedComponentType = {
       id: `comp-${Date.now()}`,
@@ -141,16 +190,94 @@ const Canvas = ({
       data: { technicalData: {} },
       certifications: [],
     };
+
     setComponents((prev) => [...prev, comp]);
     setNewComponent({ name: "", type: "" as any, category: "" });
     setShowAddComponent(false);
   };
 
+  const handleDeleteComponent = (id: string) => {
+    setComponents((prev) => prev.filter((c) => c.id !== id));
+    setConnections((prev) =>
+      prev.filter((conn) => conn.from !== id && conn.to !== id)
+    );
+
+    if (selectedComponent?.id === id) {
+      setSelectedComponent(null);
+    }
+  };
+
+  const handleDeleteConnection = (id: string) => {
+    setConnections((prev) => prev.filter((c) => c.id !== id));
+
+    if (selectedConnection?.id === id) {
+      setSelectedConnection(null);
+    }
+  };
+
   const getComponentPosition = (id: string) =>
     components.find((c) => c.id === id)?.position;
 
+  const createCarrierBetween = useCallback(
+    (fromId: string, toId: string, carrier: string, reason: string) => {
+      if (!fromId || !toId || !carrier) return;
+
+      setComponents((prevComponents) => {
+        const fromComp = prevComponents.find((c) => c.id === fromId);
+        const toComp = prevComponents.find((c) => c.id === toId);
+
+        // safety: both ends must exist
+        if (!fromComp || !toComp) return prevComponents;
+
+        // place carrier roughly in the middle
+        const carrierId = `carrier-${carrier}-${Date.now()}`;
+        const carrierComp: PlacedComponentType = {
+          id: carrierId,
+          type: "carrier",
+          name: carrier.charAt(0).toUpperCase() + carrier.slice(1),
+          category: "auto-stream",
+          position: {
+            x: (fromComp.position.x + toComp.position.x) / 2,
+            y: (fromComp.position.y + toComp.position.y) / 2,
+          },
+          data: { product: carrier },
+          certifications: [],
+        };
+
+        // add two connections: from → carrier and carrier → to
+        setConnections((prevConnections) => {
+          const now = Date.now();
+          return [
+            ...prevConnections,
+            {
+              id: `conn-${now}-a`,
+              from: fromId,
+              to: carrierId,
+              type: carrier,
+              reason,
+              data: {},
+            },
+            {
+              id: `conn-${now}-b`,
+              from: carrierId,
+              to: toId,
+              type: carrier,
+              reason,
+              data: {},
+            },
+          ];
+        });
+
+        return [...prevComponents, carrierComp];
+      });
+    },
+    [setComponents, setConnections]
+  );
+
+
   return (
     <div className="flex-1 flex flex-col bg-canvas-bg relative">
+      {/* Zoom controls */}
       <div className="absolute top-4 right-4 flex gap-2 z-10">
         <Button
           variant="outline"
@@ -182,7 +309,8 @@ const Canvas = ({
         onDragOver={handleDragOver}
         className="flex-1 relative overflow-auto"
         style={{
-          backgroundImage: `linear-gradient(hsl(var(--canvas-grid)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--canvas-grid)) 1px, transparent 1px)`,
+          backgroundImage:
+            "linear-gradient(hsl(var(--canvas-grid)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--canvas-grid)) 1px, transparent 1px)",
           backgroundSize: `${20 * zoom}px ${20 * zoom}px`,
         }}
       >
@@ -190,6 +318,7 @@ const Canvas = ({
           className="relative w-full h-full min-w-[2400px] min-h-[1800px]"
           style={{ transform: `scale(${zoom})`, transformOrigin: "0 0" }}
         >
+          {/* Column shading */}
           <div className="absolute inset-0 pointer-events-none">
             <div className="absolute top-0 bottom-0 left-0 w-1/3 bg-layer-equipment/5" />
             <div
@@ -201,6 +330,7 @@ const Canvas = ({
             <div className="absolute top-0 bottom-0 right-0 w-1/3 bg-layer-gate/5" />
           </div>
 
+          {/* Connections */}
           <svg
             className="absolute inset-0 w-full h-full pointer-events-none"
             style={{ zIndex: 1 }}
@@ -209,6 +339,7 @@ const Canvas = ({
               const from = getComponentPosition(conn.from);
               const to = getComponentPosition(conn.to);
               if (!from || !to) return null;
+
               return (
                 <ConnectionArrow
                   key={conn.id}
@@ -220,6 +351,7 @@ const Canvas = ({
             })}
           </svg>
 
+          {/* Components */}
           <div className="relative pointer-events-none" style={{ zIndex: 10 }}>
             <div className="pointer-events-auto">
               {components.map((comp) => (
@@ -231,11 +363,13 @@ const Canvas = ({
                   onConnectStart={handleConnectStart}
                   onConnectEnd={handleConnectEnd}
                   isConnecting={connectingFrom === comp.id}
+                  onDelete={handleDeleteComponent}
                 />
               ))}
             </div>
           </div>
 
+          {/* Empty state */}
           {components.length === 0 && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="text-center space-y-4 max-w-2xl px-8">
@@ -252,6 +386,7 @@ const Canvas = ({
         </div>
       </div>
 
+      {/* Component dialog */}
       {selectedComponent && (
         <ComponentDetailDialog
           component={selectedComponent}
@@ -260,13 +395,14 @@ const Canvas = ({
           open={!!selectedComponent}
           onClose={() => setSelectedComponent(null)}
           onSave={handleSaveDetails}
-          onAddConnection={(from, to, type, reason) => {
-            const id = `conn-${Date.now()}`;
-            setConnections((prev) => [...prev, { id, from, to, type, reason }]);
+          onAddConnection={(from, to, carrier, reason) => {
+            // streams UI always passes carrier name in the "type" argument
+            createCarrierBetween(from, to, carrier, reason);
           }}
         />
       )}
 
+      {/* Connection dialog */}
       {selectedConnection && (
         <ConnectionDetailDialog
           connection={selectedConnection}
@@ -274,9 +410,11 @@ const Canvas = ({
           open={!!selectedConnection}
           onClose={() => setSelectedConnection(null)}
           onSave={handleSaveConnection}
+          onDelete={handleDeleteConnection}
         />
       )}
 
+      {/* (Optional) inline Add Component dialog – you already have one in PlantBuilder */}
       <Dialog open={showAddComponent} onOpenChange={setShowAddComponent}>
         <DialogContent>
           <DialogHeader>
