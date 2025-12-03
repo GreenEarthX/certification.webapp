@@ -10,6 +10,9 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 
+// ⬇️ import JSON catalog
+import rawLibrary from "@/data/componentLibrary.json";
+
 export type ComponentType = "equipment" | "carrier" | "gate";
 
 export type TechnicalData = {
@@ -52,45 +55,41 @@ export type ComponentData = {
   name: string;
   category: string;
   icon: string;
+  // these will be filled later in PlacedComponent.data / dialogs, not in the JSON
   technicalData?: TechnicalData;
   metadata?: Metadata;
   carrierData?: CarrierData;
   gateData?: GateData;
 };
 
-// === TAILWIND COLORS ===
-const layerStyles = {
-  equipment: { dot: "bg-blue-500", border: "border-blue-300", hover: "hover:border-blue-500 hover:bg-blue-50" },
-  carrier:   { dot: "bg-green-500", border: "border-green-300", hover: "hover:border-green-500 hover:bg-green-50" },
-  gate:      { dot: "bg-purple-500", border: "border-purple-300", hover: "hover:border-purple-500 hover:bg-purple-50" },
+// Shape of the JSON file
+type ComponentLibraryJSON = {
+  equipment: ComponentData[];
+  carrier: ComponentData[];
+  gate: ComponentData[];
 };
 
-const equipmentComponents: ComponentData[] = [
-  { id: "electrolyzer", type: "equipment", name: "Electrolyzer", category: "Power-to-X", icon: "Building2" },
-  { id: "dac", type: "equipment", name: "DAC", category: "Power-to-X", icon: "Building2" },
-  { id: "methanol-synthesis", type: "equipment", name: "Methanol Synth", category: "Power-to-X", icon: "Building2" },
-  { id: "hydrotreating", type: "equipment", name: "Hydrotreating", category: "Lipid-to-Fuels", icon: "Building2" },
-  { id: "gasifier", type: "equipment", name: "Gasifier", category: "Gasification", icon: "Building2" },
-  { id: "anaerobic-digester", type: "equipment", name: "Anaerobic Digester", category: "Anaerobic Digestion", icon: "Building2" },
-  { id: "co2-liquefaction", type: "equipment", name: "CO₂ Liquefaction", category: "CO₂ Management", icon: "Building2" },
-  { id: "compressor", type: "equipment", name: "Compressor", category: "Balance-of-Plant", icon: "Building2" },
-];
+// Cast imported JSON to typed object
+const library = rawLibrary as ComponentLibraryJSON;
 
-const carrierComponents: ComponentData[] = [
-  { id: "hydrogen", type: "carrier", name: "Hydrogen", category: "Gas", icon: "Zap" },
-  { id: "co2", type: "carrier", name: "CO₂", category: "Gas", icon: "Zap" },
-  { id: "methanol", type: "carrier", name: "Methanol", category: "Liquid", icon: "Zap" },
-  { id: "ammonia", type: "carrier", name: "Ammonia", category: "Gas/Liquid", icon: "Zap" },
-  { id: "electricity", type: "carrier", name: "Electricity", category: "Energy", icon: "Zap" },
-  { id: "syngas", type: "carrier", name: "Syngas", category: "Gas", icon: "Zap" },
-];
-
-const gateComponents: ComponentData[] = [
-  { id: "input-grid", type: "gate", name: "Grid Input", category: "Input", icon: "ArrowRightLeft" },
-  { id: "input-renewable", type: "gate", name: "Renewable Input", category: "Input", icon: "ArrowRightLeft" },
-  { id: "output-product", type: "gate", name: "Product Output", category: "Output", icon: "ArrowRightLeft" },
-  { id: "valve", type: "gate", name: "Control Valve", category: "Control", icon: "ArrowRightLeft" },
-];
+// === TAILWIND COLORS ===
+const layerStyles = {
+  equipment: {
+    dot: "bg-blue-500",
+    border: "border-blue-300",
+    hover: "hover:border-blue-500 hover:bg-blue-50",
+  },
+  carrier: {
+    dot: "bg-green-500",
+    border: "border-green-300",
+    hover: "hover:border-green-500 hover:bg-green-50",
+  },
+  gate: {
+    dot: "bg-purple-500",
+    border: "border-purple-300",
+    hover: "hover:border-purple-500 hover:bg-purple-50",
+  },
+};
 
 const ComponentLibrary = () => {
   const [openSections, setOpenSections] = useState({
@@ -100,6 +99,7 @@ const ComponentLibrary = () => {
   });
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, component: ComponentData) => {
+    // Canvas will read this JSON and turn it into a PlacedComponent
     e.dataTransfer.setData("component", JSON.stringify(component));
   };
 
@@ -166,8 +166,9 @@ const ComponentLibrary = () => {
     );
   };
 
+  const { equipment, carrier, gate } = library;
+
   return (
-    // WIDE: 320px
     <div className="w-80 border-r border-border bg-card flex flex-col">
       <div className="p-3 border-b border-border">
         <h2 className="font-bold text-base">Component Library</h2>
@@ -176,11 +177,11 @@ const ComponentLibrary = () => {
 
       <ScrollArea className="flex-1">
         <div className="p-3 space-y-4">
-          {renderLayer("Equipment", <Building2 className="h-4 w-4" />, "equipment", equipmentComponents, "equipment")}
+          {renderLayer("Equipment", <Building2 className="h-4 w-4" />, "equipment", equipment, "equipment")}
           <Separator className="my-1" />
-          {renderLayer("Carriers", <Zap className="h-4 w-4" />, "carrier", carrierComponents, "carrier")}
+          {renderLayer("Carriers", <Zap className="h-4 w-4" />, "carrier", carrier, "carrier")}
           <Separator className="my-1" />
-          {renderLayer("Gates", <ArrowRightLeft className="h-4 w-4" />, "gate", gateComponents, "gate")}
+          {renderLayer("Gates", <ArrowRightLeft className="h-4 w-4" />, "gate", gate, "gate")}
         </div>
       </ScrollArea>
     </div>
