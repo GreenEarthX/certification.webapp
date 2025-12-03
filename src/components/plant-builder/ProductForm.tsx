@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from "react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,14 +20,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus, Trash2 } from "lucide-react";
-import type { ProductInfo } from "../../app/plant-builder/types";  // CORRECT PATH
-import { toast } from "sonner"; // Using toast for notifications
+import type { ProductInfo } from "../../app/plant-builder/types";
+import { toast } from "sonner";
 
 type ProductFormProps = {
   onSubmit: (products: ProductInfo[]) => void;
 };
 
 const ProductForm = ({ onSubmit }: ProductFormProps) => {
+  // KILL DARK MODE ON THIS PAGE
+  useEffect(() => {
+    document.documentElement.classList.remove("dark");
+  }, []);
+
   const [products, setProducts] = useState<ProductInfo[]>([
     {
       productId: `prod-${Date.now()}`,
@@ -68,14 +74,13 @@ const ProductForm = ({ onSubmit }: ProductFormProps) => {
     value: string | number
   ) => {
     const newProducts = [...products];
-    // @ts-expect-error - Changed from @ts-ignore. This is safe because we control the fields and conversion occurs on submit.
+    // @ts-expect-error - safe
     newProducts[index][field] = value;
     setProducts(newProducts);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
     const isValid = products.every(
       (p) =>
         p.productName &&
@@ -84,25 +89,22 @@ const ProductForm = ({ onSubmit }: ProductFormProps) => {
         p.unit &&
         p.fuelType
     );
-
     if (!isValid) {
       toast.error("Please fill in all required fields for each product.");
       return;
     }
 
-    // Final type-safe submission: convert capacity string back to number
     const submittedProducts: ProductInfo[] = products.map((p) => ({
       ...p,
       productionCapacity: Number(p.productionCapacity),
       verified: true,
     }));
-
     onSubmit(submittedProducts);
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-4 flex items-center justify-center">
-      <Card className="w-full max-w-2xl bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 shadow-xl rounded-xl overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-4 flex items-center justify-center">
+      <Card className="w-full max-w-2xl bg-white border border-gray-300 shadow-xl rounded-xl overflow-hidden">
         <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6">
           <CardTitle className="text-2xl font-bold">Product Information</CardTitle>
           <CardDescription className="text-blue-100 mt-1">
@@ -110,13 +112,15 @@ const ProductForm = ({ onSubmit }: ProductFormProps) => {
           </CardDescription>
         </CardHeader>
 
-        <CardContent className="p-6 bg-white dark:bg-gray-800">
+        <CardContent className="p-6 bg-white">
           <form onSubmit={handleSubmit} className="space-y-6">
+
             {products.map((product, index) => (
               <div
                 key={product.productId}
-                className="space-y-5 border-b border-gray-200 dark:border-gray-700 pb-6 last:border-0"
+                className="space-y-5 border-b border-gray-200 pb-6 last:border-0 last:pb-0"
               >
+                {/* Your existing fields with bg-white */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div className="space-y-1.5">
                     <Label htmlFor={`productName-${index}`}>
@@ -126,14 +130,11 @@ const ProductForm = ({ onSubmit }: ProductFormProps) => {
                       id={`productName-${index}`}
                       required
                       value={product.productName}
-                      onChange={(e) =>
-                        handleProductChange(index, "productName", e.target.value)
-                      }
+                      onChange={(e) => handleProductChange(index, "productName", e.target.value)}
                       placeholder="e.g., Green Hydrogen"
-                      className="h-11"
+                      className="h-11 bg-white"
                     />
                   </div>
-
                   <div className="space-y-1.5">
                     <Label htmlFor={`productType-${index}`}>
                       Product Type <span className="text-red-500">*</span>
@@ -141,14 +142,12 @@ const ProductForm = ({ onSubmit }: ProductFormProps) => {
                     <Select
                       required
                       value={product.productType}
-                      onValueChange={(value) =>
-                        handleProductChange(index, "productType", value)
-                      }
+                      onValueChange={(value) => handleProductChange(index, "productType", value)}
                     >
-                      <SelectTrigger id={`productType-${index}`} className="h-11">
+                      <SelectTrigger className="h-11 bg-white border-gray-300">
                         <SelectValue placeholder="Select product type" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-white border-gray-300">
                         <SelectItem value="hydrogen">Hydrogen</SelectItem>
                         <SelectItem value="ammonia">Ammonia</SelectItem>
                         <SelectItem value="methanol">Methanol</SelectItem>
@@ -170,14 +169,11 @@ const ProductForm = ({ onSubmit }: ProductFormProps) => {
                       required
                       type="number"
                       value={product.productionCapacity}
-                      onChange={(e) =>
-                        handleProductChange(index, "productionCapacity", e.target.value)
-                      }
+                      onChange={(e) => handleProductChange(index, "productionCapacity", e.target.value)}
                       placeholder="e.g., 500"
-                      className="h-11"
+                      className="h-11 bg-white"
                     />
                   </div>
-
                   <div className="space-y-1.5">
                     <Label htmlFor={`unit-${index}`}>
                       Unit <span className="text-red-500">*</span>
@@ -185,14 +181,12 @@ const ProductForm = ({ onSubmit }: ProductFormProps) => {
                     <Select
                       required
                       value={product.unit}
-                      onValueChange={(value) =>
-                        handleProductChange(index, "unit", value)
-                      }
+                      onValueChange={(value) => handleProductChange(index, "unit", value)}
                     >
-                      <SelectTrigger id={`unit-${index}`} className="h-11">
+                      <SelectTrigger className="h-11 bg-white border-gray-300">
                         <SelectValue placeholder="Select unit" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-white border-gray-300">
                         <SelectItem value="t/h">t/h</SelectItem>
                         <SelectItem value="kWh/h">kWh/h</SelectItem>
                         <SelectItem value="m3/h">m³/h</SelectItem>
@@ -210,21 +204,18 @@ const ProductForm = ({ onSubmit }: ProductFormProps) => {
                     id={`fuelType-${index}`}
                     required
                     value={product.fuelType || ""}
-                    onChange={(e) =>
-                      handleProductChange(index, "fuelType", e.target.value)
-                    }
+                    onChange={(e) => handleProductChange(index, "fuelType", e.target.value)}
                     placeholder="e.g., H2, NH3"
-                    className="h-11"
+                    className="h-11 bg-white"
                   />
                 </div>
 
+                {/* REMOVE BUTTON — ALWAYS RED + WHITE TEXT */}
                 {products.length > 1 && (
                   <Button
                     type="button"
-                    variant="destructive"
-                    size="sm"
                     onClick={() => handleRemoveProduct(index)}
-                    className="bg-red-600 hover:bg-red-700"
+                    className="bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg px-4 py-2 transition-all shadow-md hover:shadow-lg"
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
                     Remove Product
@@ -236,7 +227,7 @@ const ProductForm = ({ onSubmit }: ProductFormProps) => {
             <Button
               type="button"
               onClick={handleAddProduct}
-              className="w-full h-11 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-medium rounded-lg border border-gray-300 dark:border-gray-600 transition-all"
+              className="w-full h-11 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium rounded-lg border border-gray-300 transition-all"
             >
               <Plus className="h-4 w-4 mr-2" />
               Add Another Product

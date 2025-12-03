@@ -84,6 +84,11 @@ const PlantComponent = ({
   const [position, setPosition] = useState(component.position);
   const cardRef = useRef<HTMLDivElement>(null);
 
+  // keep local position in sync if parent updates it
+  useEffect(() => {
+    setPosition(component.position);
+  }, [component.position]);
+
   const colors = layerColors[component.type] ?? {
     bg: "bg-gray-100",
     border: "border-gray-300",
@@ -105,14 +110,18 @@ const PlantComponent = ({
     e.stopPropagation();
     const startX = e.clientX - position.x;
     const startY = e.clientY - position.y;
+
     const move = (ev: MouseEvent) => {
-      setPosition({ x: ev.clientX - startX, y: ev.clientY - startY });
+      const newPos = { x: ev.clientX - startX, y: ev.clientY - startY };
+      setPosition(newPos);
+      onMove(component.id, newPos);
     };
+
     const up = () => {
       document.removeEventListener("mousemove", move);
       document.removeEventListener("mouseup", up);
-      onMove(component.id, position);
     };
+
     document.addEventListener("mousemove", move);
     document.addEventListener("mouseup", up);
   };
@@ -123,8 +132,18 @@ const PlantComponent = ({
     out ? onConnectStart(component.id) : isConnecting && onConnectEnd(component.id);
   };
 
+  // ❌ dynamic "-${side}-2" breaks Tailwind
+  // ✅ use explicit classes so Tailwind can see them
   const nodeCls = (side: "left" | "right") =>
-    `absolute -${side}-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity`;
+    [
+      "absolute",
+      side === "left" ? "-left-2" : "-right-2",
+      "top-1/2",
+      "-translate-y-1/2",
+      "opacity-0",
+      "group-hover:opacity-100",
+      "transition-opacity",
+    ].join(" ");
 
   return (
     <div
