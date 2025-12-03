@@ -9,6 +9,27 @@ interface UserProfileDropdownProps {
 
 const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({ userName }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const ONBOARDING_URL = process.env.NEXT_PUBLIC_ONBOARDING_URL || "http://localhost:3000";
+  const CURRENT_APP_URL = window.location.origin; 
+
+  const handleGlobalLogout = async () => {
+    try {
+      // 1. Appelle le vrai logout d’Onboarding (logs + invalide Next-Auth)
+      await fetch(`${ONBOARDING_URL}/api/auth/logout`, {
+        method: "POST",
+        credentials: "include", // Required for NextAuth cookies
+      });
+    } catch (err) {
+      console.warn("Onboarding logout API failed – continuing anyway", err);
+    } finally {
+      // 2. SUPPRESSION GLOBALE du token partagé → déconnecte Certification, Geomap, etc.
+      localStorage.removeItem("geomap-auth-token");
+      localStorage.removeItem("geomap-refresh-token");
+
+      // 3. Redirection finale vers la page de login d’Onboarding
+      window.location.href = `${ONBOARDING_URL}/auth/authenticate`;
+    }
+  };
 
   return (
     <div className="relative">
@@ -53,16 +74,15 @@ const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({ userName }) =
               </a>
             </li>
 
-            {/* Log Out */}
-            <li>
-              <button
-                onClick={() => (window.location.href = '/api/auth/logout')}
-                className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
-              >
-                <FaSignOutAlt className="mr-2" />
-                Log Out
-              </button>
-            </li>
+            <button
+              onClick={() => {
+              localStorage.clear(); // tue tout
+              window.location.href = `${ONBOARDING_URL}/api/auth/signout?callbackUrl=${encodeURIComponent(CURRENT_APP_URL)}`;}}
+              className="flex items-center w-full px-4 py-3 text-sm font-bold text-red-600 hover:bg-red-50 transition"
+            >
+              <FaSignOutAlt className="mr-3" />
+              Log Out (All Apps)
+            </button>
           </ul>
         </div>
       )}
