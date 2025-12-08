@@ -1,0 +1,26 @@
+{
+  "equipment": [
+    { "id": "electrolyzer",       "type": "equipment", "name": "Electrolyzer",        "category": "Power-to-X",         "icon": "Building2" },
+    { "id": "dac",                "type": "equipment", "name": "DAC",                 "category": "Power-to-X",         "icon": "Building2" },
+    { "id": "methanol-synthesis", "type": "equipment", "name": "Methanol Synth",      "category": "Power-to-X",         "icon": "Building2" },
+    { "id": "hydrotreating",      "type": "equipment", "name": "Hydrotreating",       "category": "Lipid-to-Fuels",     "icon": "Building2" },
+    { "id": "gasifier",           "type": "equipment", "name": "Gasifier",            "category": "Gasification",       "icon": "Building2" },
+    { "id": "anaerobic-digester", "type": "equipment", "name": "Anaerobic Digester",  "category": "Anaerobic Digestion","icon": "Building2" },
+    { "id": "co2-liquefaction",   "type": "equipment", "name": "CO₂ Liquefaction",    "category": "CO₂ Management",     "icon": "Building2" },
+    { "id": "compressor",         "type": "equipment", "name": "Compressor",          "category": "Balance-of-Plant",   "icon": "Building2" }
+  ],
+  "carrier": [
+    { "id": "hydrogen",   "type": "carrier", "name": "Hydrogen",   "category": "Gas",         "icon": "Zap" },
+    { "id": "co2",        "type": "carrier", "name": "CO₂",        "category": "Gas",         "icon": "Zap" },
+    { "id": "methanol",   "type": "carrier", "name": "Methanol",   "category": "Liquid",      "icon": "Zap" },
+    { "id": "ammonia",    "type": "carrier", "name": "Ammonia",    "category": "Gas/Liquid",  "icon": "Zap" },
+    { "id": "electricity","type": "carrier", "name": "Electricity","category": "Energy",      "icon": "Zap" },
+    { "id": "syngas",     "type": "carrier", "name": "Syngas",     "category": "Gas",         "icon": "Zap" }
+  ],
+  "gate": [
+    { "id": "input-grid",      "type": "gate", "name": "Grid Input",      "category": "Input",   "icon": "ArrowRightLeft" },
+    { "id": "input-renewable", "type": "gate", "name": "Renewable Input", "category": "Input",   "icon": "ArrowRightLeft" },
+    { "id": "output-product",  "type": "gate", "name": "Product Output",  "category": "Output",  "icon": "ArrowRightLeft" },
+    { "id": "valve",           "type": "gate", "name": "Control Valve",   "category": "Control", "icon": "ArrowRightLeft" }
+  ]
+}

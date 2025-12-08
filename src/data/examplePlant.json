@@ -1,0 +1,132 @@
+{
+  "components": [
+    {
+      "id": "ppa_gate",
+      "type": "gate",
+      "name": "PPA",
+      "category": "G001",
+      "position": { "x": 0, "y": 120 },
+      "data": {}
+    },
+    {
+      "id": "res1",
+      "type": "carrier",
+      "name": "RES",
+      "category": "F001",
+      "position": { "x": 160, "y": 120 },
+      "data": { "product": "electricity" }
+    },
+    {
+      "id": "water1",
+      "type": "carrier",
+      "name": "Water",
+      "category": "F002",
+      "position": { "x": 160, "y": 240 },
+      "data": { "product": "water" }
+    },
+    {
+      "id": "electrolyser1",
+      "type": "equipment",
+      "name": "Electrolyser",
+      "category": "E001",
+      "position": { "x": 520, "y": 180 },
+      "data": { "capacity": 50 }
+    },
+    {
+      "id": "h2_carrier",
+      "type": "carrier",
+      "name": "H2",
+      "category": "P001",
+      "position": { "x": 880, "y": 160 },
+      "data": { "product": "hydrogen" }
+    },
+    {
+      "id": "o2_carrier",
+      "type": "carrier",
+      "name": "O2",
+      "category": "F004",
+      "position": { "x": 880, "y": 80 },
+      "data": { "product": "oxygen" }
+    },
+    {
+      "id": "vent_gate",
+      "type": "gate",
+      "name": "Vent",
+      "category": "G003",
+      "position": { "x": 1200, "y": 80 },
+      "data": {}
+    },
+    {
+      "id": "res2",
+      "type": "carrier",
+      "name": "RES",
+      "category": "F003",
+      "position": { "x": 160, "y": 520 },
+      "data": { "product": "electricity" }
+    },
+    {
+      "id": "spot_gate",
+      "type": "gate",
+      "name": "Spot market",
+      "category": "G002",
+      "position": { "x": 0, "y": 520 },
+      "data": {}
+    },
+    {
+      "id": "dac1",
+      "type": "equipment",
+      "name": "DAC",
+      "category": "E003",
+      "position": { "x": 520, "y": 520 },
+      "data": { "capacity": 20 }
+    },
+    {
+      "id": "co2_carrier",
+      "type": "carrier",
+      "name": "CO2",
+      "category": "F005",
+      "position": { "x": 880, "y": 520 },
+      "data": { "product": "co2" }
+    },
+    {
+      "id": "meoh_synth1",
+      "type": "equipment",
+      "name": "MeOH synthesis",
+      "category": "E002",
+      "position": { "x": 1240, "y": 340 },
+      "data": { "capacity": 30 }
+    },
+    {
+      "id": "meoh_carrier",
+      "type": "carrier",
+      "name": "MeOH",
+      "category": "P002",
+      "position": { "x": 1600, "y": 340 },
+      "data": { "product": "methanol" }
+    },
+    {
+      "id": "market_gate",
+      "type": "gate",
+      "name": "market",
+      "category": "G003",
+      "position": { "x": 2000, "y": 260 },
+      "data": {}
+    }
+  ],
+  "connections": [
+    { "id": "c1", "from": "ppa_gate", "to": "res1", "data": {} },
+    { "id": "c2", "from": "res1", "to": "electrolyser1", "data": {} },
+    { "id": "c3", "from": "water1", "to": "electrolyser1", "data": {} },
+    { "id": "c4", "from": "electrolyser1", "to": "h2_carrier", "data": {} },
+    { "id": "c5", "from": "electrolyser1", "to": "o2_carrier", "data": {} },
+    { "id": "c6", "from": "o2_carrier", "to": "vent_gate", "data": {} },
+    { "id": "c7", "from": "spot_gate", "to": "res2", "data": {} },
+    { "id": "c8", "from": "res2", "to": "dac1", "data": {} },
+    { "id": "c9", "from": "dac1", "to": "co2_carrier", "data": {} },
+    { "id": "c10", "from": "co2_carrier", "to": "meoh_synth1", "data": {} },
+    { "id": "c11", "from": "h2_carrier", "to": "meoh_synth1", "data": {} },
+    { "id": "c12", "from": "meoh_synth1", "to": "meoh_carrier", "data": {} },
+    { "id": "c13", "from": "h2_carrier", "to": "market_gate", "data": {} },
+    { "id": "c14", "from": "meoh_carrier", "to": "market_gate", "data": {} }
+  ]
+}

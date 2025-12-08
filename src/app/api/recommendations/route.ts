@@ -6,12 +6,9 @@ export async function GET(req: NextRequest) {
   try {
     const userSub = await getSessionUser(req);
     const recommendations = await recommendationService.getAllRecommendations(userSub);
-
     return NextResponse.json(recommendations);
-  } catch (error: any) {
+  } catch (error) {
     console.error("API error:", error);
-    return error instanceof Response
-      ? error
-      : NextResponse.json({ error: "Failed to fetch recommendations" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to fetch recommendations" }, { status: 500 });
   }
 }
