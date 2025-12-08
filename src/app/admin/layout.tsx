@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { UserProvider } from '@auth0/nextjs-auth0/client';
 
 import "../styles/globals.css";
 
@@ -31,7 +30,7 @@ export default function DashboardLayout({
       <Sidebar />
       <div className="flex flex-col w-full p-6">
         <Navbar />
-        <UserProvider>{children}</UserProvider>
+        {children}
       </div>
     </div>
   );
