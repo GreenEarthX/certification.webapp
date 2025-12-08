@@ -1,60 +1,29 @@
-import { getSession } from '@auth0/nextjs-auth0/edge';
-import { NextRequest, NextResponse } from 'next/server';
+// middleware.ts  
 
-export async function middleware(req: NextRequest) {
-  const res = NextResponse.next();
-  const session = await getSession(req, res);
-  const user = session?.user;
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
-  // 🧠 Read the request path
-  const path = req.nextUrl.pathname;
+export function middleware(request: NextRequest) {
+  // On ne touche que les routes API (sauf /api/auth)
+  if (request.nextUrl.pathname.startsWith("/api/") && 
+      !request.nextUrl.pathname.startsWith("/api/auth")) {
 
-  // 👤 Not authenticated
-  if (!user) {
-    const loginUrl = req.nextUrl.clone();
-    loginUrl.pathname = '/api/auth/login';
+    const clientToken = request.headers.get("x-auth-token");
 
-    // 👇 Use hint from the path or cookie/query to detect signup intent
-    if (path.startsWith('/register')) {
-      loginUrl.searchParams.set('screen_hint', 'signup');      // show signup form
-      loginUrl.searchParams.set('returnTo', '/post-signup');   // go here after signup
-    } else {
-      loginUrl.searchParams.set('returnTo', '/post-login');    // default for login
-    }
+    // Converts x-auth-token → Authorization: Bearer <jwt> so our API routes can read it normally
+    if (clientToken) {
+      const newHeaders = new Headers(request.headers);
+      newHeaders.set("Authorization", `Bearer ${clientToken}`);
 
-    return NextResponse.redirect(loginUrl);
-  }
-
-    // ✅ Get roles
-  const roles = (user['https://your-app.com/roles'] as string[]) || [];
-
-  // 📜 Define protected routes
-  const accessRules = [
-    { pathPrefix: '/admin', allowedRoles: ['Admin'] },
-    { pathPrefix: '/plant-operator', allowedRoles: ['PlantOperator', 'Default'] },
-  ];
-
-
-  // 🔒 Check role-based access
-  for (const rule of accessRules) {
-    if (path.startsWith(rule.pathPrefix) && !rule.allowedRoles.some(role => roles.includes(role))) {
-      return redirectUnauthorized(req);
+      return NextResponse.next({
+        request: { headers: newHeaders },
+      });
     }
   }
 
-  return res;
+  return NextResponse.next();
 }
 
-// 🚫 Unauthorized redirect
-function redirectUnauthorized(req: NextRequest) {
-  const url = req.nextUrl.clone();
-  url.pathname = '/unauthorized';
-  return NextResponse.redirect(url);
-}
-
-// ⚙️ Middleware config
 export const config = {
-  matcher: [
-    '/((?!api/auth|api/test-session|login|post-login|post-signup|unauthorized|_next/static|_next/image|favicon.ico).*)',
-  ],
+  matcher: "/api/((?!auth).*)",
 };
