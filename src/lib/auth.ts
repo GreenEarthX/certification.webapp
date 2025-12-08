@@ -1,41 +1,57 @@
-import { getSession } from "@auth0/nextjs-auth0/edge";
-import { initAuth0 } from "@auth0/nextjs-auth0/edge";
-import { NextRequest,NextResponse } from "next/server";
+// src/lib/auth.ts  
 
-const ROLE_NAMESPACE = "https://your-app.com/roles";
+import { NextRequest } from "next/server";
 
+const decodeJwt = (token: string): any => {
+  try {
+    const payload = token.split(".")[1];
+    return JSON.parse(atob(payload));
+  } catch {
+    return null;
+  }
+};
 
-export async function getSessionUser(req: NextRequest) {
-  const session = await getSession(req, NextResponse.next());
+export async function getSessionUser(req: NextRequest): Promise<string> {
+  const authHeader = req.headers.get("authorization");
 
-  if (!session || !session.user) {
+  if (!authHeader?.startsWith("Bearer ")) {
     throw new Error("Unauthorized");
   }
 
-  return session.user.sub;
-}
+  const token = authHeader.slice(7);
+  const payload = decodeJwt(token);
 
-
-export async function getSessionFullUser(req: NextRequest) {
-  const res = new NextResponse(); // ✅ Add this
-  const session = await getSession(req, res); // ✅ Pass both req and res
-
-  if (!session || !session.user) {
+  if (!payload?.userId) {
     throw new Error("Unauthorized");
   }
 
-  return session.user;
+  return payload.userId as string;
 }
 
-// ✅ Extract roles from user
+export async function getSessionFullUser(req: NextRequest): Promise<any> {
+  const authHeader = req.headers.get("authorization");
+  if (!authHeader?.startsWith("Bearer ")) throw new Error("Unauthorized");
+
+  const token = authHeader.slice(7);
+  const payload = decodeJwt(token);
+  if (!payload) throw new Error("Unauthorized");
+
+  return {
+    userId: payload.userId,
+    sub: payload.userId,
+    email: payload.email,
+    name: payload.name,
+    role: payload.role || "user",
+    permissions: payload.permissions || [],
+    verified: payload.verified ?? false,
+  };
+}
+
 export function getUserRoles(user: any): string[] {
-  return user?.[ROLE_NAMESPACE] || [];
+  return user?.permissions || [];
 }
 
-// ✅ Enforce required roles
 export function requireRole(user: any, allowedRoles: string[]) {
-  const roles = getUserRoles(user);
-  const hasAccess = allowedRoles.some((r) => roles.includes(r));
-  if (!hasAccess) throw new Error("Forbidden");
+  const hasRole = allowedRoles.some((r: string) => getUserRoles(user).includes(r));
+  if (!hasRole) throw new Error("Forbidden");
 }
-
