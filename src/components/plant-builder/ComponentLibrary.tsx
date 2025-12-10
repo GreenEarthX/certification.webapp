@@ -1,6 +1,14 @@
 // src/components/plant-builder/ComponentLibrary.tsx
-import { useState } from "react";
-import { Building2, Zap, ArrowRightLeft, ChevronDown, ChevronRight } from "lucide-react";
+"use client";
+
+import React, { useEffect, useState } from "react";
+import {
+  Building2,
+  Zap,
+  ArrowRightLeft,
+  ChevronDown,
+  ChevronRight,
+} from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -10,9 +18,12 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 
-// ⬇️ import JSON catalog
-import rawLibrary from "@/data/componentLibrary.json";
+// ⬇️ import API helper
+import {
+  fetchComponentLibraryFromApi,
+} from "@/services/plant-builder/componentDefinitions";
 
+// === TYPES (same as before) ===
 export type ComponentType = "equipment" | "carrier" | "gate";
 
 export type TechnicalData = {
@@ -55,22 +66,17 @@ export type ComponentData = {
   name: string;
   category: string;
   icon: string;
-  // these will be filled later in PlacedComponent.data / dialogs, not in the JSON
   technicalData?: TechnicalData;
   metadata?: Metadata;
   carrierData?: CarrierData;
   gateData?: GateData;
 };
 
-// Shape of the JSON file
 type ComponentLibraryJSON = {
   equipment: ComponentData[];
   carrier: ComponentData[];
   gate: ComponentData[];
 };
-
-// Cast imported JSON to typed object
-const library = rawLibrary as ComponentLibraryJSON;
 
 // === TAILWIND COLORS ===
 const layerStyles = {
@@ -98,8 +104,43 @@ const ComponentLibrary = () => {
     gate: false,
   });
 
-  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, component: ComponentData) => {
-    // Canvas will read this JSON and turn it into a PlacedComponent
+  const [library, setLibrary] = useState<ComponentLibraryJSON | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // 🔐 Load components from backend (needs Bearer token)
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadLibrary() {
+      try {
+        setLoading(true);
+        const data = await fetchComponentLibraryFromApi();
+        if (!isMounted) return;
+        setLibrary(data);
+        setError(null);
+      } catch (err: any) {
+        console.error("Failed to load component library:", err);
+        if (!isMounted) return;
+        setError(
+          err?.message || "Failed to load component library from server."
+        );
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+
+    loadLibrary();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const handleDragStart = (
+    e: React.DragEvent<HTMLDivElement>,
+    component: ComponentData
+  ) => {
     e.dataTransfer.setData("component", JSON.stringify(component));
   };
 
@@ -125,7 +166,10 @@ const ComponentLibrary = () => {
     const grouped = groupByCategory(components);
 
     return (
-      <Collapsible open={openSections[sectionKey]} onOpenChange={() => toggleSection(sectionKey)}>
+      <Collapsible
+        open={openSections[sectionKey]}
+        onOpenChange={() => toggleSection(sectionKey)}
+      >
         <CollapsibleTrigger className="flex items-center gap-2 w-full text-left hover:bg-muted/40 p-2 rounded transition-colors text-sm font-medium">
           <div className={`w-2.5 h-2.5 rounded-full ${style.dot}`} />
           <span className="flex items-center gap-1.5 flex-1">
@@ -153,7 +197,10 @@ const ComponentLibrary = () => {
                     onDragStart={(e) => handleDragStart(e, component)}
                     className={`p-2 cursor-move border ${style.border} ${style.hover} transition-all text-sm rounded-md shadow-sm`}
                   >
-                    <div className="font-medium truncate" title={component.name}>
+                    <div
+                      className="font-medium truncate"
+                      title={component.name}
+                    >
                       {component.name}
                     </div>
                   </Card>
@@ -166,22 +213,69 @@ const ComponentLibrary = () => {
     );
   };
 
+  // === UI states ===
+  if (loading) {
+    return (
+      <div className="w-80 border-r border-border bg-card flex flex-col">
+        <div className="p-3 border-b border-border">
+          <h2 className="font-bold text-base">Component Library</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Loading components…
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !library) {
+    return (
+      <div className="w-80 border-r border-border bg-card flex flex-col">
+        <div className="p-3 border-b border-border">
+          <h2 className="font-bold text-base">Component Library</h2>
+          <p className="text-xs text-destructive mt-0.5">
+            {error || "Unable to load component library."}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const { equipment, carrier, gate } = library;
 
   return (
     <div className="w-80 border-r border-border bg-card flex flex-col">
       <div className="p-3 border-b border-border">
         <h2 className="font-bold text-base">Component Library</h2>
-        <p className="text-xs text-muted-foreground mt-0.5">Drag to canvas</p>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          Drag to canvas
+        </p>
       </div>
 
       <ScrollArea className="flex-1">
         <div className="p-3 space-y-4">
-          {renderLayer("Equipment", <Building2 className="h-4 w-4" />, "equipment", equipment, "equipment")}
+          {renderLayer(
+            "Equipment",
+            <Building2 className="h-4 w-4" />,
+            "equipment",
+            equipment,
+            "equipment"
+          )}
           <Separator className="my-1" />
-          {renderLayer("Carriers", <Zap className="h-4 w-4" />, "carrier", carrier, "carrier")}
+          {renderLayer(
+            "Carriers",
+            <Zap className="h-4 w-4" />,
+            "carrier",
+            carrier,
+            "carrier"
+          )}
           <Separator className="my-1" />
-          {renderLayer("Gates", <ArrowRightLeft className="h-4 w-4" />, "gate", gate, "gate")}
+          {renderLayer(
+            "Gates",
+            <ArrowRightLeft className="h-4 w-4" />,
+            "gate",
+            gate,
+            "gate"
+          )}
         </div>
       </ScrollArea>
     </div>
