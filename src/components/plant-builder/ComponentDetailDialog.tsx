@@ -23,6 +23,10 @@ import {
 } from "@/components/ui/select";
 import { Upload, Plus, ChevronDown, Trash2 } from "lucide-react";
 import type { PlacedComponent, Connection } from "../../app/plant-builder/types";
+import ComponentSchemaForm, { ComponentFieldDefinition } from "./ComponentSchemaForm";
+import { fetchComponentInstanceById, updateComponentInstance } from "@/services/plant-builder/componentInstances";
+import { fetchComponentDefinitionById, fetchComponentDefinitions } from "@/services/plant-builder/componentDefinitions";
+import toast from "react-hot-toast";
 
 type ComponentDetailDialogProps = {
   component: PlacedComponent;
@@ -30,7 +34,7 @@ type ComponentDetailDialogProps = {
   connections: Connection[];
   open: boolean;
   onClose: () => void;
-  onSave: (id: string, data: any, certifications: string[]) => void;
+  onSave: (id: string, data: any, certifications: string[], componentDefinitionId?: number | null) => void;
   onAddConnection: (from: string, to: string, type: string, reason: string) => void;
 };
 
@@ -43,6 +47,21 @@ type Stream = {
   unit: string;
   additionalDetails: string;
   additionalExpanded: boolean;
+};
+
+const sanitizeFieldValues = (data?: Record<string, any> | null): Record<string, any> => {
+  if (!data) return {};
+  const keys = Object.keys(data);
+  if (
+    keys.length === 1 &&
+    keys[0] === "technicalData" &&
+    typeof data["technicalData"] === "object" &&
+    data["technicalData"] !== null &&
+    Object.keys(data["technicalData"]).length === 0
+  ) {
+    return {};
+  }
+  return data;
 };
 
 const ComponentDetailDialog = ({
@@ -59,10 +78,81 @@ const ComponentDetailDialog = ({
     document.documentElement.classList.remove("dark");
   }, []);
 
-  const [formData, setFormData] = useState(component.data || {});
   const [certifications, setCertifications] = useState<string[]>(component.certifications || []);
   const [inputStreams, setInputStreams] = useState<Stream[]>([]);
   const [outputStreams, setOutputStreams] = useState<Stream[]>([]);
+  const [fieldValues, setFieldValues] = useState<Record<string, any>>(
+    sanitizeFieldValues(component.data)
+  );
+  const [schemaFields, setSchemaFields] = useState<ComponentFieldDefinition[]>([]);
+  const [isSchemaLoading, setIsSchemaLoading] = useState(false);
+  const [schemaError, setSchemaError] = useState<string | null>(null);
+  const [activeDefinitionId, setActiveDefinitionId] = useState<number | null>(
+    component.componentDefinitionId ?? null
+  );
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    setFieldValues(sanitizeFieldValues(component.data));
+    setCertifications(component.certifications || []);
+    setActiveDefinitionId(component.componentDefinitionId ?? null);
+  }, [component]);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+
+    const loadSchema = async () => {
+      setIsSchemaLoading(true);
+      setSchemaError(null);
+      try {
+        let definitionId = component.componentDefinitionId ?? null;
+        let nextValues: Record<string, any> = sanitizeFieldValues(component.data);
+
+        if (component.instanceId) {
+          const instance = await fetchComponentInstanceById(component.instanceId);
+          if (cancelled) return;
+          nextValues = sanitizeFieldValues(instance.field_values);
+          definitionId = definitionId ?? instance.component_definition_id ?? null;
+        }
+
+        if (!definitionId) {
+          const defs = await fetchComponentDefinitions();
+          if (cancelled) return;
+          const match = defs.find(
+            (def) => def.component_name === component.name && def.component_type === component.type
+          );
+          definitionId = match?.id ?? null;
+        }
+
+        setFieldValues(nextValues);
+        setActiveDefinitionId(definitionId);
+
+        if (definitionId) {
+          const definition = await fetchComponentDefinitionById(definitionId);
+          if (cancelled) return;
+          setSchemaFields(definition.field_schema?.fields || []);
+        } else {
+          setSchemaFields([]);
+        }
+      } catch (err) {
+        console.error("Failed to load component schema:", err);
+        if (!cancelled) {
+          setSchemaFields([]);
+          setSchemaError("Unable to load component fields.");
+        }
+      } finally {
+        if (!cancelled) {
+          setIsSchemaLoading(false);
+        }
+      }
+    };
+
+    loadSchema();
+    return () => {
+      cancelled = true;
+    };
+  }, [component.id, component.instanceId, component.componentDefinitionId, component.name, component.type, open]);
 
   const handleSave = () => {
     inputStreams.forEach((stream) => {
@@ -75,7 +165,22 @@ const ComponentDetailDialog = ({
         onAddConnection(stream.from, stream.to, stream.carrier, stream.additionalDetails);
       }
     });
-    onSave(component.id, formData, certifications);
+    onSave(component.id, fieldValues, certifications, activeDefinitionId);
+    if (component.instanceId) {
+      setIsSaving(true);
+      updateComponentInstance(component.instanceId, {
+        field_values: fieldValues,
+        component_definition_id: activeDefinitionId ?? undefined,
+      })
+        .then(() => {
+          toast.success(`${component.name} updated`);
+        })
+        .catch((err) => {
+          console.error("Failed to update component instance:", err);
+          toast.error("Failed to save component fields");
+        })
+        .finally(() => setIsSaving(false));
+    }
   };
 
   const addInputStream = () => {
@@ -150,56 +255,6 @@ const ComponentDetailDialog = ({
   };
 
   // Reusable form renders with forced white background
-  const renderEquipmentForm = () => (
-    <div className="space-y-4">
-      {/* All selects & inputs forced white */}
-      <div><Label>Input Type</Label><Select value={formData.inputType} onValueChange={(v) => setFormData({ ...formData, inputType: v })}><SelectTrigger className="bg-white border-gray-300"><SelectValue placeholder="Select input type" /></SelectTrigger><SelectContent className="bg-white border-gray-300">{"hydrogen,electricity,water,co2,biomass".split(",").map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div>
-      <div className="grid grid-cols-2 gap-4">
-        <div><Label>Input Quantity</Label><Input type="number" value={formData.inputQuantity || ""} onChange={(e) => setFormData({ ...formData, inputQuantity: e.target.value })} placeholder="0" className="bg-white" /></div>
-        <div><Label>Input Unit</Label><Select value={formData.inputUnit} onValueChange={(v) => setFormData({ ...formData, inputUnit: v })}><SelectTrigger className="bg-white border-gray-300"><SelectValue placeholder="Unit" /></SelectTrigger><SelectContent className="bg-white border-gray-300">{"MW,MWel,nm3,kt,t".split(",").map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div>
-      </div>
-      <div><Label>Output Type</Label><Select value={formData.outputType} onValueChange={(v) => setFormData({ ...formData, outputType: v })}><SelectTrigger className="bg-white border-gray-300"><SelectValue placeholder="Select output type" /></SelectTrigger><SelectContent className="bg-white border-gray-300">{"hydrogen,methanol,ammonia,diesel,kerosene".split(",").map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div>
-      <div className="grid grid-cols-2 gap-4">
-        <div><Label>Output Quantity</Label><Input type="number" value={formData.outputQuantity || ""} onChange={(e) => setFormData({ ...formData, outputQuantity: e.target.value })} placeholder="0" className="bg-white" /></div>
-        <div><Label>Output Unit</Label><Select value={formData.outputUnit} onValueChange={(v) => setFormData({ ...formData, outputUnit: v })}><SelectTrigger className="bg-white border-gray-300"><SelectValue placeholder="Unit" /></SelectTrigger><SelectContent className="bg-white border-gray-300">{"MW,MWel,nm3,kt,t".split(",").map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div>
-      </div>
-      <div><Label>Efficiency (%)</Label><Input type="number" value={formData.efficiency || ""} onChange={(e) => setFormData({ ...formData, efficiency: e.target.value })} placeholder="0-100" min="0" max="100" className="bg-white" /></div>
-      <div><Label>Manufacturer</Label><Input value={formData.manufacturer || ""} onChange={(e) => setFormData({ ...formData, manufacturer: e.target.value })} placeholder="Enter manufacturer" className="bg-white" /></div>
-      <div><Label>Commercial Operating Date</Label><Input type="date" value={formData.operatingDate || ""} onChange={(e) => setFormData({ ...formData, operatingDate: e.target.value })} className="bg-white" /></div>
-    </div>
-  );
-
-  const renderCarrierForm = () => (
-    <div className="space-y-4">
-      <div><Label>Fuel Type</Label><Select value={formData.fuelType} onValueChange={(v) => setFormData({ ...formData, fuelType: v })}><SelectTrigger className="bg-white border-gray-300"><SelectValue placeholder="Select fuel type" /></SelectTrigger><SelectContent className="bg-white border-gray-300">{"hydrogen,methanol,ammonia,diesel".split(",").map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div>
-      <div><Label>Fuel Class</Label><Select value={formData.fuelClass} onValueChange={(v) => setFormData({ ...formData, fuelClass: v })}><SelectTrigger className="bg-white border-gray-300"><SelectValue placeholder="Select fuel class" /></SelectTrigger><SelectContent className="bg-white border-gray-300">{"rfnbo,advanced,annexIXA,annexIXB".split(",").map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div>
-      <div className="grid grid-cols-2 gap-4">
-        <div><Label>Temperature (°C)</Label><Input type="number" value={formData.temperature ?? ""} onChange={(e) => setFormData({ ...formData, temperature: e.target.value === "" ? undefined : Number(e.target.value) })} placeholder="0" className="bg-white" /></div>
-        <div><Label>Pressure (bar)</Label><Input type="number" value={formData.pressure ?? ""} onChange={(e) => setFormData({ ...formData, pressure: e.target.value === "" ? undefined : Number(e.target.value) })} placeholder="0" className="bg-white" /></div>
-      </div>
-    </div>
-  );
-
-  const renderGateForm = () => (
-    <div className="space-y-4">
-      <div><Label>Gate Type</Label><Select value={formData.gateType} onValueChange={(v) => setFormData({ ...formData, gateType: v })}><SelectTrigger className="bg-white border-gray-300"><SelectValue placeholder="Select type" /></SelectTrigger><SelectContent className="bg-white border-gray-300">{"input,output".split(",").map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div>
-      <div><Label>Product</Label><Select value={formData.product} onValueChange={(v) => setFormData({ ...formData, product: v })}><SelectTrigger className="bg-white border-gray-300"><SelectValue placeholder="Select product" /></SelectTrigger><SelectContent className="bg-white border-gray-300">{"hydrogen,electricity,water,co2".split(",").map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div>
-      <div className="grid grid-cols-2 gap-4">
-        <div><Label>Quantity</Label><Input type="number" value={formData.quantity || ""} onChange={(e) => setFormData({ ...formData, quantity: e.target.value })} placeholder="0" className="bg-white" /></div>
-        <div><Label>Unit</Label><Select value={formData.unit} onValueChange={(v) => setFormData({ ...formData, unit: v })}><SelectTrigger className="bg-white border-gray-300"><SelectValue placeholder="Unit" /></SelectTrigger><SelectContent className="bg-white border-gray-300">{"t/h,kWh/h,m3/h".split(",").map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div>
-      </div>
-      {formData.gateType === "input" && (
-        <>
-          <div><Label>Source Type</Label><Select value={formData.sourceType} onValueChange={(v) => setFormData({ ...formData, sourceType: v })}><SelectTrigger className="bg-white border-gray-300"><SelectValue placeholder="Select source" /></SelectTrigger><SelectContent className="bg-white border-gray-300">{"grid,ppa,spot".split(",").map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div>
-          <div><Label>Source Origin</Label><Select value={formData.sourceOrigin} onValueChange={(v) => setFormData({ ...formData, sourceOrigin: v })}><SelectTrigger className="bg-white border-gray-300"><SelectValue placeholder="Select origin" /></SelectTrigger><SelectContent className="bg-white border-gray-300">{"wind,solar,hydro,waste".split(",").map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select></div>
-        </>
-      )}
-      {formData.gateType === "output" && (
-        <div><Label>End Use</Label><Input value={formData.endUse || ""} onChange={(e) => setFormData({ ...formData, endUse: e.target.value })} placeholder="Enter end use" className="bg-white" /></div>
-      )}
-    </div>
-  );
-
   const renderStreamForm = (stream: Stream, isInput: boolean, streams: Stream[], setStreams: React.Dispatch<React.SetStateAction<Stream[]>>) => (
     <div key={stream.id} className="flex items-end gap-3 pb-3 mb-3 border-b last:border-0">
       <div className="flex-1">
@@ -279,10 +334,26 @@ const ComponentDetailDialog = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="mt-6 space-y-6">
-          {component.type === "equipment" && renderEquipmentForm()}
-          {component.type === "carrier" && renderCarrierForm()}
-          {component.type === "gate" && renderGateForm()}
+        <div className="mt-6 space-y-4">
+          {schemaError && (
+            <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              {schemaError}
+            </div>
+          )}
+          {isSchemaLoading ? (
+            <div className="text-sm text-muted-foreground">Loading component fields…</div>
+          ) : (
+            <ComponentSchemaForm
+              fields={schemaFields}
+              values={fieldValues}
+              onChange={(name, value) =>
+                setFieldValues((prev) => ({
+                  ...prev,
+                  [name]: value,
+                }))
+              }
+            />
+          )}
         </div>
 
         {/* Streams Section */}
@@ -354,7 +425,9 @@ const ComponentDetailDialog = ({
 
         <DialogFooter className="mt-6 flex justify-end gap-3">
           <Button variant="outline" onClick={onClose} className="border-gray-300">Cancel</Button>
-          <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700 text-white">Save Details</Button>
+          <Button onClick={handleSave} disabled={isSaving} className="bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-60">
+            {isSaving ? "Saving..." : "Save Details"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
