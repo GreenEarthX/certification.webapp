@@ -1,4 +1,11 @@
 'use client';
+
+// Helper: Pretty-print JSON to console
+const logJson = (label: string, data?: any) => {
+  console.log(label);
+  if (data) console.log(JSON.stringify(data, null, 2));
+};
+
 import "./plant-builder-vite.css";  //
 import "./App.css";
 import { useState, useCallback, useEffect } from "react";
@@ -52,7 +59,24 @@ import {
   PlacedComponent,
   Connection,
 } from "./types";
+import { createPlant } from "@/services/plant-builder/plants";
+import { createDigitalTwin, fetchDigitalTwinJsonForPlant } from "@/services/plant-builder/digitalTwins";
+import { updateComponentInstance, deleteComponentInstance } from "@/services/plant-builder/componentInstances";
+import { buildConnectionPayloadForComponent, StoredConnectionPayload } from "@/lib/plant-builder/connection-utils";
 
+// Coerce optional id fields from persisted JSON (string/number) into usable numbers.
+const parseOptionalNumber = (value: unknown): number | undefined => {
+  if (value === undefined || value === null) return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+};
+
+/**
+ * Plant Builder Component
+ * 
+ * Multi-step workflow: User Details → Plant Info → Products → Canvas Builder → Compliance Check
+ * Manages component persistence to backend and process flow visualization.
+ */
 export const PlantBuilder = () => {
   const router = useRouter();
   const [step, setStep] = useState<"info" | "product" | "builder" | "compliance" | "loading">("info");
@@ -64,6 +88,7 @@ export const PlantBuilder = () => {
   const [showAssistantModal, setShowAssistantModal] = useState(false);
   const [components, setComponents] = useState<PlacedComponent[]>([]);
   const [connections, setConnections] = useState<Connection[]>([]);
+  const [originalComponents, setOriginalComponents] = useState<PlacedComponent[]>([]);
   const [showAddComponent, setShowAddComponent] = useState(false);
   const [showComponentLibrary, setShowComponentLibrary] = useState(true);
   const [newComponent, setNewComponent] = useState({
@@ -83,10 +108,140 @@ export const PlantBuilder = () => {
   const [error, setError] = useState<string | null>(null);
   const [plantModelJson, setPlantModelJson] = useState<string>("");
 
+  const persistConnectionsForComponent = useCallback(
+    async (
+      componentId: string,
+      overrideConnections?: Connection[],
+      overrideComponents?: PlacedComponent[]
+    ) => {
+      const connectionList = overrideConnections ?? connections;
+      const componentList = overrideComponents ?? components;
+      const component = componentList.find((c) => c.id === componentId);
 
+      if (!component?.instanceId) {
+        logJson(`[PlantBuilder] Cannot persist connections for ${componentId}; missing instanceId`);
+        return;
+      }
+
+      const payload = buildConnectionPayloadForComponent(componentId, connectionList, componentList);
+
+      try {
+        logJson(
+          `[PlantBuilder] Persisting ${payload.length} connections for ${componentId} (instanceId=${component.instanceId})`,
+          payload
+        );
+        await updateComponentInstance(component.instanceId, { connections: payload });
+      } catch (err) {
+        logJson(`[PlantBuilder] ✗ Failed to persist connections for ${componentId}:`, err);
+        toast.error(`Failed to update connections for ${component.name}`);
+      }
+    },
+    [components, connections]
+  );
+
+  // When components are removed via Canvas they're already deleted on the backend,
+  // so trim them from originalComponents to avoid duplicate delete calls on save.
+  useEffect(() => {
+    setOriginalComponents((prev) => {
+      if (!prev.length) return prev;
+      const next = prev.filter((orig) => components.some((comp) => comp.id === orig.id));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [components]);
+
+
+  // Clear errors when step changes
   useEffect(() => {
     setError(null);
   }, [step]);
+
+  // Load existing plant from URL (edit mode)
+    useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const plantIdParam = searchParams.get("plantId");
+
+    if (!plantIdParam) return;
+
+    const plantId = Number(plantIdParam);
+    if (Number.isNaN(plantId)) return;
+
+    setStep("builder");
+
+    (async () => {
+      try {
+        toast.info("Loading digital twin from database…");
+
+        const records = await fetchDigitalTwinJsonForPlant(plantId);
+
+        if (!records.length || !records[0].digital_twin_json) {
+          toast.error("No digital twin JSON found for this plant.");
+          return;
+        }
+
+        const { components: rawComponents = [], connections: rawConnections = [] } =
+          records[0].digital_twin_json;
+
+        const mappedComponents: PlacedComponent[] = rawComponents.map((c: any) => {
+          const inferredInstanceId =
+            c.instanceId ??
+            c.instance_id ??
+            c.componentInstanceId ??
+            c.component_instance_id ??
+            c.componentId ??
+            c.component_id ??
+            c.id;
+          const inferredDefinitionId =
+            c.componentDefinitionId ??
+            c.component_definition_id ??
+            c.definitionId ??
+            c.definition_id;
+
+          return {
+            id: String(c.id ?? inferredInstanceId ?? `comp-${Date.now()}`),
+            name: c.name,
+            type: c.type,
+            category: c.category,
+            position: c.position,
+            // keep whatever data comes, but ensure at least empty object
+            data: c.data || { technicalData: {} },
+            certifications: [],
+            componentDefinitionId: parseOptionalNumber(inferredDefinitionId),
+            instanceId: parseOptionalNumber(inferredInstanceId),
+          };
+        });
+
+        const mappedConnections: Connection[] = rawConnections.map((conn: any) => ({
+          id: String(conn.id),
+          from: String(conn.from),
+          to: String(conn.to),
+          type: conn.type || "",
+          reason: conn.reason,
+          data: conn.data || {},
+        }));
+
+        setComponents(mappedComponents);
+        setConnections(mappedConnections);
+        setOriginalComponents(mappedComponents); // Track originals for delete detection
+        
+        // Set global IDs for Canvas persistence
+        try {
+          (window as any).currentPlantId = plantId;
+          (window as any).currentTwinId = Number(records[0].id);
+          console.log("[plant-builder] restored currentPlantId/currentTwinId:", (window as any).currentPlantId, (window as any).currentTwinId);
+        } catch (e) {
+          // ignore
+        }
+
+        toast.success("Digital twin loaded from database.");
+      } catch (err: any) {
+        console.error("Failed to load digital twin JSON:", err);
+        setError("Failed to load digital twin model from database.");
+        toast.error("Failed to load digital twin model from database.");
+      }
+    })();
+  }, [setComponents, setConnections]);
+
+
 
   const handleUserSubmit = (details: UserDetails) => {
     try {
@@ -99,16 +254,49 @@ export const PlantBuilder = () => {
     }
   };
 
-  const handleInfoSubmit = (info: PlantInfo) => {
-    try {
-      setPlantInfo(info);
-      setStep("product");
-      toast.success("Plant information saved! Now specify your products.");
-    } catch (err) {
-      setError("Failed to save plant information. Please try again.");
-      toast.error("Error saving plant information.");
-    }
-  };
+  // Create plant and digital twin; set global IDs for component persistence
+  const handleInfoSubmit = async (info: PlantInfo) => {
+  try {
+    toast.loading("Creating plant...");
+
+    const payload = {
+      name: info.plantName,
+      user_id: 1, // hardcoded for now
+      location: info.country,
+      status: info.status,
+      metadata: {
+        projectName: info.projectName,
+        projectType: info.projectType,
+        primaryFuelType: info.primaryFuelType,
+        commercialOperationalDate: info.commercialOperationalDate,
+        investment: info.investment,
+      },
+    };
+
+    const plant = await createPlant(payload);
+    toast.success("Plant created successfully!");
+
+    setPlantInfo(info);
+    (window as any).currentPlantId = plant.id;
+
+    // Create digital twin for component persistence
+    const twin = await createDigitalTwin({
+      plant_id: plant.id,
+      name: `${info.plantName} Digital Twin`,
+      version: "1",
+      is_active: true,
+    });
+
+    toast.success("Digital Twin initialized!");
+    (window as any).currentTwinId = twin.id;
+
+    setStep("product");
+
+  } catch (err: any) {
+    console.error(err);
+    toast.error("Failed to create plant or digital twin.");
+  }
+};
 
   const handleProductSubmit = (products: ProductInfo[]) => {
     try {
@@ -134,15 +322,83 @@ export const PlantBuilder = () => {
     toast.info("Starting compliance check process.");
   };
 
-  const handleSave = () => {
+  // Save plant model: update positions and delete removed components
+  const handleSave = async () => {
     try {
+      toast.loading("Saving plant model...");
+
+      // LOG: Current state before Save
+      logJson(`[PlantBuilder] ========== SAVE START ==========`);
+      logJson(`[PlantBuilder] Current Components:`, components);
+      logJson(`[PlantBuilder] Original Components:`, originalComponents);
+
+      const connectionPayloadMap = components.reduce<Record<string, StoredConnectionPayload[]>>(
+        (acc, component) => {
+          acc[component.id] = buildConnectionPayloadForComponent(component.id, connections, components);
+          return acc;
+        },
+        {}
+      );
+
+      // 1. Update positions for all current components with instanceId
+      const componentsToUpdate = components.filter((c) => c.instanceId && typeof c.instanceId === 'number');
+      logJson(`[PlantBuilder] Components to Update (positions):`, componentsToUpdate);
+
+      const updatePromises = componentsToUpdate.map((c) => {
+        const updatePayload = {
+          position: c.position,
+          connections: connectionPayloadMap[c.id] ?? [],
+        };
+        logJson(`[PlantBuilder] Updating instanceId ${c.instanceId} with:`, updatePayload);
+        
+        return updateComponentInstance(c.instanceId as number, updatePayload)
+          .then((result: any) => {
+            logJson(`[PlantBuilder] ✓ Position update SUCCESS for ${c.id}:`, result);
+          })
+          .catch((err: any) => {
+            logJson(`[PlantBuilder] ✗ Position update FAILED for ${c.id}:`, err);
+          });
+      });
+
+      // 2. Delete components that were removed (in original but not in current)
+      const deletedComponents = originalComponents.filter(
+        (orig) => !components.find((curr) => curr.id === orig.id)
+      );
+      
+      logJson(`[PlantBuilder] Deleted Components (in original but not in current):`, deletedComponents);
+
+      const componentsToDelete = deletedComponents.filter((c) => c.instanceId && typeof c.instanceId === 'number');
+      logJson(`[PlantBuilder] Components to Delete (with instanceId):`, componentsToDelete);
+
+      const deletePromises = componentsToDelete.map((c) => {
+        logJson(`[PlantBuilder] Deleting instanceId ${c.instanceId}...`);
+        
+        return deleteComponentInstance(c.instanceId as number)
+          .then((result: any) => {
+            logJson(`[PlantBuilder] ✓ Delete SUCCESS for ${c.id} (instanceId: ${c.instanceId}):`, result);
+            // Update original tracking
+            setOriginalComponents((prev) => prev.filter((orig) => orig.id !== c.id));
+          })
+          .catch((err: any) => {
+            logJson(`[PlantBuilder] ✗ Delete FAILED for ${c.id} (instanceId: ${c.instanceId}):`, err);
+          });
+      });
+
+      // Wait for all updates and deletes
+      const allResults = await Promise.all([...updatePromises, ...deletePromises]);
+      logJson(`[PlantBuilder] All promises resolved:`, allResults);
+
       toast.success("Plant model saved successfully!");
+      logJson(`[PlantBuilder] ========== SAVE END (SUCCESS) ==========`);
     } catch (err) {
+      logJson(`[PlantBuilder] ========== SAVE END (ERROR) ==========`);
+      logJson(`[PlantBuilder] Save error:`, err);
       setError("Failed to save plant model. Please try again.");
       toast.error("Error saving plant model.");
     }
   };
 
+  // Add component from inline dialog (persists to DB asynchronously)
   const handleAddNewComponent = () => {
     if (!newComponent.name || !newComponent.type || !newComponent.category) {
       setError("Please fill all component fields.");
@@ -159,10 +415,54 @@ export const PlantBuilder = () => {
         data: { technicalData: {} }, // REQUIRED
         certifications: [],
       };
+
+      // Optimistic UI update
       setComponents((prev) => [...prev, component]);
       setNewComponent({ name: "", type: "" as any, category: "" });
       setShowAddComponent(false);
       toast.success("Component added successfully!");
+
+      // Persist to backend asynchronously
+      (async () => {
+        try {
+          const { fetchComponentDefinitions, createComponentDefinition } = await import(
+            "@/services/plant-builder/componentDefinitions"
+          );
+          const { createComponentInstance } = await import(
+            "@/services/plant-builder/componentInstances"
+          );
+
+          const defs = await fetchComponentDefinitions();
+          const def = defs.find((d) => d.component_name === component.name && d.component_type === component.type);
+
+          // Use existing definition only; no auto-create
+          if (!def) {
+            console.warn("[PlantBuilder] Component definition not found:", component.name);
+            return;
+          }
+
+          const twinId = (window as any).currentTwinId as number | undefined;
+          if (!twinId) return;
+
+          const instancePayload = {
+            digital_twin_id: twinId,
+            component_definition_id: def.id,
+            instance_name: component.name,
+            position: component.position,
+            field_values: component.data || {},
+            connections: [],
+            metadata: {},
+          };
+
+          const created = await createComponentInstance(instancePayload as any);
+
+          setComponents((prev) =>
+            prev.map((c) => (c.id === component.id ? { ...c, componentDefinitionId: def!.id, instanceId: created.id } : c))
+          );
+        } catch (err) {
+          console.warn("Failed to persist component from PlantBuilder modal:", err);
+        }
+      })();
     } catch (err) {
       setError("Failed to add component. Please try again.");
       toast.error("Error adding component.");
@@ -199,9 +499,11 @@ export const PlantBuilder = () => {
     }
   };
 
+  // Prepare and export complete plant data model
   const handleSaveDataModel = () => {
     try {
       setShowDataModel(true);
+      // Aggregate all plant data for export
       const dataModel = {
         userDetails: userDetails || {},
         plantInfo: plantInfo || {},
@@ -252,21 +554,25 @@ export const PlantBuilder = () => {
           to: params.target,
           type: "",
         };
-        setConnections((prev) => [...prev, newConn]);
+        setConnections((prev) => {
+          const next = [...prev, newConn];
+          void persistConnectionsForComponent(params.source, next);
+          return next;
+        });
         toast.success("Connection added successfully!");
       } catch (err) {
         setError("Failed to add connection. Please try again.");
         toast.error("Error adding connection.");
       }
     },
-    [setConnections]
+    [persistConnectionsForComponent, setConnections]
   );
 
+  // Update plant model JSON for export
   const handleCanvasModelChange = (model: {
   components: PlacedComponent[];
   connections: Connection[];
 }) => {
-  // 🔁 Normalize to examplePlant.json-like structure
   const normalized = {
     components: model.components.map((c) => ({
       id: c.id,
@@ -493,9 +799,25 @@ export const PlantBuilder = () => {
     <div className="h-screen flex flex-col bg-gray-50">
       <header className="border-b border-gray-200 bg-white text-gray-900 flex items-center justify-between px-4 py-3 shadow-sm">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => router.push("/")}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+              const params = new URLSearchParams(window.location.search);
+              const plantId = params.get("plantId");
+
+              if (plantId) {
+                // If user is editing an existing plant, return to select-plant list
+                router.push("/plant-builder");
+              } else {
+                // Default behavior for new plant creation
+                router.push("/");
+              }
+            }}
+          >
             <ArrowLeft className="h-5 w-5" />
           </Button>
+
           <div>
             <h1 className="text-base sm:text-lg font-semibold">
               {plantInfo ? plantInfo.plantName : "New Plant"}
