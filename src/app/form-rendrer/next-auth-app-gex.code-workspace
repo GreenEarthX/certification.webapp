@@ -1,0 +1,20 @@
+{
+	"folders": [
+		{
+			"path": "../../../../../next-auth-app-gex"
+		},
+		{
+			"path": "../../.."
+		},
+		{
+			"path": "../../../../../gex-map-v2"
+		},
+		{
+			"path": "../../../../../Certif2_backend-main"
+		},
+		{
+			"path": "../../../../../Certif2_backend"
+		}
+	],
+	"settings": {}
+}

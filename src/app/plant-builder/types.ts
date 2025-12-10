@@ -125,6 +125,9 @@ export interface PlacedComponent {
     [key: string]: any;
   };
   certifications: string[];
+  // Optional backend linkage
+  componentDefinitionId?: number;
+  instanceId?: number; // database primary key for component_instances
 }
 
 export interface Connection {
