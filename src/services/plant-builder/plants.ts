@@ -11,23 +11,12 @@ export type Plant = {
   metadata?: Record<string, any> | null;
 };
 
-type UserWithPlantsResponse = {
-  id: string;
-  email: string;
-  name?: string;
-  plants?: Plant[];
-};
-
-const DEFAULT_USER_ID = "1";
-
 export async function fetchPlantsForCurrentUser(): Promise<Plant[]> {
-  const data = await apiFetch<UserWithPlantsResponse>(`/users/${DEFAULT_USER_ID}`);
-  return data.plants || [];
+  return apiFetch<Plant[]>("/plants");
 }
 
 export async function createPlant(payload: {
   name: string;
-  user_id: number;
   location?: string;
   status?: string;
   metadata?: Record<string, any>;
