@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Connection, PlacedComponent } from "../../app/plant-builder/types"; // CORRECT PATH
+import type { Connection, PlacedComponent } from "@/app/plant-operator/plant-builder/types"; // CORRECT PATH
 
 type ConnectionDetailDialogProps = {
   connection: Connection;

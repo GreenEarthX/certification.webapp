@@ -808,7 +808,7 @@ export const PlantBuilder = () => {
 
               if (plantId) {
                 // If user is editing an existing plant, return to select-plant list
-                router.push("/plant-builder");
+                router.push("/plant-operator/plant-builder");
               } else {
                 // Default behavior for new plant creation
                 router.push("/");

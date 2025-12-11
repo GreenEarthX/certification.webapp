@@ -1,4 +1,4 @@
-import type { Connection, PlacedComponent } from '@/app/plant-builder/types';
+import type { Connection, PlacedComponent } from '@/app/plant-operator/plant-builder/types';
 
 export type StoredConnectionPayload = {
   id: string;

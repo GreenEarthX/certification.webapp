@@ -12,13 +12,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
-import { ComplianceResult, ProductInfo } from "../../app/plant-builder/types";
+import { ComplianceResult, ProductInfo } from "@/app/plant-operator/plant-builder/types";
 import {
   UserDetails,     // interface
   PlantInfo,       // interface
   PlacedComponent, // interface
   Connection,      // interface
-} from "../../app/plant-builder/types"; // EXACT PATH
+} from "@/app/plant-operator/plant-builder/types"; // EXACT PATH
 
 interface ComplianceResultsProps {
   productInfo: ProductInfo[];
@@ -159,7 +159,7 @@ export const ComplianceResults = ({
               className="bg-[#3c83f6]"
               onClick={() => {
                 const data = encodeURIComponent(JSON.stringify(complianceResults));
-                router.push(`/plant-builder/recommendations?data=${data}`);
+                router.push(`/plant-operator/plant-builder/recommendations?data=${data}`);
               }}
             >
               View Recommendations
