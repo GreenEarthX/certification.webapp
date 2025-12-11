@@ -4,7 +4,7 @@
 const logJson = (label: string, data?: any) => {
   console.log(label);
   if (data) console.log(JSON.stringify(data, null, 2));
-  };
+};
 
 import "./plant-builder-vite.css";  //
 import "./App.css";
@@ -69,7 +69,7 @@ const parseOptionalNumber = (value: unknown): number | undefined => {
   if (value === undefined || value === null) return undefined;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : undefined;
-  };
+};
 
 /**
  * Plant Builder Component
@@ -173,32 +173,13 @@ export const PlantBuilder = () => {
 
         const records = await fetchDigitalTwinJsonForPlant(plantId);
 
-        if (!records.length) {
-          toast.error("No digital twin found for this plant.");
-          return;
-        }
-
-        const record = records[0];
-
-        // Set global IDs for Canvas persistence even if there's no JSON yet
-        try {
-          (window as any).currentPlantId = plantId;
-          (window as any).currentTwinId = Number(record.id);
-          console.log("[plant-builder] restored currentPlantId/currentTwinId:", (window as any).currentPlantId, (window as any).currentTwinId);
-        } catch (e) {
-          // ignore
-        }
-
-        if (!record.digital_twin_json) {
-          setComponents([]);
-          setConnections([]);
-          setOriginalComponents([]);
-          toast.info("No saved digital twin model yet. Start building!");
+        if (!records.length || !records[0].digital_twin_json) {
+          toast.error("No digital twin JSON found for this plant.");
           return;
         }
 
         const { components: rawComponents = [], connections: rawConnections = [] } =
-          record.digital_twin_json;
+          records[0].digital_twin_json;
 
         const mappedComponents: PlacedComponent[] = rawComponents.map((c: any) => {
           const inferredInstanceId =
@@ -241,6 +222,15 @@ export const PlantBuilder = () => {
         setComponents(mappedComponents);
         setConnections(mappedConnections);
         setOriginalComponents(mappedComponents); // Track originals for delete detection
+        
+        // Set global IDs for Canvas persistence
+        try {
+          (window as any).currentPlantId = plantId;
+          (window as any).currentTwinId = Number(records[0].id);
+          console.log("[plant-builder] restored currentPlantId/currentTwinId:", (window as any).currentPlantId, (window as any).currentTwinId);
+        } catch (e) {
+          // ignore
+        }
 
         toast.success("Digital twin loaded from database.");
       } catch (err: any) {
@@ -266,45 +256,47 @@ export const PlantBuilder = () => {
 
   // Create plant and digital twin; set global IDs for component persistence
   const handleInfoSubmit = async (info: PlantInfo) => {
-    try {
-      toast.loading("Creating plant...");
+  try {
+    toast.loading("Creating plant...");
 
-      const payload = {
-        name: info.plantName,
-        location: info.country,
-        status: info.status,
-        metadata: {
-          projectName: info.projectName,
-          projectType: info.projectType,
-          primaryFuelType: info.primaryFuelType,
-          commercialOperationalDate: info.commercialOperationalDate,
-          investment: info.investment,
-        },
-      };
+    const payload = {
+      name: info.plantName,
+      user_id: 1, // hardcoded for now
+      location: info.country,
+      status: info.status,
+      metadata: {
+        projectName: info.projectName,
+        projectType: info.projectType,
+        primaryFuelType: info.primaryFuelType,
+        commercialOperationalDate: info.commercialOperationalDate,
+        investment: info.investment,
+      },
+    };
 
-      const plant = await createPlant(payload);
-      toast.success("Plant created successfully!");
+    const plant = await createPlant(payload);
+    toast.success("Plant created successfully!");
 
-      setPlantInfo(info);
-      (window as any).currentPlantId = plant.id;
+    setPlantInfo(info);
+    (window as any).currentPlantId = plant.id;
 
-      // Create digital twin for component persistence
-      const twin = await createDigitalTwin({
-        plant_id: plant.id,
-        name: `${info.plantName} Digital Twin`,
-        version: "1",
-        is_active: true,
-      });
+    // Create digital twin for component persistence
+    const twin = await createDigitalTwin({
+      plant_id: plant.id,
+      name: `${info.plantName} Digital Twin`,
+      version: "1",
+      is_active: true,
+    });
 
-      toast.success("Digital Twin initialized!");
-      (window as any).currentTwinId = twin.id;
+    toast.success("Digital Twin initialized!");
+    (window as any).currentTwinId = twin.id;
 
-      setStep("product");
-    } catch (err: any) {
-      console.error(err);
-      toast.error("Failed to create plant or digital twin.");
-    }
-  };
+    setStep("product");
+
+  } catch (err: any) {
+    console.error(err);
+    toast.error("Failed to create plant or digital twin.");
+  }
+};
 
   const handleProductSubmit = (products: ProductInfo[]) => {
     try {
