@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Upload, Plus, ChevronDown, Trash2 } from "lucide-react";
-import type { PlacedComponent, Connection } from "../../app/plant-builder/types";
+import type { PlacedComponent, Connection } from "@/app/plant-operator/plant-builder/types";
 import ComponentSchemaForm, { ComponentFieldDefinition } from "./ComponentSchemaForm";
 import { fetchComponentInstanceById, updateComponentInstance } from "@/services/plant-builder/componentInstances";
 import { fetchComponentDefinitionById, fetchComponentDefinitions } from "@/services/plant-builder/componentDefinitions";

@@ -53,12 +53,12 @@ export default function ChoosePlantPage() {
 
   const handleOpenPlant = (plant: Plant) => {
     // Later this can preload the plant
-    router.push(`/plant-builder/builder?plantId=${plant.id}`);
+    router.push(`/plant-operator/plant-builder/builder?plantId=${plant.id}`);
   };
 
   const handleAddNewPlant = () => {
     // New flow: go to builder wizard with empty data
-    router.push("/plant-builder/builder");
+    router.push("/plant-operator/plant-builder/builder");
   };
 
   const handleRetry = () => {

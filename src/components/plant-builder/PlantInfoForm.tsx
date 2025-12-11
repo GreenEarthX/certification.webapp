@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { PlantInfo } from "../../app/plant-builder/types";
+import type { PlantInfo } from "@/app/plant-operator/plant-builder/types";
 
 type PlantInfoFormProps = {
   onSubmit: (info: PlantInfo) => void;

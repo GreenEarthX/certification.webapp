@@ -8,7 +8,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import type { Position, PlacedComponent } from "./../../app/plant-builder/types";
+import type { Position, PlacedComponent } from "@/app/plant-operator/plant-builder/types";
 
 interface PlantComponentProps {
   component: PlacedComponent;

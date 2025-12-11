@@ -5,7 +5,7 @@ export default {
   darkMode: ["class"],
   content: [
     "./src/components/plant-builder/**/*.{ts,tsx}",
-    "./src/app/plant-builder/**/*.{ts,tsx}",
+    "./src/app/plant-operator/plant-builder/**/*.{ts,tsx}",
   ],
   theme: {
     extend: {
