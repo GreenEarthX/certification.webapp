@@ -1,8 +1,11 @@
 // src/services/plant-builder/componentDefinitions.ts
 "use client";
 
-import { apiFetch } from "../api-client";
-import type { ComponentType, ComponentData } from "@/components/plant-builder/ComponentLibrary";
+import type {
+  ComponentData,
+  ComponentType,
+} from "@/components/plant-builder/ComponentLibrary";
+import { apiFetch } from "@/services/api-client";
 
 export type ComponentDefinitionDto = {
   id: number;
@@ -20,62 +23,70 @@ export type ComponentLibraryJSON = {
   gate: ComponentData[];
 };
 
+const COMPONENT_DEFINITIONS_PATH = "/component-definitions";
+const TYPE_TO_ICON: Record<ComponentType, ComponentData["icon"]> = {
+  equipment: "Building2",
+  carrier: "Zap",
+  gate: "ArrowRightLeft",
+};
+
+// Provide a readable fallback category when schema lacks one
+const defaultCategoryFor = (componentType: ComponentType) =>
+  componentType.charAt(0).toUpperCase() + componentType.slice(1);
+
+// Pull category metadata from the schema with multiple fallbacks
+const deriveCategoryFromSchema = (def: ComponentDefinitionDto) => {
+  const schema = def.field_schema;
+  if (!schema) return defaultCategoryFor(def.component_type);
+
+  const fields = Array.isArray(schema.fields) ? schema.fields : [];
+  return (
+    schema.category ||
+    schema.group ||
+    schema.meta?.category ||
+    fields[0]?.category ||
+    fields[0]?.group ||
+    defaultCategoryFor(def.component_type)
+  );
+};
+
+// Convert backend DTO into the component-library-friendly structure
+const mapToComponentData = (def: ComponentDefinitionDto): ComponentData => ({
+  id: def.component_id,
+  type: def.component_type,
+  name: def.component_name,
+  category: deriveCategoryFromSchema(def),
+  icon: TYPE_TO_ICON[def.component_type] ?? "ArrowRightLeft",
+});
+
 export async function fetchComponentDefinitions(): Promise<ComponentDefinitionDto[]> {
-  return apiFetch<ComponentDefinitionDto[]>("/component-definitions");
+  return apiFetch<ComponentDefinitionDto[]>(COMPONENT_DEFINITIONS_PATH);
 }
 
+// Retrieve a single component definition for editing/detail views
 export async function fetchComponentDefinitionById(id: number): Promise<ComponentDefinitionDto> {
-  return apiFetch<ComponentDefinitionDto>(`/component-definitions/${id}`);
+  return apiFetch<ComponentDefinitionDto>(`${COMPONENT_DEFINITIONS_PATH}/${id}`);
 }
 
 export async function fetchComponentLibraryFromApi(): Promise<ComponentLibraryJSON> {
   const defs = await fetchComponentDefinitions();
 
-  const mapToComponentData = (def: ComponentDefinitionDto): ComponentData => {
-    // try multiple places for a category: explicit category/group, meta, or first field group
-    const categoryFromSchema =
-      def.field_schema?.category ||
-      def.field_schema?.group ||
-      def.field_schema?.meta?.category ||
-      (Array.isArray(def.field_schema?.fields) && (def.field_schema.fields[0]?.category || def.field_schema.fields[0]?.group)) ||
-      // fallback to a human-friendly type name
-      (def.component_type ? def.component_type.charAt(0).toUpperCase() + def.component_type.slice(1) : "General");
-
-    const icon =
-      def.component_type === "equipment"
-        ? "Building2"
-        : def.component_type === "carrier"
-        ? "Zap"
-        : "ArrowRightLeft";
-
-    return {
-      id: def.component_id,
-      type: def.component_type,
-      name: def.component_name,
-      category: categoryFromSchema,
-      icon,
-    };
-  };
-
-  const equipment = defs
-    .filter((d) => d.component_type === "equipment")
-    .map(mapToComponentData);
-
-  const carrier = defs
-    .filter((d) => d.component_type === "carrier")
-    .map(mapToComponentData);
-
-  const gate = defs
-    .filter((d) => d.component_type === "gate")
-    .map(mapToComponentData);
-
-  return { equipment, carrier, gate };
+  return defs.reduce<ComponentLibraryJSON>(
+    (library, def) => {
+      const bucket = library[def.component_type];
+      if (bucket) {
+        bucket.push(mapToComponentData(def));
+      }
+      return library;
+    },
+    { equipment: [], carrier: [], gate: [] }
+  );
 }
 
 export async function createComponentDefinition(
   payload: Partial<ComponentDefinitionDto>
 ): Promise<ComponentDefinitionDto> {
-  return apiFetch<ComponentDefinitionDto>("/component-definitions", {
+  return apiFetch<ComponentDefinitionDto>(COMPONENT_DEFINITIONS_PATH, {
     method: "POST",
     body: JSON.stringify(payload),
   });

@@ -1,7 +1,7 @@
 // src/services/plant-builder/plants.ts
 "use client";
 
-import { apiFetch } from "./client";
+import { apiFetch } from "@/services/api-client";
 
 export type Plant = {
   id: number;            // FIX: should be number, not string
@@ -11,18 +11,10 @@ export type Plant = {
   metadata?: Record<string, any> | null;
 };
 
-type UserWithPlantsResponse = {
-  id: string;
-  email: string;
-  name?: string;
-  plants?: Plant[];
-};
-
-const DEFAULT_USER_ID = "1";
+const PLANTS_PATH = "/plants";
 
 export async function fetchPlantsForCurrentUser(): Promise<Plant[]> {
-  const data = await apiFetch<UserWithPlantsResponse>(`/users/${DEFAULT_USER_ID}`);
-  return data.plants || [];
+  return apiFetch<Plant[]>(PLANTS_PATH);
 }
 
 export async function createPlant(payload: {
@@ -32,7 +24,7 @@ export async function createPlant(payload: {
   status?: string;
   metadata?: Record<string, any>;
 }): Promise<Plant> {
-  return apiFetch<Plant>("/plants", {
+  return apiFetch<Plant>(PLANTS_PATH, {
     method: "POST",
     body: JSON.stringify(payload),
   });
