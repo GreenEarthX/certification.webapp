@@ -16,7 +16,7 @@ const Index = () => {
               <Building2 className="h-8 w-8 text-primary" />
               <h1 className="text-2xl font-bold text-foreground">Plant Builder</h1>
             </div>
-            <Button onClick={() => navigate("/plant-builder")} size="lg">
+            <Button onClick={() => navigate("/plant-operator/plant-builder")} size="lg">
               Start Building
             </Button>
           </div>
@@ -34,7 +34,7 @@ const Index = () => {
             process optimization, and regulatory comparison.
           </p>
           <div className="flex gap-4 justify-center pt-4">
-            <Button onClick={() => navigate("/plant-builder")} size="lg" className="text-lg px-8">
+            <Button onClick={() => navigate("/plant-operator/plant-builder")} size="lg" className="text-lg px-8">
               Create New Plant
             </Button>
             <Button variant="outline" size="lg" className="text-lg px-8">
@@ -150,7 +150,7 @@ const Index = () => {
           <p className="text-xl text-muted-foreground">
             Create your first digital twin and streamline your compliance process today
           </p>
-          <Button onClick={() => navigate("/plant-builder")} size="lg" className="text-lg px-8">
+          <Button onClick={() => navigate("/plant-operator/plant-builder")} size="lg" className="text-lg px-8">
             Launch Plant Builder
           </Button>
         </div>

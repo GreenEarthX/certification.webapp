@@ -1,7 +1,7 @@
 'use client';
 
 import { PlantInfo, ProductInfo } from "./types";
-import type { PlacedComponent, Connection } from "@/app/plant-builder/types"; // CORRECT NEXT.JS 15 PATH
+import type { PlacedComponent, Connection } from "@/app/plant-operator/plant-builder/types"; // CORRECT NEXT.JS 15 PATH
 
 export type CertificationScheme = {
   id: string;

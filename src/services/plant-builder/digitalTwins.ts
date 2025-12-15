@@ -1,7 +1,7 @@
 // src/services/plant-builder/digitalTwins.ts
 "use client";
 
-import { apiFetch } from "../api-client";
+import { apiFetch } from "@/services/api-client";
 
 export type DigitalTwinDto = {
   id: number;
@@ -14,17 +14,25 @@ export type DigitalTwinDto = {
   // you can add relations later if needed
 };
 
-export async function fetchDigitalTwins(plantId?: number): Promise<DigitalTwinDto[]> {
+const DIGITAL_TWINS_PATH = "/digital-twins";
+
+export async function fetchDigitalTwins(
+  plantId?: number
+): Promise<DigitalTwinDto[]> {
   const query = plantId ? `?plantId=${plantId}` : "";
-  return apiFetch<DigitalTwinDto[]>(`/digital-twins${query}`);
+  return apiFetch<DigitalTwinDto[]>(`${DIGITAL_TWINS_PATH}${query}`);
 }
 
-export async function fetchDigitalTwinById(id: number): Promise<DigitalTwinDto> {
-  return apiFetch<DigitalTwinDto>(`/digital-twins/${id}`);
+export async function fetchDigitalTwinById(
+  id: number
+): Promise<DigitalTwinDto> {
+  return apiFetch<DigitalTwinDto>(`${DIGITAL_TWINS_PATH}/${id}`);
 }
 
-export async function createDigitalTwin(payload: Partial<DigitalTwinDto>): Promise<DigitalTwinDto> {
-  return apiFetch<DigitalTwinDto>("/digital-twins", {
+export async function createDigitalTwin(
+  payload: Partial<DigitalTwinDto>
+): Promise<DigitalTwinDto> {
+  return apiFetch<DigitalTwinDto>(DIGITAL_TWINS_PATH, {
     method: "POST",
     body: JSON.stringify(payload),
   });
@@ -60,6 +68,6 @@ export async function fetchDigitalTwinJsonForPlant(
   plantId: number
 ): Promise<DigitalTwinJsonRecord[]> {
   return apiFetch<DigitalTwinJsonRecord[]>(
-    `/digital-twins/digital-twin-json/plant/${plantId}`
+    `${DIGITAL_TWINS_PATH}/digital-twin-json/plant/${plantId}`
   );
 }

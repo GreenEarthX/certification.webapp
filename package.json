@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "build:plant-builder": "postcss src/app/plant-builder/plant-builder.css -o src/app/plant-builder/plant-builder-compiled.css"
+    "build:plant-builder": "postcss src/app/plant-operator/plant-builder/plant-builder.css -o src/app/plant-operator/plant-builder/plant-builder-compiled.css"
   },
   "dependencies": {
     "@auth0/nextjs-auth0": "^3.7.0",
