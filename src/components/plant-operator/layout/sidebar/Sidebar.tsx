@@ -88,7 +88,7 @@ const Sidebar: React.FC = () => {
           
           // REAL PAGE NAMES
           { text: 'Plausibility Check', icon: <FaCheckCircle />, path: '/plant-operator/plausibility-check' },
-          { text: 'Plant Builder',      icon: <FaTools />,       path: '/plant-builder' },
+          { text: 'Plant Builder',      icon: <FaTools />,       path: '/plant-operator/plant-builder' },
 
           { text: 'Recommendations', icon: <FaFileMedical />,   path: '/plant-operator/recommendations' },
         ].map((item) => (

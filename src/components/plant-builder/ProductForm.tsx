@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus, Trash2 } from "lucide-react";
-import type { ProductInfo } from "../../app/plant-builder/types";
+import type { ProductInfo } from "@/app/plant-operator/plant-builder/types";
 import { toast } from "sonner";
 
 type ProductFormProps = {

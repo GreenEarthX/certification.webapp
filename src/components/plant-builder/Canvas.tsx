@@ -36,7 +36,7 @@ import ConnectionDetailDialog from "./ConnectionDetailDialog";
 import {
   PlacedComponent as PlacedComponentType,
   Connection as ConnectionType,
-} from "../../app/plant-builder/types";
+} from "@/app/plant-operator/plant-builder/types";
 import { buildConnectionPayloadForComponent, StoredConnectionPayload } from "@/lib/plant-builder/connection-utils";
 import { 
   createComponentInstance, 
