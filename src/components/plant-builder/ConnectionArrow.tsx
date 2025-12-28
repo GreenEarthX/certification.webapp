@@ -1,5 +1,5 @@
 // ConnectionArrow.tsx
-import type { Position } from "../../app/plant-builder/types";  // CORRECT SOURCE
+import type { Position } from "@/app/plant-operator/plant-builder/types";  // CORRECT SOURCE
 
 type ConnectionArrowProps = {
   from: Position;

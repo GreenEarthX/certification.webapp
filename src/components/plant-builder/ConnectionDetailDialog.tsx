@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Connection, PlacedComponent } from "../../app/plant-builder/types"; // CORRECT PATH
+import type { Connection, PlacedComponent } from "@/app/plant-operator/plant-builder/types"; // CORRECT PATH
 
 type ConnectionDetailDialogProps = {
   connection: Connection;
@@ -27,6 +27,7 @@ type ConnectionDetailDialogProps = {
   open: boolean;
   onClose: () => void;
   onSave: (id: string, type: string, reason: string, data: any) => void;
+  onDelete: (id: string) => void; 
 };
 
 const ConnectionDetailDialog = ({
@@ -35,6 +36,7 @@ const ConnectionDetailDialog = ({
   open,
   onClose,
   onSave,
+  onDelete,
 }: ConnectionDetailDialogProps) => {
   const [type, setType] = useState(connection.type || "");
   const [reason, setReason] = useState(connection.reason || "");
@@ -92,17 +94,30 @@ const ConnectionDetailDialog = ({
           </div>
         </div>
 
-        <DialogFooter className="flex justify-end gap-3 mt-4">
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
+        <DialogFooter className="flex justify-between gap-3 mt-4">
           <Button
-            onClick={handleSave}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            variant="outline"
+            onClick={() => {
+              onDelete(connection.id);
+            }}
+            className="border-red-600 text-red-600 hover:bg-red-50"
           >
-            Save
+            Delete Connection
           </Button>
+
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSave}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              Save
+            </Button>
+          </div>
         </DialogFooter>
+
       </DialogContent>
     </Dialog>
   );

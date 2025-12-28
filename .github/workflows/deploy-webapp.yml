@@ -1,0 +1,64 @@
+name: Deploy Certification Webapp to ECS
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'certification.webapp/**'
+      - '.github/workflows/deploy-webapp.yml'
+
+env:
+  AWS_REGION: us-west-1
+  ECR_REPOSITORY: certification-webapp
+  ECS_SERVICE: certification-webapp
+  ECS_CLUSTER: certification-cluster
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: arn:aws:iam::975232045453:role/github-actions-deploy-role
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Build and push image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+      working-directory: ./certification.webapp
+      run: |
+        docker build \
+            --build-arg NEXT_PUBLIC_HCS_TOPIC_ID="${{ vars.NEXT_PUBLIC_HCS_TOPIC_ID }}" \
+            --build-arg NEXT_PUBLIC_AUTH0_REDIRECT_URI="${{ vars.NEXT_PUBLIC_AUTH0_REDIRECT_URI }}" \
+            --build-arg NEXT_PUBLIC_AUTH0_POST_LOGOUT_REDIRECT_URI="${{ vars.NEXT_PUBLIC_AUTH0_POST_LOGOUT_REDIRECT_URI }}" \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+    - name: Deploy to ECS
+      run: |
+        aws ecs update-service \
+          --cluster ${{ env.ECS_CLUSTER }} \
+          --service ${{ env.ECS_SERVICE }} \
+          --force-new-deployment
+          --desired-count 1
+          
+        aws ecs wait services-stable \
+          --cluster ${{ env.ECS_CLUSTER }} \
+          --services ${{ env.ECS_SERVICE }}
+
+    - name: Deployment Summary
+      run: |
+        echo "🚀 Deployment successful!"
+        echo "🔗 Service: ${{ env.ECS_SERVICE }}"
+        echo "🌐 Cluster: ${{ env.ECS_CLUSTER }}"

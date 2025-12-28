@@ -2,13 +2,13 @@
 import { useState, useRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Building2, Zap, ArrowRightLeft } from "lucide-react";
+import { Building2, Zap, ArrowRightLeft, X } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import type { Position, PlacedComponent } from "./../../app/plant-builder/types";
+import type { Position, PlacedComponent } from "@/app/plant-operator/plant-builder/types";
 
 interface PlantComponentProps {
   component: PlacedComponent;
@@ -17,6 +17,7 @@ interface PlantComponentProps {
   onConnectStart: (id: string) => void;
   onConnectEnd: (id: string) => void;
   isConnecting: boolean;
+  onDelete: (id: string) => void;   // ⬅️ NEW
 }
 
 /* ─────────────────────── REAL TAILWIND COLORS ─────────────────────── */
@@ -80,9 +81,15 @@ const PlantComponent = ({
   onConnectStart,
   onConnectEnd,
   isConnecting,
+  onDelete,
 }: PlantComponentProps) => {
   const [position, setPosition] = useState(component.position);
   const cardRef = useRef<HTMLDivElement>(null);
+
+  // keep local position in sync if parent updates it
+  useEffect(() => {
+    setPosition(component.position);
+  }, [component.position]);
 
   const colors = layerColors[component.type] ?? {
     bg: "bg-gray-100",
@@ -105,14 +112,18 @@ const PlantComponent = ({
     e.stopPropagation();
     const startX = e.clientX - position.x;
     const startY = e.clientY - position.y;
+
     const move = (ev: MouseEvent) => {
-      setPosition({ x: ev.clientX - startX, y: ev.clientY - startY });
+      const newPos = { x: ev.clientX - startX, y: ev.clientY - startY };
+      setPosition(newPos);
+      onMove(component.id, newPos);
     };
+
     const up = () => {
       document.removeEventListener("mousemove", move);
       document.removeEventListener("mouseup", up);
-      onMove(component.id, position);
     };
+
     document.addEventListener("mousemove", move);
     document.addEventListener("mouseup", up);
   };
@@ -123,8 +134,18 @@ const PlantComponent = ({
     out ? onConnectStart(component.id) : isConnecting && onConnectEnd(component.id);
   };
 
+  // ❌ dynamic "-${side}-2" breaks Tailwind
+  // ✅ use explicit classes so Tailwind can see them
   const nodeCls = (side: "left" | "right") =>
-    `absolute -${side}-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity`;
+    [
+      "absolute",
+      side === "left" ? "-left-2" : "-right-2",
+      "top-1/2",
+      "-translate-y-1/2",
+      "opacity-0",
+      "group-hover:opacity-100",
+      "transition-opacity",
+    ].join(" ");
 
   return (
     <div
@@ -137,6 +158,17 @@ const PlantComponent = ({
       <Card
         className={`${shapeClasses} border-2 ${colors.border} ${colors.bg} shadow-md hover:shadow-lg transition-shadow relative group flex flex-col items-center justify-center p-2 overflow-visible`}
       >
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();       // don't open the detail dialog
+            onDelete(component.id);    // call parent handler
+          }}
+          className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+        >
+          <X className="w-3 h-3" />
+        </button>
+        
         <CardContent
           className={`p-2 flex flex-col items-center justify-center text-center ${contentClasses} max-w-full`}
         >

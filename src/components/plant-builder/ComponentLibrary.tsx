@@ -1,6 +1,14 @@
 // src/components/plant-builder/ComponentLibrary.tsx
-import { useState } from "react";
-import { Building2, Zap, ArrowRightLeft, ChevronDown, ChevronRight } from "lucide-react";
+"use client";
+
+import React, { useEffect, useState } from "react";
+import {
+  Building2,
+  Zap,
+  ArrowRightLeft,
+  ChevronDown,
+  ChevronRight,
+} from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -10,6 +18,12 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 
+// ⬇️ import API helper
+import {
+  fetchComponentLibraryFromApi,
+} from "@/services/plant-builder/componentDefinitions";
+
+// === TYPES (same as before) ===
 export type ComponentType = "equipment" | "carrier" | "gate";
 
 export type TechnicalData = {
@@ -58,39 +72,30 @@ export type ComponentData = {
   gateData?: GateData;
 };
 
-// === TAILWIND COLORS ===
-const layerStyles = {
-  equipment: { dot: "bg-blue-500", border: "border-blue-300", hover: "hover:border-blue-500 hover:bg-blue-50" },
-  carrier:   { dot: "bg-green-500", border: "border-green-300", hover: "hover:border-green-500 hover:bg-green-50" },
-  gate:      { dot: "bg-purple-500", border: "border-purple-300", hover: "hover:border-purple-500 hover:bg-purple-50" },
+type ComponentLibraryJSON = {
+  equipment: ComponentData[];
+  carrier: ComponentData[];
+  gate: ComponentData[];
 };
 
-const equipmentComponents: ComponentData[] = [
-  { id: "electrolyzer", type: "equipment", name: "Electrolyzer", category: "Power-to-X", icon: "Building2" },
-  { id: "dac", type: "equipment", name: "DAC", category: "Power-to-X", icon: "Building2" },
-  { id: "methanol-synthesis", type: "equipment", name: "Methanol Synth", category: "Power-to-X", icon: "Building2" },
-  { id: "hydrotreating", type: "equipment", name: "Hydrotreating", category: "Lipid-to-Fuels", icon: "Building2" },
-  { id: "gasifier", type: "equipment", name: "Gasifier", category: "Gasification", icon: "Building2" },
-  { id: "anaerobic-digester", type: "equipment", name: "Anaerobic Digester", category: "Anaerobic Digestion", icon: "Building2" },
-  { id: "co2-liquefaction", type: "equipment", name: "CO₂ Liquefaction", category: "CO₂ Management", icon: "Building2" },
-  { id: "compressor", type: "equipment", name: "Compressor", category: "Balance-of-Plant", icon: "Building2" },
-];
-
-const carrierComponents: ComponentData[] = [
-  { id: "hydrogen", type: "carrier", name: "Hydrogen", category: "Gas", icon: "Zap" },
-  { id: "co2", type: "carrier", name: "CO₂", category: "Gas", icon: "Zap" },
-  { id: "methanol", type: "carrier", name: "Methanol", category: "Liquid", icon: "Zap" },
-  { id: "ammonia", type: "carrier", name: "Ammonia", category: "Gas/Liquid", icon: "Zap" },
-  { id: "electricity", type: "carrier", name: "Electricity", category: "Energy", icon: "Zap" },
-  { id: "syngas", type: "carrier", name: "Syngas", category: "Gas", icon: "Zap" },
-];
-
-const gateComponents: ComponentData[] = [
-  { id: "input-grid", type: "gate", name: "Grid Input", category: "Input", icon: "ArrowRightLeft" },
-  { id: "input-renewable", type: "gate", name: "Renewable Input", category: "Input", icon: "ArrowRightLeft" },
-  { id: "output-product", type: "gate", name: "Product Output", category: "Output", icon: "ArrowRightLeft" },
-  { id: "valve", type: "gate", name: "Control Valve", category: "Control", icon: "ArrowRightLeft" },
-];
+// === TAILWIND COLORS ===
+const layerStyles = {
+  equipment: {
+    dot: "bg-blue-500",
+    border: "border-blue-300",
+    hover: "hover:border-blue-500 hover:bg-blue-50",
+  },
+  carrier: {
+    dot: "bg-green-500",
+    border: "border-green-300",
+    hover: "hover:border-green-500 hover:bg-green-50",
+  },
+  gate: {
+    dot: "bg-purple-500",
+    border: "border-purple-300",
+    hover: "hover:border-purple-500 hover:bg-purple-50",
+  },
+};
 
 const ComponentLibrary = () => {
   const [openSections, setOpenSections] = useState({
@@ -99,7 +104,43 @@ const ComponentLibrary = () => {
     gate: false,
   });
 
-  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, component: ComponentData) => {
+  const [library, setLibrary] = useState<ComponentLibraryJSON | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // 🔐 Load components from backend (needs Bearer token)
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadLibrary() {
+      try {
+        setLoading(true);
+        const data = await fetchComponentLibraryFromApi();
+        if (!isMounted) return;
+        setLibrary(data);
+        setError(null);
+      } catch (err: any) {
+        console.error("Failed to load component library:", err);
+        if (!isMounted) return;
+        setError(
+          err?.message || "Failed to load component library from server."
+        );
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+
+    loadLibrary();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const handleDragStart = (
+    e: React.DragEvent<HTMLDivElement>,
+    component: ComponentData
+  ) => {
     e.dataTransfer.setData("component", JSON.stringify(component));
   };
 
@@ -125,7 +166,10 @@ const ComponentLibrary = () => {
     const grouped = groupByCategory(components);
 
     return (
-      <Collapsible open={openSections[sectionKey]} onOpenChange={() => toggleSection(sectionKey)}>
+      <Collapsible
+        open={openSections[sectionKey]}
+        onOpenChange={() => toggleSection(sectionKey)}
+      >
         <CollapsibleTrigger className="flex items-center gap-2 w-full text-left hover:bg-muted/40 p-2 rounded transition-colors text-sm font-medium">
           <div className={`w-2.5 h-2.5 rounded-full ${style.dot}`} />
           <span className="flex items-center gap-1.5 flex-1">
@@ -153,7 +197,10 @@ const ComponentLibrary = () => {
                     onDragStart={(e) => handleDragStart(e, component)}
                     className={`p-2 cursor-move border ${style.border} ${style.hover} transition-all text-sm rounded-md shadow-sm`}
                   >
-                    <div className="font-medium truncate" title={component.name}>
+                    <div
+                      className="font-medium truncate"
+                      title={component.name}
+                    >
                       {component.name}
                     </div>
                   </Card>
@@ -166,21 +213,69 @@ const ComponentLibrary = () => {
     );
   };
 
+  // === UI states ===
+  if (loading) {
+    return (
+      <div className="w-80 border-r border-border bg-card flex flex-col">
+        <div className="p-3 border-b border-border">
+          <h2 className="font-bold text-base">Component Library</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Loading components…
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !library) {
+    return (
+      <div className="w-80 border-r border-border bg-card flex flex-col">
+        <div className="p-3 border-b border-border">
+          <h2 className="font-bold text-base">Component Library</h2>
+          <p className="text-xs text-destructive mt-0.5">
+            {error || "Unable to load component library."}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const { equipment, carrier, gate } = library;
+
   return (
-    // WIDE: 320px
     <div className="w-80 border-r border-border bg-card flex flex-col">
       <div className="p-3 border-b border-border">
         <h2 className="font-bold text-base">Component Library</h2>
-        <p className="text-xs text-muted-foreground mt-0.5">Drag to canvas</p>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          Drag to canvas
+        </p>
       </div>
 
       <ScrollArea className="flex-1">
         <div className="p-3 space-y-4">
-          {renderLayer("Equipment", <Building2 className="h-4 w-4" />, "equipment", equipmentComponents, "equipment")}
+          {renderLayer(
+            "Equipment",
+            <Building2 className="h-4 w-4" />,
+            "equipment",
+            equipment,
+            "equipment"
+          )}
           <Separator className="my-1" />
-          {renderLayer("Carriers", <Zap className="h-4 w-4" />, "carrier", carrierComponents, "carrier")}
+          {renderLayer(
+            "Carriers",
+            <Zap className="h-4 w-4" />,
+            "carrier",
+            carrier,
+            "carrier"
+          )}
           <Separator className="my-1" />
-          {renderLayer("Gates", <ArrowRightLeft className="h-4 w-4" />, "gate", gateComponents, "gate")}
+          {renderLayer(
+            "Gates",
+            <ArrowRightLeft className="h-4 w-4" />,
+            "gate",
+            gate,
+            "gate"
+          )}
         </div>
       </ScrollArea>
     </div>
