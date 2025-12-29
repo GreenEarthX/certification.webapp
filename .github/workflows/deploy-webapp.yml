@@ -40,6 +40,7 @@ jobs:
             --build-arg NEXT_PUBLIC_HCS_TOPIC_ID="${{ vars.NEXT_PUBLIC_HCS_TOPIC_ID }}" \
             --build-arg NEXT_PUBLIC_AUTH0_REDIRECT_URI="${{ vars.NEXT_PUBLIC_AUTH0_REDIRECT_URI }}" \
             --build-arg NEXT_PUBLIC_AUTH0_POST_LOGOUT_REDIRECT_URI="${{ vars.NEXT_PUBLIC_AUTH0_POST_LOGOUT_REDIRECT_URI }}" \
+            --build-arg NEXT_PUBLIC_ONBOARDING_URL="${{ vars.NEXT_PUBLIC_ONBOARDING_URL }}" \
             -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
 
