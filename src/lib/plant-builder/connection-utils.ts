@@ -33,5 +33,5 @@ export const buildConnectionPayloadForComponent = (
         data: conn.data || {},
       };
     })
-    .filter((payload): payload is StoredConnectionPayload => Boolean(payload));
+    .filter((payload): payload is NonNullable<typeof payload> => payload !== null);
 };
