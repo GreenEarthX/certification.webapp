@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState } from "react";
 import Link from 'next/link';
 import Image from "next/image";
@@ -10,7 +12,7 @@ interface UserProfileDropdownProps {
 const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({ userName }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const ONBOARDING_URL = process.env.NEXT_PUBLIC_ONBOARDING_URL || "http://localhost:3000";
-  const CURRENT_APP_URL = window.location.origin; 
+  const currentAppUrl = typeof window === "undefined" ? "" : window.location.origin;
 
   const handleGlobalLogout = async () => {
     try {
@@ -77,7 +79,7 @@ const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({ userName }) =
             <button
               onClick={() => {
               localStorage.clear(); // tue tout
-              window.location.href = `${ONBOARDING_URL}/api/auth/signout?callbackUrl=${encodeURIComponent(CURRENT_APP_URL)}`;}}
+              window.location.href = `${ONBOARDING_URL}/api/auth/signout?callbackUrl=${encodeURIComponent(currentAppUrl)}`;}}
               className="flex items-center w-full px-4 py-3 text-sm font-bold text-red-600 hover:bg-red-50 transition"
             >
               <FaSignOutAlt className="mr-3" />
