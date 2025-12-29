@@ -46,7 +46,14 @@ export default function AuthGuard() {
     // We allow /public and /unauthorized pages (for error pages)
     if (!token && !pathname.startsWith("/public") && !pathname.startsWith("/unauthorized")) {
       const redirectUrl = encodeURIComponent(window.location.href);
-      window.location.href = `http://localhost:3000/auth/authenticate?redirect=${redirectUrl}`;
+      const onboardingUrl = process.env.NEXT_PUBLIC_ONBOARDING_URL;
+
+      if (!onboardingUrl) {
+        console.error("NEXT_PUBLIC_ONBOARDING_URL is not defined");
+        return;
+      }
+
+      window.location.href = `${onboardingUrl}/auth/authenticate?redirect=${redirectUrl}`;
       return;
     }
 
