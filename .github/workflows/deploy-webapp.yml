@@ -3,9 +3,8 @@ name: Deploy Certification Webapp to ECS
 on:
   push:
     branches: [main]
-    paths:
-      - 'certification.webapp/**'
-      - '.github/workflows/deploy-webapp.yml'
+  pull_request:
+    branches: [main]
 
 env:
   AWS_REGION: us-west-1
