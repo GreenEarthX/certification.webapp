@@ -11,7 +11,7 @@ interface UserProfileDropdownProps {
 
 const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({ userName }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const ONBOARDING_URL = process.env.NEXT_PUBLIC_ONBOARDING_URL || "http://localhost:3000";
+  const ONBOARDING_URL = process.env.NEXT_PUBLIC_ONBOARDING_URL ;
   const currentAppUrl = typeof window === "undefined" ? "" : window.location.origin;
 
   const handleGlobalLogout = async () => {
