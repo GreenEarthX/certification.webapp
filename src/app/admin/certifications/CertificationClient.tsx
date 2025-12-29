@@ -7,6 +7,7 @@ import CertificationJSONGeneration from "@/components/admin/certifications/Certi
 import promptsData from '@/data/promptsData.json';
 
 const CertificationClient = () => {
+  
   const [files, setFiles] = useState<File[]>([]);
   const [currentPromptId, setCurrentPromptId] = useState<number>(1);
 
