@@ -7,11 +7,10 @@ import {
   setTokens,
 } from "@/lib/shared-auth";
 
-// Backends reading bearers live on CERT_API; tokens are minted by onboarding app.
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_CERT_API_URL ?? "http://localhost:5000";
+// Proxy through Next.js so the real backend URL stays server-side.
+const API_BASE_URL = "/api/cert-backend";
 const AUTH_APP_BASE_URL =
-  process.env.NEXT_PUBLIC_AUTH_APP_URL ?? "http://localhost:3000";
+  process.env.NEXT_PUBLIC_AUTH_APP_URL;
 const REFRESH_ENDPOINT = `${AUTH_APP_BASE_URL}/api/auth/refresh-token`;
 
 // Deduplicate concurrent refreshes so only one network call runs at a time.
