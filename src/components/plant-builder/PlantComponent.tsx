@@ -1,5 +1,6 @@
 // src/components/plant-builder/PlantComponent.tsx
 import { useState, useRef, useEffect } from "react";
+import type { RefObject } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Building2, Zap, ArrowRightLeft, X } from "lucide-react";
@@ -12,6 +13,8 @@ import type { Position, PlacedComponent } from "@/app/plant-operator/plant-build
 
 interface PlantComponentProps {
   component: PlacedComponent;
+  canvasRef: RefObject<HTMLDivElement>;
+  zoom: number;
   onClick: () => void;
   onMove: (id: string, position: Position) => void;
   onConnectStart: (id: string) => void;
@@ -76,6 +79,8 @@ const getBaseShapeClasses = (type: string) => {
 /* ─────────────────────── COMPONENT ─────────────────────── */
 const PlantComponent = ({
   component,
+  canvasRef,
+  zoom,
   onClick,
   onMove,
   onConnectStart,
@@ -85,6 +90,8 @@ const PlantComponent = ({
 }: PlantComponentProps) => {
   const [position, setPosition] = useState(component.position);
   const cardRef = useRef<HTMLDivElement>(null);
+  const didDragRef = useRef(false);
+  const ignoreClickRef = useRef(false);
 
   // keep local position in sync if parent updates it
   useEffect(() => {
@@ -110,11 +117,27 @@ const PlantComponent = ({
   /* ───── drag ───── */
   const handleMouseDown = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const startX = e.clientX - position.x;
-    const startY = e.clientY - position.y;
+    didDragRef.current = false;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const startX = (e.clientX - rect.left + canvas.scrollLeft) / zoom - position.x;
+    const startY = (e.clientY - rect.top + canvas.scrollTop) / zoom - position.y;
+    const originClientX = e.clientX;
+    const originClientY = e.clientY;
 
     const move = (ev: MouseEvent) => {
-      const newPos = { x: ev.clientX - startX, y: ev.clientY - startY };
+      if (!didDragRef.current) {
+        const dx = ev.clientX - originClientX;
+        const dy = ev.clientY - originClientY;
+        if (Math.hypot(dx, dy) > 4) {
+          didDragRef.current = true;
+        }
+      }
+      const newPos = {
+        x: (ev.clientX - rect.left + canvas.scrollLeft) / zoom - startX,
+        y: (ev.clientY - rect.top + canvas.scrollTop) / zoom - startY,
+      };
       setPosition(newPos);
       onMove(component.id, newPos);
     };
@@ -122,6 +145,7 @@ const PlantComponent = ({
     const up = () => {
       document.removeEventListener("mousemove", move);
       document.removeEventListener("mouseup", up);
+      ignoreClickRef.current = didDragRef.current;
     };
 
     document.addEventListener("mousemove", move);
@@ -153,7 +177,13 @@ const PlantComponent = ({
       className="absolute cursor-move select-none"
       style={{ left: position.x, top: position.y }}
       onMouseDown={handleMouseDown}
-      onClick={onClick}
+      onDoubleClick={() => {
+        if (ignoreClickRef.current) {
+          ignoreClickRef.current = false;
+          return;
+        }
+        onClick();
+      }}
     >
       <Card
         className={`${shapeClasses} border-2 ${colors.border} ${colors.bg} shadow-md hover:shadow-lg transition-shadow relative group flex flex-col items-center justify-center p-2 overflow-visible`}
