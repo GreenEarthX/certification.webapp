@@ -13,7 +13,7 @@ import type { Position, PlacedComponent } from "@/app/plant-operator/plant-build
 
 interface PlantComponentProps {
   component: PlacedComponent;
-  canvasRef: RefObject<HTMLDivElement>;
+  canvasRef: RefObject<HTMLDivElement | null>;
   zoom: number;
   onClick: () => void;
   onMove: (id: string, position: Position) => void;
