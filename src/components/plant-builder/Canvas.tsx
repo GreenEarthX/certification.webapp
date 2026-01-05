@@ -7,8 +7,15 @@ const logJson = (label: string, data?: any) => {
   if (data) console.log(JSON.stringify(data, null, 2));
 };
 
-import { useState, useRef, useCallback, useEffect } from "react";
-import { Plus, ZoomIn, ZoomOut } from "lucide-react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { Crosshair, Hand, Plus, ZoomIn, ZoomOut } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -59,9 +66,50 @@ type CanvasProps = {
 
 const CANVAS_BASE_WIDTH = 2400;
 const CANVAS_BASE_HEIGHT = 1800;
+const CANVAS_PADDING = 200;
 const ZOOM_MIN = 0.25;
 const ZOOM_MAX = 2;
 const ZOOM_STEP = 0.1;
+
+const getComponentBounds = (type: PlacedComponentType["type"]) => {
+  switch (type) {
+    case "equipment":
+      return { width: 192, height: 128, offsetX: 0, offsetY: 0 };
+    case "carrier":
+      return { width: 128, height: 128, offsetX: 0, offsetY: 0 };
+    case "gate":
+      return { width: 96, height: 160, offsetX: 32, offsetY: -32 };
+    default:
+      return { width: 192, height: 128, offsetX: 0, offsetY: 0 };
+  }
+};
+
+const toNumber = (value: unknown) => {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number.parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  return 0;
+};
+
+const SmoothIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M2 16 C6 4, 18 4, 22 16" strokeLinecap="round" />
+  </svg>
+);
+
+const OrthogonalIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M4 6 H12 V18 H20" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+const StraightIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M4 12 H20" strokeLinecap="round" />
+  </svg>
+);
 
 const Canvas = ({
   components,
@@ -78,18 +126,119 @@ const Canvas = ({
   const [hasUserZoomed, setHasUserZoomed] = useState(false);
   const [showAddComponent, setShowAddComponent] = useState(false);
   const [newComponent, setNewComponent] = useState({ name: "", type: "" as "equipment" | "carrier" | "gate", category: "" });
+  const [connectionStyle, setConnectionStyle] = useState<"smooth" | "orthogonal" | "straight">("smooth");
+  const [isPanMode, setIsPanMode] = useState(false);
+  const [isPanning, setIsPanning] = useState(false);
 
   const canvasRef = useRef<HTMLDivElement>(null);
+  const panRef = useRef<{
+    active: boolean;
+    startX: number;
+    startY: number;
+    scrollLeft: number;
+    scrollTop: number;
+  } | null>(null);
   const clampZoom = useCallback((value: number) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, value)), []);
+  const applyZoom = useCallback(
+    (nextZoom: number, anchor?: { x: number; y: number }) => {
+      const canvas = canvasRef.current;
+      const clamped = clampZoom(nextZoom);
+      if (!canvas) {
+        setZoom(clamped);
+        return;
+      }
+      const rect = canvas.getBoundingClientRect();
+      const offsetX = anchor?.x ?? rect.width / 2;
+      const offsetY = anchor?.y ?? rect.height / 2;
+      const prevZoom = zoom;
+      const worldX = (canvas.scrollLeft + offsetX) / prevZoom;
+      const worldY = (canvas.scrollTop + offsetY) / prevZoom;
+
+      setZoom(clamped);
+      requestAnimationFrame(() => {
+        canvas.scrollLeft = worldX * clamped - offsetX;
+        canvas.scrollTop = worldY * clamped - offsetY;
+      });
+    },
+    [clampZoom, zoom]
+  );
+
+  const zoomPadding = useMemo(
+    () => CANVAS_PADDING + Math.max(0, (zoom - 1) * 600),
+    [zoom]
+  );
+
+  const canvasBounds = useMemo(() => {
+    if (!components.length) {
+      return {
+        minX: 0,
+        minY: 0,
+        maxX: CANVAS_BASE_WIDTH,
+        maxY: CANVAS_BASE_HEIGHT,
+      };
+    }
+
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+
+    components.forEach((comp) => {
+      const x = toNumber(comp.position?.x);
+      const y = toNumber(comp.position?.y);
+      const bounds = getComponentBounds(comp.type);
+      const left = x + bounds.offsetX;
+      const top = y + bounds.offsetY;
+      const right = left + bounds.width;
+      const bottom = top + bounds.height;
+      minX = Math.min(minX, left);
+      minY = Math.min(minY, top);
+      maxX = Math.max(maxX, right);
+      maxY = Math.max(maxY, bottom);
+    });
+
+    return { minX, minY, maxX, maxY };
+  }, [components]);
+
+  const canvasOffset = useMemo(
+    () => ({
+      x: zoomPadding - Math.min(canvasBounds.minX, 0),
+      y: zoomPadding - Math.min(canvasBounds.minY, 0),
+    }),
+    [canvasBounds.minX, canvasBounds.minY, zoomPadding]
+  );
+
+  const canvasSize = useMemo(() => {
+    if (!components.length) {
+      return { width: CANVAS_BASE_WIDTH, height: CANVAS_BASE_HEIGHT };
+    }
+    return {
+      width: Math.max(
+        CANVAS_BASE_WIDTH,
+        canvasBounds.maxX + canvasOffset.x + zoomPadding
+      ),
+      height: Math.max(
+        CANVAS_BASE_HEIGHT,
+        canvasBounds.maxY + canvasOffset.y + zoomPadding
+      ),
+    };
+  }, [canvasBounds.maxX, canvasBounds.maxY, canvasOffset.x, canvasOffset.y, components.length, zoomPadding]);
 
   const getFitZoom = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return null;
     const { clientWidth, clientHeight } = canvas;
     if (!clientWidth || !clientHeight) return null;
-    const fit = Math.min(clientWidth / CANVAS_BASE_WIDTH, clientHeight / CANVAS_BASE_HEIGHT, 1);
+    const fit = Math.min(clientWidth / canvasSize.width, clientHeight / canvasSize.height, 1);
     return clampZoom(fit);
-  }, [clampZoom]);
+  }, [canvasSize.height, canvasSize.width, clampZoom]);
+
+  const handleFitToView = useCallback(() => {
+    const next = getFitZoom();
+    if (next === null) return;
+    setHasUserZoomed(true);
+    applyZoom(next);
+  }, [applyZoom, getFitZoom]);
 
   const persistConnectionsForComponent = useCallback(
     async (
@@ -141,8 +290,9 @@ const Canvas = ({
     if (hasUserZoomed) return;
     const next = getFitZoom();
     if (next === null) return;
-    setZoom((current) => (Math.abs(current - next) > 0.01 ? next : current));
-  }, [getFitZoom, hasUserZoomed]);
+    if (Math.abs(zoom - next) <= 0.01) return;
+    applyZoom(next);
+  }, [applyZoom, getFitZoom, hasUserZoomed, zoom]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -151,11 +301,12 @@ const Canvas = ({
       if (hasUserZoomed) return;
       const next = getFitZoom();
       if (next === null) return;
-      setZoom((current) => (Math.abs(current - next) > 0.01 ? next : current));
+      if (Math.abs(zoom - next) <= 0.01) return;
+      applyZoom(next);
     });
     observer.observe(canvas);
     return () => observer.disconnect();
-  }, [getFitZoom, hasUserZoomed]);
+  }, [applyZoom, getFitZoom, hasUserZoomed, zoom]);
 
   const getCanvasPoint = useCallback(
     (clientX: number, clientY: number) => {
@@ -163,11 +314,11 @@ const Canvas = ({
       if (!canvas) return null;
       const rect = canvas.getBoundingClientRect();
       return {
-        x: (clientX - rect.left + canvas.scrollLeft) / zoom,
-        y: (clientY - rect.top + canvas.scrollTop) / zoom,
+        x: (clientX - rect.left + canvas.scrollLeft) / zoom - canvasOffset.x,
+        y: (clientY - rect.top + canvas.scrollTop) / zoom - canvasOffset.y,
       };
     },
-    [zoom]
+    [canvasOffset.x, canvasOffset.y, zoom]
   );
 
   // Drag & drop from ComponentLibrary
@@ -268,6 +419,48 @@ const Canvas = ({
   );
 
   const handleDragOver = (e: React.DragEvent) => e.preventDefault();
+
+  const handlePanStart = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isPanMode || e.button !== 0) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const target = e.target as HTMLElement;
+    if (target.closest("[data-plant-component]")) return;
+    e.preventDefault();
+    panRef.current = {
+      active: true,
+      startX: e.clientX,
+      startY: e.clientY,
+      scrollLeft: canvas.scrollLeft,
+      scrollTop: canvas.scrollTop,
+    };
+    setIsPanning(true);
+  };
+
+  const handlePanMove = useCallback((e: MouseEvent) => {
+    if (!panRef.current?.active) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const dx = e.clientX - panRef.current.startX;
+    const dy = e.clientY - panRef.current.startY;
+    canvas.scrollLeft = panRef.current.scrollLeft - dx;
+    canvas.scrollTop = panRef.current.scrollTop - dy;
+  }, []);
+
+  const handlePanEnd = useCallback(() => {
+    if (!panRef.current?.active) return;
+    panRef.current.active = false;
+    setIsPanning(false);
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener("mousemove", handlePanMove);
+    window.addEventListener("mouseup", handlePanEnd);
+    return () => {
+      window.removeEventListener("mousemove", handlePanMove);
+      window.removeEventListener("mouseup", handlePanEnd);
+    };
+  }, [handlePanMove, handlePanEnd]);
 
   const handleConnectStart = (id: string) => setConnectingFrom(id);
 
@@ -493,7 +686,17 @@ const Canvas = ({
     }
   };
 
-  const getComponentPosition = (id: string) => components.find((c) => c.id === id)?.position;
+  const getPortPoint = (component: PlacedComponentType, side: "left" | "right") => {
+    const x = toNumber(component.position?.x);
+    const y = toNumber(component.position?.y);
+    const bounds = getComponentBounds(component.type);
+    const left = x + bounds.offsetX + canvasOffset.x;
+    const top = y + bounds.offsetY + canvasOffset.y;
+    return {
+      x: left + (side === "right" ? bounds.width : 0),
+      y: top + bounds.height / 2,
+    };
+  };
 
   const createCarrierBetween = useCallback(
     (fromId: string, toId: string, carrier: string, reason: string) => {
@@ -556,31 +759,99 @@ const Canvas = ({
 
 
   return (
-    <div className="flex-1 flex flex-col bg-canvas-bg relative">
+    <div className="h-full min-h-0 w-full flex flex-col bg-canvas-bg relative">
       {/* Zoom controls */}
-      <div className="absolute top-4 right-4 flex gap-2 z-10">
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => {
-            setHasUserZoomed(true);
-            setZoom((z) => clampZoom(z + ZOOM_STEP));
-          }}
-          className="bg-card"
-        >
-          <ZoomIn className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => {
-            setHasUserZoomed(true);
-            setZoom((z) => clampZoom(z - ZOOM_STEP));
-          }}
-          className="bg-card"
-        >
-          <ZoomOut className="h-4 w-4" />
-        </Button>
+      <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
+        <div className="flex items-center gap-2 rounded-md border border-slate-200 bg-white/95 p-1 shadow-sm">
+          <Button
+            variant={isPanMode ? "secondary" : "outline"}
+            size="icon"
+            onClick={() => setIsPanMode((prev) => !prev)}
+            title={isPanMode ? "Pan: on" : "Pan: off"}
+            className="bg-white text-slate-900 border-slate-200 hover:bg-slate-50"
+          >
+            <Hand className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleFitToView}
+            title="Fit to view"
+            className="bg-white text-slate-900 border-slate-200 hover:bg-slate-50"
+          >
+            <Crosshair className="h-4 w-4" />
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="bg-white text-slate-900 border-slate-200 hover:bg-slate-50"
+              >
+                {connectionStyle === "smooth" ? (
+                  <SmoothIcon className="mr-2 h-4 w-4" />
+                ) : connectionStyle === "orthogonal" ? (
+                  <OrthogonalIcon className="mr-2 h-4 w-4" />
+                ) : (
+                  <StraightIcon className="mr-2 h-4 w-4" />
+                )}
+                {connectionStyle === "smooth"
+                  ? "Smooth"
+                  : connectionStyle === "orthogonal"
+                    ? "90deg"
+                    : "Straight"}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              className="bg-white text-slate-900 border-slate-200"
+            >
+              <DropdownMenuRadioGroup
+                value={connectionStyle}
+                onValueChange={(value) =>
+                  setConnectionStyle(value as "smooth" | "orthogonal" | "straight")
+                }
+              >
+                <DropdownMenuRadioItem value="smooth" className="gap-2">
+                  <SmoothIcon className="h-4 w-4" />
+                  Smooth
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="orthogonal" className="gap-2">
+                  <OrthogonalIcon className="h-4 w-4" />
+                  90deg
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="straight" className="gap-2">
+                  <StraightIcon className="h-4 w-4" />
+                  Straight
+                </DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => {
+              setHasUserZoomed(true);
+              applyZoom(zoom + ZOOM_STEP);
+            }}
+            className="bg-white text-slate-900 border-slate-200 hover:bg-slate-50"
+          >
+            <ZoomIn className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => {
+              setHasUserZoomed(true);
+              applyZoom(zoom - ZOOM_STEP);
+            }}
+            className="bg-white text-slate-900 border-slate-200 hover:bg-slate-50"
+          >
+            <ZoomOut className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       {connectingFrom && (
@@ -593,7 +864,8 @@ const Canvas = ({
         ref={canvasRef}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
-        className="flex-1 relative overflow-auto"
+        onMouseDown={handlePanStart}
+        className={`flex-1 min-h-0 relative overflow-auto ${isPanMode ? (isPanning ? "cursor-grabbing" : "cursor-grab") : ""}`}
         style={{
           backgroundImage:
             "linear-gradient(hsl(var(--canvas-grid)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--canvas-grid)) 1px, transparent 1px)",
@@ -602,13 +874,13 @@ const Canvas = ({
       >
         <div
           className="relative"
-          style={{ width: CANVAS_BASE_WIDTH * zoom, height: CANVAS_BASE_HEIGHT * zoom }}
+          style={{ width: canvasSize.width * zoom, height: canvasSize.height * zoom }}
         >
           <div
             className="relative"
             style={{
-              width: CANVAS_BASE_WIDTH,
-              height: CANVAS_BASE_HEIGHT,
+              width: canvasSize.width,
+              height: canvasSize.height,
               transform: `scale(${zoom})`,
               transformOrigin: "0 0",
             }}
@@ -631,15 +903,19 @@ const Canvas = ({
             style={{ zIndex: 1 }}
           >
             {connections.map((conn) => {
-              const from = getComponentPosition(conn.from);
-              const to = getComponentPosition(conn.to);
-              if (!from || !to) return null;
+              const fromComp = components.find((c) => c.id === conn.from);
+              const toComp = components.find((c) => c.id === conn.to);
+              if (!fromComp || !toComp) return null;
+
+              const from = getPortPoint(fromComp, "right");
+              const to = getPortPoint(toComp, "left");
 
               return (
                 <ConnectionArrow
                   key={conn.id}
                   from={from}
                   to={to}
+                  style={connectionStyle}
                   onClick={() => setSelectedConnection(conn)}
                 />
               );
@@ -649,20 +925,34 @@ const Canvas = ({
           {/* Components */}
           <div className="relative pointer-events-none" style={{ zIndex: 10 }}>
             <div className="pointer-events-auto">
-              {components.map((comp) => (
-                <PlantComponent
-                  key={comp.id}
-                  component={comp}
-                  canvasRef={canvasRef}
-                  zoom={zoom}
-                  onClick={() => handleComponentClick(comp)}
-                  onMove={handleComponentMove}
-                  onConnectStart={handleConnectStart}
-                  onConnectEnd={handleConnectEnd}
-                  isConnecting={connectingFrom === comp.id}
-                  onDelete={handleDeleteComponent}
-                />
-              ))}
+              {components.map((comp) => {
+                const x = toNumber(comp.position?.x);
+                const y = toNumber(comp.position?.y);
+                const renderComp: PlacedComponentType = {
+                  ...comp,
+                  position: {
+                    x: x + canvasOffset.x,
+                    y: y + canvasOffset.y,
+                  },
+                };
+                return (
+                  <PlantComponent
+                    key={comp.id}
+                    component={renderComp}
+                    canvasOffset={canvasOffset}
+                    canvasRef={canvasRef}
+                    zoom={zoom}
+                    isPanMode={isPanMode}
+                    onClick={() => handleComponentClick(comp)}
+                    onMove={handleComponentMove}
+                    onConnectStart={handleConnectStart}
+                    onConnectEnd={handleConnectEnd}
+                    isConnectingActive={Boolean(connectingFrom)}
+                    isConnecting={connectingFrom === comp.id}
+                    onDelete={handleDeleteComponent}
+                  />
+                );
+              })}
             </div>
           </div>
 

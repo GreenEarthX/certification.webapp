@@ -195,6 +195,15 @@ export const PlantBuilder = () => {
         const { components: rawComponents = [], connections: rawConnections = [] } =
           records[0].digital_twin_json;
 
+        const normalizePosition = (pos: any) => {
+          const rawX = typeof pos?.x === "string" ? Number.parseFloat(pos.x) : Number(pos?.x ?? 0);
+          const rawY = typeof pos?.y === "string" ? Number.parseFloat(pos.y) : Number(pos?.y ?? 0);
+          return {
+            x: Number.isFinite(rawX) ? rawX : 0,
+            y: Number.isFinite(rawY) ? rawY : 0,
+          };
+        };
+
         const mappedComponents: PlacedComponent[] = rawComponents.map((c: any) => {
           const inferredInstanceId =
             c.instanceId ??
@@ -215,7 +224,7 @@ export const PlantBuilder = () => {
             name: c.name,
             type: c.type,
             category: c.category,
-            position: c.position,
+            position: normalizePosition(c.position),
             // keep whatever data comes, but ensure at least empty object
             data: c.data || { technicalData: {} },
             certifications: [],
@@ -554,7 +563,7 @@ export const PlantBuilder = () => {
         },
       };
       console.log("Data Model:", dataModel);
-      handleExport(dataModel, "plant-data.json");
+      //handleExport(dataModel, "plant-data.json");
     } catch (err) {
       setError("Failed to save data model. Please try again.");
       toast.error("Error saving data model.");
@@ -816,7 +825,7 @@ export const PlantBuilder = () => {
   );
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
+    <div className="h-screen flex flex-col bg-gray-50 min-h-0">
       <header className="border-b border-gray-200 bg-white text-gray-900 flex items-center justify-between px-4 py-3 shadow-sm">
         <div className="flex items-center gap-3">
           <Button
@@ -861,7 +870,7 @@ export const PlantBuilder = () => {
       </header>
 
       <div
-        className={`flex-1 p-4 relative ${
+        className={`flex-1 min-h-0 p-4 relative ${
           step === "info" || step === "product" ? "overflow-y-auto" : "overflow-hidden"
         }`}
       >
@@ -878,8 +887,8 @@ export const PlantBuilder = () => {
             <ProductForm onSubmit={handleProductSubmit} />
           </div>
         ) : step === "builder" ? (
-          <div className="h-full relative overflow-hidden">
-            <div className="absolute inset-0">
+          <div className="h-full min-h-0 relative overflow-hidden">
+            <div className="absolute inset-0 min-h-0">
               <Canvas
                 components={components}
                 setComponents={setComponents}
