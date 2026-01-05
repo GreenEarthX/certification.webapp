@@ -59,7 +59,7 @@ import {
   PlacedComponent,
   Connection,
 } from "./types";
-import { createPlant } from "@/services/plant-builder/plants";
+import { createPlant, fetchPlantById, Plant } from "@/services/plant-builder/plants";
 import { createDigitalTwin, fetchDigitalTwinJsonForPlant } from "@/services/plant-builder/digitalTwins";
 import { updateComponentInstance, deleteComponentInstance } from "@/services/plant-builder/componentInstances";
 import { buildConnectionPayloadForComponent, StoredConnectionPayload } from "@/lib/plant-builder/connection-utils";
@@ -167,6 +167,20 @@ export const PlantBuilder = () => {
 
     setStep("builder");
 
+    const mapPlantToInfo = (plant: Plant): PlantInfo => {
+      const metadata = plant.metadata || {};
+      return {
+        plantName: plant.name || "New Plant",
+        projectName: metadata.projectName || "",
+        projectType: metadata.projectType || "",
+        primaryFuelType: metadata.primaryFuelType || "",
+        country: plant.location || metadata.country || "",
+        status: plant.status || "",
+        commercialOperationalDate: metadata.commercialOperationalDate || "",
+        investment: metadata.investment,
+      };
+    };
+
     (async () => {
       try {
         toast.info("Loading digital twin from database…");
@@ -222,6 +236,13 @@ export const PlantBuilder = () => {
         setComponents(mappedComponents);
         setConnections(mappedConnections);
         setOriginalComponents(mappedComponents); // Track originals for delete detection
+
+        try {
+          const plant = await fetchPlantById(plantId);
+          setPlantInfo(mapPlantToInfo(plant));
+        } catch (err) {
+          console.warn("Failed to load plant details:", err);
+        }
         
         // Set global IDs for Canvas persistence
         try {
@@ -261,7 +282,6 @@ export const PlantBuilder = () => {
 
     const payload = {
       name: info.plantName,
-      user_id: 1, // hardcoded for now
       location: info.country,
       status: info.status,
       metadata: {
@@ -858,12 +878,22 @@ export const PlantBuilder = () => {
             <ProductForm onSubmit={handleProductSubmit} />
           </div>
         ) : step === "builder" ? (
-          <div className="h-full flex relative">
-            {/* Sidebar Container */}
+          <div className="h-full relative overflow-hidden">
+            <div className="absolute inset-0">
+              <Canvas
+                components={components}
+                setComponents={setComponents}
+                connections={connections}
+                setConnections={setConnections}
+                onConnect={onConnect}  // PASSED
+                onModelChange={handleCanvasModelChange}
+              />
+            </div>
+            {/* Sidebar Container (overlay; does not shift canvas) */}
             <div
-              className={`flex transition-all duration-300 ease-in-out ${
+              className={`absolute top-0 left-0 h-full flex transition-all duration-300 ease-in-out ${
                 showComponentLibrary ? "w-full sm:w-96" : "w-10"
-              } bg-white border-r border-gray-200 shadow-sm overflow-hidden`}
+              } bg-white border-r border-gray-200 shadow-sm overflow-hidden z-20`}
             >
               {showComponentLibrary && (
                 <div className="flex-1 overflow-y-auto">
@@ -881,16 +911,6 @@ export const PlantBuilder = () => {
                   <ChevronRight className="h-5 w-5 text-[#4F8FF7]" />
                 )}
               </div>
-            </div>
-            <div className="flex-1 overflow-y-auto">
-              <Canvas
-                components={components}
-                setComponents={setComponents}
-                connections={connections}
-                setConnections={setConnections}
-                onConnect={onConnect}  // PASSED
-                onModelChange={handleCanvasModelChange}
-              />
             </div>
           </div>
         ) : step === "compliance" ? (
@@ -966,23 +986,15 @@ export const PlantBuilder = () => {
             <div>
               <h3 className="font-semibold text-base sm:text-lg text-gray-800">Process Flow Diagram</h3>
               <div className="border border-gray-200 rounded-lg p-4 bg-gray-50 relative">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowAddComponent(true)}
-                  className="absolute top-2 right-2 bg-white border-[#4F8FF7]/30 hover:bg-[#4F8FF7]/10 text-sm"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Component
-                </Button>
-                <div className="h-[300px] overflow-y-auto">
-                 <Canvas
-                  components={components}
-                  setComponents={setComponents}
-                  connections={connections}
-                  setConnections={setConnections}
-                  onConnect={onConnect}  // PASSED
-                  onModelChange={handleCanvasModelChange}
-                />
+                <div className="h-[300px] flex overflow-hidden">
+                  <Canvas
+                    components={components}
+                    setComponents={setComponents}
+                    connections={connections}
+                    setConnections={setConnections}
+                    onConnect={onConnect}  // PASSED
+                    onModelChange={handleCanvasModelChange}
+                  />
                 </div>
               </div>
             </div>
@@ -1037,23 +1049,7 @@ export const PlantBuilder = () => {
               </div>
             </div>
             <div className="flex flex-col sm:flex-row justify-between gap-4">
-              <Button
-                className="bg-[#4F8FF7] hover:bg-[#4F8FF7]/90 text-white text-sm"
-                onClick={() => {
-                  const params = new URLSearchParams({
-                    data: JSON.stringify({
-                      userDetails: userDetails || {},
-                      plantInfo: plantInfo || {},
-                      productInfo,
-                      components,
-                      connections,
-                    }),
-                  });
-                  router.push(`/details?${params.toString()}`);
-                }}
-              >
-                View Detailed Data
-              </Button>
+             
               <Button
                 className="bg-green-600 hover:bg-green-700 text-white text-sm"
                 onClick={handleSaveDataModel}
@@ -1068,9 +1064,6 @@ export const PlantBuilder = () => {
 
       <Dialog open={showAddComponent} onOpenChange={setShowAddComponent}>
         <DialogContent className="max-w-md bg-white rounded-lg">
-          <DialogHeader>
-            <DialogTitle className="text-lg">Add New Component</DialogTitle>
-          </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="componentType" className="text-sm">Component Type *</Label>

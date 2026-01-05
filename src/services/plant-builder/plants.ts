@@ -17,9 +17,12 @@ export async function fetchPlantsForCurrentUser(): Promise<Plant[]> {
   return apiFetch<Plant[]>(PLANTS_PATH);
 }
 
+export async function fetchPlantById(plantId: number): Promise<Plant> {
+  return apiFetch<Plant>(`${PLANTS_PATH}/${plantId}`);
+}
+
 export async function createPlant(payload: {
   name: string;
-  user_id: number;
   location?: string;
   status?: string;
   metadata?: Record<string, any>;

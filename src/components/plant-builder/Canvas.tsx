@@ -57,6 +57,12 @@ type CanvasProps = {
   }) => void;
 };
 
+const CANVAS_BASE_WIDTH = 2400;
+const CANVAS_BASE_HEIGHT = 1800;
+const ZOOM_MIN = 0.25;
+const ZOOM_MAX = 2;
+const ZOOM_STEP = 0.1;
+
 const Canvas = ({
   components,
   setComponents,
@@ -69,10 +75,21 @@ const Canvas = ({
   const [selectedConnection, setSelectedConnection] = useState<ConnectionType | null>(null);
   const [connectingFrom, setConnectingFrom] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
+  const [hasUserZoomed, setHasUserZoomed] = useState(false);
   const [showAddComponent, setShowAddComponent] = useState(false);
   const [newComponent, setNewComponent] = useState({ name: "", type: "" as "equipment" | "carrier" | "gate", category: "" });
 
   const canvasRef = useRef<HTMLDivElement>(null);
+  const clampZoom = useCallback((value: number) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, value)), []);
+
+  const getFitZoom = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+    const { clientWidth, clientHeight } = canvas;
+    if (!clientWidth || !clientHeight) return null;
+    const fit = Math.min(clientWidth / CANVAS_BASE_WIDTH, clientHeight / CANVAS_BASE_HEIGHT, 1);
+    return clampZoom(fit);
+  }, [clampZoom]);
 
   const persistConnectionsForComponent = useCallback(
     async (
@@ -109,6 +126,50 @@ const Canvas = ({
     onModelChange({ components, connections });
   }, [components, connections, onModelChange]);
 
+  useEffect(() => {
+    const next = selectedComponent ? components.find((c) => c.id === selectedComponent.id) : null;
+    if (!next) {
+      if (selectedComponent) setSelectedComponent(null);
+      return;
+    }
+    if (next !== selectedComponent) {
+      setSelectedComponent(next);
+    }
+  }, [components, selectedComponent]);
+
+  useEffect(() => {
+    if (hasUserZoomed) return;
+    const next = getFitZoom();
+    if (next === null) return;
+    setZoom((current) => (Math.abs(current - next) > 0.01 ? next : current));
+  }, [getFitZoom, hasUserZoomed]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const observer = new ResizeObserver(() => {
+      if (hasUserZoomed) return;
+      const next = getFitZoom();
+      if (next === null) return;
+      setZoom((current) => (Math.abs(current - next) > 0.01 ? next : current));
+    });
+    observer.observe(canvas);
+    return () => observer.disconnect();
+  }, [getFitZoom, hasUserZoomed]);
+
+  const getCanvasPoint = useCallback(
+    (clientX: number, clientY: number) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return null;
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: (clientX - rect.left + canvas.scrollLeft) / zoom,
+        y: (clientY - rect.top + canvas.scrollTop) / zoom,
+      };
+    },
+    [zoom]
+  );
+
   // Drag & drop from ComponentLibrary
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
@@ -117,15 +178,15 @@ const Canvas = ({
       if (!raw) return;
 
       const componentData = JSON.parse(raw);
-      const rect = canvasRef.current?.getBoundingClientRect();
-      if (!rect) return;
+      const point = getCanvasPoint(e.clientX, e.clientY);
+      if (!point) return;
 
       const newComp: PlacedComponentType = {
         ...componentData,
         id: `${componentData.id}-${Date.now()}`,
         position: {
-          x: (e.clientX - rect.left) / zoom,
-          y: (e.clientY - rect.top) / zoom,
+          x: point.x,
+          y: point.y,
         },
         data: componentData.data || { technicalData: {} },
         certifications: componentData.certifications || [],
@@ -203,7 +264,7 @@ const Canvas = ({
         }
       })();
     },
-    [zoom, setComponents]
+    [getCanvasPoint, setComponents]
   );
 
   const handleDragOver = (e: React.DragEvent) => e.preventDefault();
@@ -501,7 +562,10 @@ const Canvas = ({
         <Button
           variant="outline"
           size="icon"
-          onClick={() => setZoom((z) => Math.min(z + 0.1, 2))}
+          onClick={() => {
+            setHasUserZoomed(true);
+            setZoom((z) => clampZoom(z + ZOOM_STEP));
+          }}
           className="bg-card"
         >
           <ZoomIn className="h-4 w-4" />
@@ -509,7 +573,10 @@ const Canvas = ({
         <Button
           variant="outline"
           size="icon"
-          onClick={() => setZoom((z) => Math.max(z - 0.1, 0.5))}
+          onClick={() => {
+            setHasUserZoomed(true);
+            setZoom((z) => clampZoom(z - ZOOM_STEP));
+          }}
           className="bg-card"
         >
           <ZoomOut className="h-4 w-4" />
@@ -534,9 +601,18 @@ const Canvas = ({
         }}
       >
         <div
-          className="relative w-full h-full min-w-[2400px] min-h-[1800px]"
-          style={{ transform: `scale(${zoom})`, transformOrigin: "0 0" }}
+          className="relative"
+          style={{ width: CANVAS_BASE_WIDTH * zoom, height: CANVAS_BASE_HEIGHT * zoom }}
         >
+          <div
+            className="relative"
+            style={{
+              width: CANVAS_BASE_WIDTH,
+              height: CANVAS_BASE_HEIGHT,
+              transform: `scale(${zoom})`,
+              transformOrigin: "0 0",
+            }}
+          >
           {/* Column shading */}
           <div className="absolute inset-0 pointer-events-none">
             <div className="absolute top-0 bottom-0 left-0 w-1/3 bg-layer-equipment/5" />
@@ -577,6 +653,8 @@ const Canvas = ({
                 <PlantComponent
                   key={comp.id}
                   component={comp}
+                  canvasRef={canvasRef}
+                  zoom={zoom}
                   onClick={() => handleComponentClick(comp)}
                   onMove={handleComponentMove}
                   onConnectStart={handleConnectStart}
@@ -602,6 +680,7 @@ const Canvas = ({
               </div>
             </div>
           )}
+          </div>
         </div>
       </div>
 
