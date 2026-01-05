@@ -184,11 +184,19 @@ const ComponentLibrary = () => {
         </CollapsibleTrigger>
 
         <CollapsibleContent className="space-y-3 pl-5 border-l border-muted/50 ml-2">
-          {Object.entries(grouped).map(([category, items]) => (
+          {Object.entries(grouped).map(([category, items]) => {
+            const normalized = category.trim().toLowerCase();
+            const hideCategory =
+              (type === "equipment" && (normalized === "equipment" || normalized === "equipments")) ||
+              (type === "carrier" && (normalized === "carrier" || normalized === "carriers")) ||
+              (type === "gate" && (normalized === "gate" || normalized === "gates"));
+            return (
             <div key={category} className="space-y-2">
-              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
-                {category}
-              </div>
+              {!hideCategory && (
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
+                  {category}
+                </div>
+              )}
               <div className="space-y-1.5">
                 {items.map((component) => (
                   <Card
@@ -207,7 +215,7 @@ const ComponentLibrary = () => {
                 ))}
               </div>
             </div>
-          ))}
+          )})}
         </CollapsibleContent>
       </Collapsible>
     );

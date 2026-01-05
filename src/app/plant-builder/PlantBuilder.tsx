@@ -509,12 +509,21 @@ export const PlantBuilder = () => {
             <ProductForm onSubmit={handleProductSubmit} />
           </div>
         ) : step === "builder" ? (
-          <div className="h-full flex relative">
-            {/* Sidebar Container */}
+          <div className="h-full relative overflow-hidden">
+            <div className="absolute inset-0">
+              <Canvas
+                components={components}
+                setComponents={setComponents}
+                connections={connections}
+                setConnections={setConnections}
+                onConnect={onConnect}  // PASSED
+              />
+            </div>
+            {/* Sidebar Container (overlay; does not shift canvas) */}
             <div
-              className={`flex transition-all duration-300 ease-in-out ${
+              className={`absolute top-0 left-0 h-full flex transition-all duration-300 ease-in-out ${
                 showComponentLibrary ? "w-full sm:w-96" : "w-10"
-              } bg-white border-r border-gray-200 shadow-sm overflow-hidden`}
+              } bg-white border-r border-gray-200 shadow-sm overflow-hidden z-20`}
             >
               {showComponentLibrary && (
                 <div className="flex-1 overflow-y-auto">
@@ -532,15 +541,6 @@ export const PlantBuilder = () => {
                   <ChevronRight className="h-5 w-5 text-[#4F8FF7]" />
                 )}
               </div>
-            </div>
-            <div className="flex-1 overflow-y-auto">
-              <Canvas
-                components={components}
-                setComponents={setComponents}
-                connections={connections}
-                setConnections={setConnections}
-                onConnect={onConnect}  // PASSED
-              />
             </div>
           </div>
         ) : step === "compliance" ? (
@@ -624,14 +624,14 @@ export const PlantBuilder = () => {
                   <Plus className="h-4 w-4 mr-2" />
                   Add Component
                 </Button>
-                <div className="h-[300px] overflow-y-auto">
-                 <Canvas
-                  components={components}
-                  setComponents={setComponents}
-                  connections={connections}
-                  setConnections={setConnections}
-                  onConnect={onConnect}  // PASSED
-                />
+                <div className="h-[300px] flex overflow-hidden">
+                  <Canvas
+                    components={components}
+                    setComponents={setComponents}
+                    connections={connections}
+                    setConnections={setConnections}
+                    onConnect={onConnect}  // PASSED
+                  />
                 </div>
               </div>
             </div>
