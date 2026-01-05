@@ -62,6 +62,7 @@ type CanvasProps = {
     components: PlacedComponentType[];
     connections: ConnectionType[];
   }) => void;
+  exportId?: string;
 };
 
 const CANVAS_BASE_WIDTH = 2400;
@@ -93,6 +94,49 @@ const toNumber = (value: unknown) => {
   return 0;
 };
 
+const mapDroppedComponentData = (componentData: any) => {
+  if (componentData?.data && Object.keys(componentData.data).length) {
+    return componentData.data;
+  }
+
+  const next: Record<string, any> = {};
+
+  if (componentData?.technicalData) {
+    next.technicalData = componentData.technicalData;
+  } else if (componentData?.technical_data) {
+    next.technicalData = componentData.technical_data;
+  }
+
+  if (componentData?.metadata?.manufacturer) {
+    next.manufacturer = componentData.metadata.manufacturer;
+  } else if (componentData?.manufacturer) {
+    next.manufacturer = componentData.manufacturer;
+  }
+
+  if (componentData?.carrierData && typeof componentData.carrierData === "object") {
+    Object.assign(next, componentData.carrierData);
+  }
+
+  if (componentData?.gateData && typeof componentData.gateData === "object") {
+    if (componentData.gateData.inputOrOutput && !next.gateType) {
+      next.gateType = componentData.gateData.inputOrOutput;
+    }
+    if (componentData.gateData.sourceOrigin && !next.sourceOrigin) {
+      next.sourceOrigin = componentData.gateData.sourceOrigin;
+    }
+    if (componentData.gateData.endUse && !next.endUse) {
+      next.endUse = componentData.gateData.endUse;
+    }
+    Object.assign(next, componentData.gateData);
+  }
+
+  if (componentData?.type === "equipment" && !next.technicalData) {
+    next.technicalData = {};
+  }
+
+  return next;
+};
+
 const SmoothIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M2 16 C6 4, 18 4, 22 16" strokeLinecap="round" />
@@ -118,6 +162,7 @@ const Canvas = ({
   setConnections,
   onConnect,
   onModelChange,
+  exportId,
 }: CanvasProps) => {
   const [selectedComponent, setSelectedComponent] = useState<PlacedComponentType | null>(null);
   const [selectedConnection, setSelectedConnection] = useState<ConnectionType | null>(null);
@@ -339,7 +384,7 @@ const Canvas = ({
           x: point.x,
           y: point.y,
         },
-        data: componentData.data || { technicalData: {} },
+        data: mapDroppedComponentData(componentData),
         certifications: componentData.certifications || [],
       };
 
@@ -878,6 +923,7 @@ const Canvas = ({
         >
           <div
             className="relative"
+            data-plant-builder-canvas={exportId}
             style={{
               width: canvasSize.width,
               height: canvasSize.height,

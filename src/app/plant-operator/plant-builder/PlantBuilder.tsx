@@ -8,7 +8,7 @@ const logJson = (label: string, data?: any) => {
 
 import "./plant-builder-vite.css";  //
 import "./App.css";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +21,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
+import html2canvas from "html2canvas";
 import PlantInfoForm from "@/components/plant-builder/PlantInfoForm";
 import ProductForm from "@/components/plant-builder/ProductForm";
 import LoadingPage from "@/components/plant-builder/LoadingPage";
@@ -107,6 +108,127 @@ export const PlantBuilder = () => {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [error, setError] = useState<string | null>(null);
   const [plantModelJson, setPlantModelJson] = useState<string>("");
+
+  const normalizeComponentData = useCallback((component: PlacedComponent) => {
+    const data = component.data ?? {};
+    const normalized: Record<string, any> = { ...data };
+
+    const rawTechnical = (data as any).technicalData ?? (data as any).technical_data;
+    const input = rawTechnical?.input ?? (data as any).input ?? (data as any).inputs;
+    const output = rawTechnical?.output ?? (data as any).output ?? (data as any).outputs;
+    const efficiency = rawTechnical?.efficiency ?? (data as any).efficiency;
+    let capacity = rawTechnical?.capacity ?? (data as any).capacity;
+    if (capacity == null) {
+      const capacityValue = (data as any).capacity_value ?? (data as any).capacityValue;
+      const capacityUnit = (data as any).capacity_unit ?? (data as any).capacityUnit;
+      if (capacityValue != null || capacityUnit != null) {
+        capacity = { value: capacityValue ?? "", unit: capacityUnit ?? "" };
+      }
+    }
+    if (capacity != null && typeof capacity !== "object") {
+      capacity = { value: capacity, unit: "" };
+    }
+    if (rawTechnical || input || output || efficiency != null || capacity != null) {
+      normalized.technicalData = {
+        ...(rawTechnical ?? {}),
+        ...(input != null ? { input } : {}),
+        ...(output != null ? { output } : {}),
+        ...(efficiency != null ? { efficiency } : {}),
+        ...(capacity != null ? { capacity } : {}),
+      };
+    }
+
+    if (!normalized.manufacturer && (data as any).metadata?.manufacturer) {
+      normalized.manufacturer = (data as any).metadata.manufacturer;
+    }
+    if (!normalized.manufacturer && (data as any).manufacturer) {
+      normalized.manufacturer = (data as any).manufacturer;
+    }
+
+    if ((data as any).carrierData && typeof (data as any).carrierData === "object") {
+      const carrierData = (data as any).carrierData;
+      if (normalized.fuelType == null && carrierData.fuelType != null) {
+        normalized.fuelType = carrierData.fuelType;
+      }
+      if (normalized.temperature == null && carrierData.temperature != null) {
+        normalized.temperature = carrierData.temperature;
+      }
+      if (normalized.pressure == null && carrierData.pressure != null) {
+        normalized.pressure = carrierData.pressure;
+      }
+    }
+    if (normalized.fuelType == null && (data as any).fuel_type != null) {
+      normalized.fuelType = (data as any).fuel_type;
+    }
+    if (normalized.temperature == null && (data as any).temperature_c != null) {
+      normalized.temperature = (data as any).temperature_c;
+    }
+    if (normalized.pressure == null && (data as any).pressure_bar != null) {
+      normalized.pressure = (data as any).pressure_bar;
+    }
+
+    if ((data as any).gateData && typeof (data as any).gateData === "object") {
+      const gateData = (data as any).gateData;
+      if (normalized.gateType == null && gateData.inputOrOutput != null) {
+        normalized.gateType = gateData.inputOrOutput;
+      }
+      if (normalized.sourceOrigin == null && gateData.sourceOrigin != null) {
+        normalized.sourceOrigin = gateData.sourceOrigin;
+      }
+      if (normalized.endUse == null && gateData.endUse != null) {
+        normalized.endUse = gateData.endUse;
+      }
+    }
+
+    if (normalized.gateType == null && (data as any).inputOrOutput != null) {
+      normalized.gateType = (data as any).inputOrOutput;
+    }
+    if (normalized.gateType == null && (data as any).input_or_output != null) {
+      normalized.gateType = (data as any).input_or_output;
+    }
+    if (normalized.sourceOrigin == null && (data as any).source_origin != null) {
+      normalized.sourceOrigin = (data as any).source_origin;
+    }
+    if (normalized.endUse == null && (data as any).end_use != null) {
+      normalized.endUse = (data as any).end_use;
+    }
+
+    return normalized;
+  }, []);
+
+  const normalizedComponents = useMemo(
+    () =>
+      components.map((component) => ({
+        ...component,
+        data: normalizeComponentData(component),
+      })),
+    [components, normalizeComponentData]
+  );
+
+  const uniqueConnections = useMemo(() => {
+    const deduped = new Map<string, Connection>();
+    connections.forEach((conn) => {
+      const key = `${conn.from}|${conn.to}|${conn.type ?? ""}`;
+      const existing = deduped.get(key);
+      if (!existing) {
+        deduped.set(key, conn);
+        return;
+      }
+      const existingHasData = Object.keys(existing.data || {}).length > 0;
+      const nextHasData = Object.keys(conn.data || {}).length > 0;
+      if (!existingHasData && nextHasData) {
+        deduped.set(key, conn);
+      }
+    });
+    return Array.from(deduped.values());
+  }, [connections]);
+
+  const hasDuplicateConnections = uniqueConnections.length !== connections.length;
+
+  useEffect(() => {
+    if (!hasDuplicateConnections) return;
+    setConnections(uniqueConnections);
+  }, [hasDuplicateConnections, setConnections, uniqueConnections]);
 
   const persistConnectionsForComponent = useCallback(
     async (
@@ -218,6 +340,15 @@ export const PlantBuilder = () => {
             c.component_definition_id ??
             c.definitionId ??
             c.definition_id;
+          const rawData =
+            c.data ??
+            c.field_values ??
+            c.fieldValues ??
+            c.field_values_json ??
+            c.fieldValuesJson ??
+            {};
+          const data =
+            rawData && Object.keys(rawData).length ? rawData : { technicalData: {} };
 
           return {
             id: String(c.id ?? inferredInstanceId ?? `comp-${Date.now()}`),
@@ -226,7 +357,7 @@ export const PlantBuilder = () => {
             category: c.category,
             position: normalizePosition(c.position),
             // keep whatever data comes, but ensure at least empty object
-            data: c.data || { technicalData: {} },
+            data,
             certifications: [],
             componentDefinitionId: parseOptionalNumber(inferredDefinitionId),
             instanceId: parseOptionalNumber(inferredInstanceId),
@@ -528,40 +659,239 @@ export const PlantBuilder = () => {
     }
   };
 
+  const buildDataModel = useCallback(() => {
+    return {
+      userDetails: userDetails || {},
+      plantInfo: plantInfo || {},
+      products: productInfo,
+      components: normalizedComponents.map((c) => ({
+        id: c.id,
+        type: c.type,
+        name: c.name,
+        category: c.category,
+        position: c.position,
+        data: c.data || {},
+        certifications: c.certifications || [],
+      })),
+      connections: uniqueConnections.map((c) => ({
+        id: c.id,
+        from: c.from,
+        to: c.to,
+        type: c.type,
+        reason: c.reason || "N/A",
+        data: c.data || {},
+      })),
+      regulatoryMetadata: {
+        projectType: plantInfo?.projectType || "N/A",
+        primaryFuelType: plantInfo?.primaryFuelType || "N/A",
+        country: plantInfo?.country || "N/A",
+        status: plantInfo?.status || "N/A",
+        commercialOperationalDate: plantInfo?.commercialOperationalDate || "N/A",
+      },
+    };
+  }, [normalizedComponents, plantInfo, productInfo, uniqueConnections, userDetails]);
+
+  const escapeHtml = (value: unknown) => {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  };
+
+  const buildExcelTable = (title: string, headers: string[], rows: Array<Array<string | number>>) => {
+    const headerRow = headers.map((header) => `<th>${escapeHtml(header)}</th>`).join("");
+    const bodyRows = rows
+      .map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`)
+      .join("");
+    return `
+      <h3>${escapeHtml(title)}</h3>
+      <table border="1">
+        <thead><tr>${headerRow}</tr></thead>
+        <tbody>${bodyRows || "<tr><td colspan=\"" + headers.length + "\">N/A</td></tr>"}</tbody>
+      </table>
+      <br />
+    `;
+  };
+
+  const formatStreamList = (items?: Array<{ name: string; quantity: number; unit: string }>) => {
+    if (!items?.length) return "N/A";
+    return items.map((item) => `${item.name} (${item.quantity} ${item.unit})`).join(", ");
+  };
+
+  const formatCapacity = (capacity?: { value: number; unit: string } | number | string | null) => {
+    if (capacity == null) return "N/A";
+    if (typeof capacity === "object") {
+      return `${(capacity as { value: number; unit: string }).value} ${(capacity as { value: number; unit: string }).unit}`.trim();
+    }
+    return String(capacity);
+  };
+
+  const handleExportCanvasImage = async () => {
+    try {
+      const canvasNode = document.querySelector(
+        '[data-plant-builder-canvas="main"]'
+      ) as HTMLElement | null;
+      if (!canvasNode) {
+        toast.error("Canvas not found.");
+        return;
+      }
+      const canvas = await html2canvas(canvasNode, {
+        backgroundColor: "#f7f9fc",
+        scale: 2,
+      });
+      const url = canvas.toDataURL("image/png");
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "plant-canvas.png";
+      link.click();
+      toast.success("Canvas image exported successfully!");
+    } catch (err) {
+      console.error("Failed to export canvas image:", err);
+      toast.error("Failed to export canvas image.");
+    }
+  };
+
+  const handleExportExcel = () => {
+    try {
+      const equipmentRows = normalizedComponents
+        .filter((c) => c.type === "equipment")
+        .map((c) => [
+          c.name,
+          c.category,
+          formatStreamList(c.data?.technicalData?.input),
+          formatStreamList(c.data?.technicalData?.output),
+          c.data?.technicalData?.efficiency != null ? `${c.data.technicalData.efficiency}%` : "N/A",
+          formatCapacity(c.data?.technicalData?.capacity),
+          c.data?.manufacturer || "N/A",
+          c.certifications?.length ? c.certifications.join(", ") : "None",
+        ]);
+
+      const carrierRows = normalizedComponents
+        .filter((c) => c.type === "carrier")
+        .map((c) => [
+          c.name,
+          c.category,
+          c.data?.fuelType || "N/A",
+          c.data?.temperature != null ? `${c.data.temperature}C` : "N/A",
+          c.data?.pressure != null ? `${c.data.pressure} bar` : "N/A",
+          c.certifications?.length ? c.certifications.join(", ") : "None",
+        ]);
+
+      const gateRows = normalizedComponents
+        .filter((c) => c.type === "gate")
+        .map((c) => [
+          c.name,
+          c.category,
+          c.data?.gateType || "N/A",
+          c.data?.sourceOrigin || "N/A",
+          c.data?.endUse || "N/A",
+          c.certifications?.length ? c.certifications.join(", ") : "None",
+        ]);
+
+      const connectionRows = uniqueConnections.map((c) => [
+        getComponentName(c.from),
+        getComponentName(c.to),
+        c.type || "Untitled",
+        c.reason || "N/A",
+        Object.keys(c.data || {}).length > 0
+          ? Object.entries(c.data || {}).map(([key, value]) => `${key}: ${value}`).join(", ")
+          : "N/A",
+      ]);
+
+      const plantRows = plantInfo
+        ? Object.entries(plantInfo).map(([key, value]) => [
+            key,
+            typeof value === "string"
+              ? value || "N/A"
+              : Array.isArray(value)
+              ? value.map((item: any) => JSON.stringify(item)).join(", ")
+              : typeof value === "object" && value !== null
+              ? JSON.stringify(value)
+              : String(value ?? "N/A"),
+          ])
+        : [["N/A", "N/A"]];
+
+      const productRows = productInfo.length
+        ? productInfo.map((p) => [
+            p.productName,
+            p.fuelType,
+            p.productionCapacity,
+            p.unit,
+            p.feedstock || "N/A",
+            p.offtakeLocations?.[0]?.country || "N/A",
+            p.downstreamOperations || p.downstreamOperationsArray?.join(", ") || "N/A",
+            p.verified ? "Yes" : "No",
+          ])
+        : [["N/A", "N/A", "N/A", "N/A", "N/A", "N/A", "N/A", "No"]];
+
+      const html = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8" />
+          </head>
+          <body>
+            ${buildExcelTable(
+              "Equipment Components",
+              ["Name", "Category", "Inputs", "Outputs", "Efficiency", "Capacity", "Manufacturer", "Certifications"],
+              equipmentRows
+            )}
+            ${buildExcelTable(
+              "Carrier Components",
+              ["Name", "Category", "Fuel Type", "Temperature", "Pressure", "Certifications"],
+              carrierRows
+            )}
+            ${buildExcelTable(
+              "Gate Components",
+              ["Name", "Category", "Input/Output", "Source Origin", "End Use", "Certifications"],
+              gateRows
+            )}
+            ${buildExcelTable(
+              "Connections",
+              ["From", "To", "Type", "Reason", "Details"],
+              connectionRows
+            )}
+            ${buildExcelTable("Plant Information", ["Field", "Value"], plantRows)}
+            ${buildExcelTable(
+              "Products",
+              [
+                "Product Name",
+                "Fuel Type",
+                "Production Capacity",
+                "Unit",
+                "Feedstock",
+                "Offtake Location",
+                "Downstream Operations",
+                "Verified",
+              ],
+              productRows
+            )}
+          </body>
+        </html>
+      `;
+
+      const blob = new Blob([html], { type: "application/vnd.ms-excel" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "plant-data.xls";
+      link.click();
+      URL.revokeObjectURL(url);
+      toast.success("Excel export ready!");
+    } catch (err) {
+      console.error("Failed to export Excel:", err);
+      toast.error("Failed to export Excel data.");
+    }
+  };
+
   // Prepare and export complete plant data model
   const handleSaveDataModel = () => {
     try {
       setShowDataModel(true);
-      // Aggregate all plant data for export
-      const dataModel = {
-        userDetails: userDetails || {},
-        plantInfo: plantInfo || {},
-        products: productInfo,
-        components: components.map((c) => ({
-          id: c.id,
-          type: c.type,
-          name: c.name,
-          category: c.category,
-          position: c.position,
-          data: c.data || {},
-          certifications: c.certifications || [],
-        })),
-        connections: connections.map((c) => ({
-          id: c.id,
-          from: c.from,
-          to: c.to,
-          type: c.type,
-          reason: c.reason || "N/A",
-          data: c.data || {},
-        })),
-        regulatoryMetadata: {
-          projectType: plantInfo?.projectType || "N/A",
-          primaryFuelType: plantInfo?.primaryFuelType || "N/A",
-          country: plantInfo?.country || "N/A",
-          status: plantInfo?.status || "N/A",
-          commercialOperationalDate: plantInfo?.commercialOperationalDate || "N/A",
-        },
-      };
+      const dataModel = buildDataModel();
+      setPlantModelJson(JSON.stringify(dataModel, null, 2));
       console.log("Data Model:", dataModel);
       //handleExport(dataModel, "plant-data.json");
     } catch (err) {
@@ -571,12 +901,20 @@ export const PlantBuilder = () => {
   };
 
   const getComponentName = (id: string) => {
-    return components.find((c) => c.id === id)?.name || "Unknown";
+    return normalizedComponents.find((c) => c.id === id)?.name || "Unknown";
   };
 
   const onConnect = useCallback(
     (params: any) => {
       try {
+        const exists = uniqueConnections.some(
+          (conn) => conn.from === params.source && conn.to === params.target
+        );
+        if (exists) {
+          toast.info("Connection already exists.");
+          return;
+        }
+
         const newConn: Connection = {
           id: `conn-${Date.now()}`,
           from: params.source,
@@ -594,7 +932,7 @@ export const PlantBuilder = () => {
         toast.error("Error adding connection.");
       }
     },
-    [persistConnectionsForComponent, setConnections]
+    [persistConnectionsForComponent, setConnections, uniqueConnections]
   );
 
   // Update plant model JSON for export
@@ -627,7 +965,7 @@ export const PlantBuilder = () => {
   };
 
   const renderComponentTable = (type: "equipment" | "carrier" | "gate", title: string) => {
-    const filteredComponents = components.filter((c) => c.type === type);
+    const filteredComponents = normalizedComponents.filter((c) => c.type === type);
     return (
       <div className="w-full">
         <h3 className="font-semibold text-base sm:text-lg text-gray-800 mb-4">{title}</h3>
@@ -683,14 +1021,14 @@ export const PlantBuilder = () => {
                         <TableCell className="text-gray-900 text-sm">
                           {c.data?.technicalData?.input?.length
                             ? c.data.technicalData.input
-                                .map((inp) => `${inp.name} (${inp.quantity} ${inp.unit})`)
+                                .map((inp:any) => `${inp.name} (${inp.quantity} ${inp.unit})`)
                                 .join(", ")
                             : "N/A"}
                         </TableCell>
                         <TableCell className="text-gray-900 text-sm">
                           {c.data?.technicalData?.output?.length
                             ? c.data.technicalData.output
-                                .map((out) => `${out.name} (${out.quantity} ${out.unit})`)
+                                .map((out:any) => `${out.name} (${out.quantity} ${out.unit})`)
                                 .join(", ")
                             : "N/A"}
                         </TableCell>
@@ -753,14 +1091,14 @@ export const PlantBuilder = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {connections.length === 0 ? (
+            {uniqueConnections.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="text-center text-gray-500 text-sm">
                   No connections
                 </TableCell>
               </TableRow>
             ) : (
-              connections.map((c) => (
+              uniqueConnections.map((c) => (
                 <TableRow key={c.id} className="hover:bg-[#4F8FF7]/5">
                   <TableCell className="text-gray-900 text-sm">{getComponentName(c.from)}</TableCell>
                   <TableCell className="text-gray-900 text-sm">{getComponentName(c.to)}</TableCell>
@@ -896,6 +1234,7 @@ export const PlantBuilder = () => {
                 setConnections={setConnections}
                 onConnect={onConnect}  // PASSED
                 onModelChange={handleCanvasModelChange}
+                exportId="main"
               />
             </div>
             {/* Sidebar Container (overlay; does not shift canvas) */}
@@ -1003,6 +1342,7 @@ export const PlantBuilder = () => {
                     setConnections={setConnections}
                     onConnect={onConnect}  // PASSED
                     onModelChange={handleCanvasModelChange}
+                    exportId="preview"
                   />
                 </div>
               </div>
@@ -1058,14 +1398,30 @@ export const PlantBuilder = () => {
               </div>
             </div>
             <div className="flex flex-col sm:flex-row justify-between gap-4">
-             
-              <Button
-                className="bg-green-600 hover:bg-green-700 text-white text-sm"
-                onClick={handleSaveDataModel}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Export Plant Data
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button
+                  className="bg-blue-600 hover:bg-blue-700 text-white text-sm"
+                  onClick={handleExportCanvasImage}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Export Canvas Image
+                </Button>
+                <Button
+                  className="bg-green-600 hover:bg-green-700 text-white text-sm"
+                  onClick={handleExportExcel}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Export Excel Data
+                </Button>
+                <Button
+                  variant="outline"
+                  className="text-sm border-[#4F8FF7] hover:bg-[#4F8FF7]/10"
+                  onClick={() => handleExport(buildDataModel(), "plant-data.json")}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Export JSON
+                </Button>
+              </div>
             </div>
           </div>
         </DialogContent>
