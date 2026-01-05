@@ -643,22 +643,6 @@ export const PlantBuilder = () => {
     }
   };
 
-  const handleExport = (data: any, filename: string) => {
-    try {
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success(`${filename} exported successfully!`);
-    } catch (err) {
-      setError(`Failed to export ${filename}. Please try again.`);
-      toast.error(`Error exporting ${filename}.`);
-    }
-  };
-
   const buildDataModel = useCallback(() => {
     return {
       userDetails: userDetails || {},
@@ -893,7 +877,6 @@ export const PlantBuilder = () => {
       const dataModel = buildDataModel();
       setPlantModelJson(JSON.stringify(dataModel, null, 2));
       console.log("Data Model:", dataModel);
-      //handleExport(dataModel, "plant-data.json");
     } catch (err) {
       setError("Failed to save data model. Please try again.");
       toast.error("Error saving data model.");
@@ -1412,14 +1395,6 @@ export const PlantBuilder = () => {
                 >
                   <Download className="h-4 w-4 mr-2" />
                   Export Excel Data
-                </Button>
-                <Button
-                  variant="outline"
-                  className="text-sm border-[#4F8FF7] hover:bg-[#4F8FF7]/10"
-                  onClick={() => handleExport(buildDataModel(), "plant-data.json")}
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Export JSON
                 </Button>
               </div>
             </div>
