@@ -1,75 +1,77 @@
 // src/components/AuthGuard.tsx 
 // This is the BRAIN of authentication in Certification app
-// It runs ONCE per page load (client-side) and does 4 critical jobs
-
+ 
 "use client";
-
-import { useEffect } from "react";
+ 
+import { useEffect, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { getToken, setTokens } from "@/lib/shared-auth";
-
-// On déclare la fonction globale proprement
+ 
 declare global {
   interface Window {
     handleGlobalLogout?: () => void;
+    __fetchPatched?: boolean;
   }
 }
-
+ 
+// ==================================================================
+// PATCH FETCH IMMEDIATELY (outside component, runs on module load)
+// ==================================================================
+if (typeof window !== "undefined" && !window.__fetchPatched) {
+  const originalFetch = window.fetch;
+  window.fetch = async (input: RequestInfo | URL, init: RequestInit = {}) => {
+    const token = getToken(); // Get fresh token on each request
+    if (token && typeof input === "string" && input.startsWith("/api/")) {
+      const headers = new Headers(init.headers || {});
+      headers.set("x-auth-token", token);
+      init = { ...init, headers };
+    }
+    return originalFetch(input, init);
+  };
+  window.__fetchPatched = true;
+  console.log("[AuthGuard] Fetch patched successfully");
+}
+ 
 export default function AuthGuard() {
-  const pathname = usePathname();   // Current URL path (e.g. /dashboard)
-  const searchParams = useSearchParams();  // URL query params (?token=...)
-
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [isReady, setIsReady] = useState(false);
+ 
   useEffect(() => {
     // ==================================================================
     // 1. HANDLE RETURN FROM ONBOARDING (first login or redirect back)
     // ==================================================================
-    // When user logs in on localhost:3000, Onboarding redirects back with:
-    // ?token=eyJhbGci...&refresh_token=eyJhbGci...
     const urlToken = searchParams.get("token");
     const urlRefresh = searchParams.get("refresh_token");
-
+ 
     if (urlToken && urlRefresh) {
-      // Save tokens to localStorage so we have them on next visits
       setTokens(urlToken, urlRefresh);
       window.history.replaceState({}, "", pathname);
     }
-
+ 
     // ==================================================================
-    // 2. GET CURRENT TOKEN (from localStorage or just saved from URL)
+    // 2. GET CURRENT TOKEN
     // ==================================================================
     const token = getToken();
-
+ 
     // ==================================================================
     // 3. IF NO TOKEN → REDIRECT TO ONBOARDING LOGIN PAGE
     // ==================================================================
-    // This prevents access to the app when not logged in
-    // We allow /public and /unauthorized pages (for error pages)
     if (!token && !pathname.startsWith("/public") && !pathname.startsWith("/unauthorized")) {
       const redirectUrl = encodeURIComponent(window.location.href);
       const onboardingUrl = process.env.NEXT_PUBLIC_ONBOARDING_URL;
-
+ 
       if (!onboardingUrl) {
         console.error("NEXT_PUBLIC_ONBOARDING_URL is not defined");
         return;
       }
-
+ 
       window.location.href = `${onboardingUrl}/auth/authenticate?redirect=${redirectUrl}`;
       return;
     }
-
-    // 3. Monkey-patch fetch
-    const originalFetch = window.fetch;
-    window.fetch = async (input: any, init: any = {}) => {
-      if (token && typeof input === "string" && input.startsWith("/api/")) {
-        const headers = new Headers(init.headers || {});
-        headers.set("x-auth-token", token);
-        init = { ...init, headers };
-      }
-      return originalFetch(input, init);
-    };
-
-   
+ 
+    setIsReady(true);
   }, [pathname, searchParams]);
-
+ 
   return null;
 }
