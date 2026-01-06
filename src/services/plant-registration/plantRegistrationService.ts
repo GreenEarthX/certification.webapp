@@ -18,7 +18,6 @@ export class PlantRegistrationService {
 
   static async registerPlant(req: NextRequest): Promise<any> {
     const user = await getSessionFullUser(req);
-    requireRole(user, ['PlantOperator']);
 
     const auth0Sub = await getSessionUser(req);
     const { plantName, fuelType, address, plantStage } = await req.json();
