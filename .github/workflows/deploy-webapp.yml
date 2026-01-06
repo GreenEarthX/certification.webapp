@@ -3,8 +3,6 @@ name: Deploy Certification Webapp to ECS
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
 
 env:
   AWS_REGION: us-west-1
