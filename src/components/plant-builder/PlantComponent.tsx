@@ -13,12 +13,15 @@ import type { Position, PlacedComponent } from "@/app/plant-operator/plant-build
 
 interface PlantComponentProps {
   component: PlacedComponent;
+  canvasOffset: { x: number; y: number };
   canvasRef: RefObject<HTMLDivElement | null>;
   zoom: number;
+  isPanMode: boolean;
   onClick: () => void;
   onMove: (id: string, position: Position) => void;
   onConnectStart: (id: string) => void;
   onConnectEnd: (id: string) => void;
+  isConnectingActive: boolean;
   isConnecting: boolean;
   onDelete: (id: string) => void;   // ⬅️ NEW
 }
@@ -79,12 +82,15 @@ const getBaseShapeClasses = (type: string) => {
 /* ─────────────────────── COMPONENT ─────────────────────── */
 const PlantComponent = ({
   component,
+  canvasOffset,
   canvasRef,
   zoom,
+  isPanMode,
   onClick,
   onMove,
   onConnectStart,
   onConnectEnd,
+  isConnectingActive,
   isConnecting,
   onDelete,
 }: PlantComponentProps) => {
@@ -116,6 +122,7 @@ const PlantComponent = ({
 
   /* ───── drag ───── */
   const handleMouseDown = (e: React.MouseEvent) => {
+    if (isPanMode) return;
     e.stopPropagation();
     didDragRef.current = false;
     const canvas = canvasRef.current;
@@ -139,7 +146,10 @@ const PlantComponent = ({
         y: (ev.clientY - rect.top + canvas.scrollTop) / zoom - startY,
       };
       setPosition(newPos);
-      onMove(component.id, newPos);
+      onMove(component.id, {
+        x: newPos.x - canvasOffset.x,
+        y: newPos.y - canvasOffset.y,
+      });
     };
 
     const up = () => {
@@ -155,7 +165,13 @@ const PlantComponent = ({
   /* ───── ports ───── */
   const handleNodeClick = (e: React.MouseEvent, out: boolean) => {
     e.stopPropagation();
-    out ? onConnectStart(component.id) : isConnecting && onConnectEnd(component.id);
+    if (out) {
+      onConnectStart(component.id);
+      return;
+    }
+    if (isConnectingActive) {
+      onConnectEnd(component.id);
+    }
   };
 
   // ❌ dynamic "-${side}-2" breaks Tailwind
@@ -163,17 +179,20 @@ const PlantComponent = ({
   const nodeCls = (side: "left" | "right") =>
     [
       "absolute",
-      side === "left" ? "-left-2" : "-right-2",
+      isGate ? (side === "left" ? "left-6" : "right-6") : side === "left" ? "-left-2" : "-right-2",
       "top-1/2",
       "-translate-y-1/2",
       "opacity-0",
       "group-hover:opacity-100",
       "transition-opacity",
+      "pointer-events-none",
+      "group-hover:pointer-events-auto",
     ].join(" ");
 
   return (
     <div
       ref={cardRef}
+      data-plant-component
       className="absolute cursor-move select-none"
       style={{ left: position.x, top: position.y }}
       onMouseDown={handleMouseDown}
@@ -187,6 +206,15 @@ const PlantComponent = ({
     >
       <Card
         className={`${shapeClasses} border-2 ${colors.border} ${colors.bg} shadow-md hover:shadow-lg transition-shadow relative group flex flex-col items-center justify-center p-2 overflow-visible`}
+        onClick={(e) => {
+          if (ignoreClickRef.current) {
+            ignoreClickRef.current = false;
+            return;
+          }
+          if (!isConnectingActive) return;
+          e.stopPropagation();
+          onClick();
+        }}
       >
         <button
           type="button"
@@ -246,14 +274,14 @@ const PlantComponent = ({
             <TooltipTrigger asChild>
               <svg
                 className={`${nodeCls("left")} cursor-pointer z-10`}
-                width="12"
-                height="12"
+                width="16"
+                height="16"
                 onClick={(e) => handleNodeClick(e, false)}
               >
                 <circle
-                  cx="6"
-                  cy="6"
-                  r="5"
+                  cx="8"
+                  cy="8"
+                  r="7"
                   className={`${colors.fill} fill-opacity-60 hover:fill-opacity-80`}
                 />
               </svg>
@@ -268,14 +296,14 @@ const PlantComponent = ({
             <TooltipTrigger asChild>
               <svg
                 className={`${nodeCls("right")} cursor-pointer z-10`}
-                width="12"
-                height="12"
+                width="16"
+                height="16"
                 onClick={(e) => handleNodeClick(e, true)}
               >
                 <circle
-                  cx="6"
-                  cy="6"
-                  r="5"
+                  cx="8"
+                  cy="8"
+                  r="7"
                   className={`${colors.fill} fill-opacity-60 hover:fill-opacity-80`}
                 />
               </svg>
