@@ -5,18 +5,33 @@ type ConnectionArrowProps = {
   from: Position;
   to: Position;
   onClick: () => void;
+  style?: "smooth" | "orthogonal" | "straight";
 };
 
-const ConnectionArrow = ({ from, to, onClick }: ConnectionArrowProps) => {
-  // Adjust for component center (200px width, 80px height)
-  const startX = from.x + 100;
-  const startY = from.y + 40;
-  const endX = to.x + 100;
-  const endY = to.y + 40;
+const ConnectionArrow = ({ from, to, onClick, style = "smooth" }: ConnectionArrowProps) => {
+  const startX = from.x;
+  const startY = from.y;
+  const endX = to.x;
+  const endY = to.y;
 
-  // Curved path with quadratic Bézier
-  const controlX = (startX + endX) / 2;
-  const pathData = `M ${startX} ${startY} Q ${controlX} ${startY}, ${controlX} ${(startY + endY) / 2} T ${endX} ${endY}`;
+  const dx = endX - startX;
+  const curveOffset = Math.min(180, Math.max(40, Math.abs(dx) * 0.5));
+  const dir = dx >= 0 ? 1 : -1;
+
+  const buildPath = () => {
+    if (style === "straight") {
+      return `M ${startX} ${startY} L ${endX} ${endY}`;
+    }
+    if (style === "orthogonal") {
+      const midX = startX + dx / 2;
+      return `M ${startX} ${startY} L ${midX} ${startY} L ${midX} ${endY} L ${endX} ${endY}`;
+    }
+    const c1x = startX + curveOffset * dir;
+    const c2x = endX - curveOffset * dir;
+    return `M ${startX} ${startY} C ${c1x} ${startY}, ${c2x} ${endY}, ${endX} ${endY}`;
+  };
+
+  const pathData = buildPath();
 
   // Arrow angle
   const angle = Math.atan2(endY - startY, endX - startX) * (180 / Math.PI);
@@ -35,6 +50,8 @@ const ConnectionArrow = ({ from, to, onClick }: ConnectionArrowProps) => {
         strokeWidth="2"
         fill="none"
         markerEnd="url(#arrowhead)"
+        strokeLinecap="round"
+        strokeLinejoin="round"
         style={{ transition: "opacity 0.2s" }}
       />
 
