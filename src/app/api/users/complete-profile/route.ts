@@ -21,6 +21,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("complete-profile error:", err);
+    if ((err as Error).message === "Unauthorized") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     return NextResponse.json({ error: "Failed to complete profile" }, { status: 500 });
   }
 }

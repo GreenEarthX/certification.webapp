@@ -14,6 +14,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ needsCompletion });
   } catch (err) {
     console.error("check-profile error:", err);
+    if ((err as Error).message === "Unauthorized") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     return NextResponse.json({ needsCompletion: false }, { status: 500 });
   }
 }
