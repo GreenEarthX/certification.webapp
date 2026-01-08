@@ -32,6 +32,9 @@ export async function DELETE(
     );
   } catch (error) {
     console.error("Error deleting plant:", error);
+    if ((error as Error).message === "Unauthorized") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     return NextResponse.json(
       { error: "Failed to delete plant" },
       { status: 500 }

@@ -9,6 +9,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(alerts, { status: 200 });
   } catch (error) {
     console.error("Error fetching alerts:", error);
+    if ((error as Error).message === "Unauthorized") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     return NextResponse.json({ error: "Failed to fetch alerts" }, { status: 500 });
   }
 }
