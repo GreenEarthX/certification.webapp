@@ -9,6 +9,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(recommendations);
   } catch (error) {
     console.error("API error:", error);
+    if ((error as Error).message === "Unauthorized") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     return NextResponse.json({ error: "Failed to fetch recommendations" }, { status: 500 });
   }
 }

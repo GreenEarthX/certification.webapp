@@ -11,6 +11,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(data);
   } catch (error) {
     console.error("Fetch form data error:", error);
+    if ((error as Error).message === "Unauthorized") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -24,10 +27,13 @@ export async function POST(req: NextRequest) {
 
     const errorMessage = (error as Error).message;
 
+    if (errorMessage === "Unauthorized") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     return NextResponse.json(
       { error: errorMessage || "Registration failed" },
       { status: errorMessage === "User not found" || errorMessage === "Address not found" ? 404 : 500 }
     );
   }
 }
-

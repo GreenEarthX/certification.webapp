@@ -36,6 +36,12 @@ export class RiskProfileService {
       return result.rows[0] || { risk_score: 0 };
     } catch (error) {
       console.error("Error fetching risk score:", error);
+      if (
+        error instanceof Error &&
+        (error.message === "Unauthorized" || error.message === "Unauthorized access")
+      ) {
+        throw error;
+      }
       throw new Error("Failed to fetch risk score");
     } finally {
       client.release();

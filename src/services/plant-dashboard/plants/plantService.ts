@@ -20,6 +20,9 @@ export class PlantService {
       return rows;
     } catch (error) {
       console.error("Error fetching user plants:", error);
+      if (error instanceof Error && error.message === "Unauthorized") {
+        throw error;
+      }
       throw new Error("Failed to fetch user plants");
     }
   }
