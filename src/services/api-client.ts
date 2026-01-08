@@ -9,9 +9,7 @@ import {
 
 // Proxy through Next.js so the real backend URL stays server-side.
 const API_BASE_URL = "/api/cert-backend";
-const AUTH_APP_BASE_URL =
-  process.env.NEXT_PUBLIC_AUTH_APP_URL;
-const REFRESH_ENDPOINT = `${AUTH_APP_BASE_URL}/api/auth/refresh-token`;
+const REFRESH_ENDPOINT = "/api/auth/refresh-token";
 
 // Deduplicate concurrent refreshes so only one network call runs at a time.
 let refreshPromise: Promise<string | null> | null = null;

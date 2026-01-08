@@ -41,6 +41,12 @@ export class RecommendationService {
       return result.rows.map((rec) => rec.certification_scheme_name);
     } catch (error) {
       console.error("Error fetching recommendations:", error);
+      if (
+        error instanceof Error &&
+        (error.message === "Unauthorized" || error.message === "Unauthorized access")
+      ) {
+        throw error;
+      }
       throw new Error("Failed to fetch recommendations");
     } finally {
       client.release();

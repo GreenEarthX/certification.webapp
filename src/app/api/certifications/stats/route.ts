@@ -22,6 +22,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(stats, { status: 200 });
   } catch (error) {
     console.error("Error fetching certification stats:", error);
+    if ((error as Error).message === "Unauthorized") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     return NextResponse.json(
       { error: "Failed to fetch certification stats" },
       { status: 500 }

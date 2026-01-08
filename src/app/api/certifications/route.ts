@@ -9,6 +9,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(certifications);
   } catch (error) {
     console.error("Error fetching certifications:", error);
+    if ((error as Error).message === "Unauthorized") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
