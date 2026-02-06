@@ -2,13 +2,22 @@
 import type { Position } from "@/app/plant-operator/plant-builder/types";  // CORRECT SOURCE
 
 type ConnectionArrowProps = {
+  id?: string;
   from: Position;
   to: Position;
   onClick: () => void;
   style?: "smooth" | "orthogonal" | "straight";
+  isInvalid?: boolean;
 };
 
-const ConnectionArrow = ({ from, to, onClick, style = "smooth" }: ConnectionArrowProps) => {
+const ConnectionArrow = ({
+  id,
+  from,
+  to,
+  onClick,
+  style = "smooth",
+  isInvalid = false,
+}: ConnectionArrowProps) => {
   const startX = from.x;
   const startY = from.y;
   const endX = to.x;
@@ -32,6 +41,9 @@ const ConnectionArrow = ({ from, to, onClick, style = "smooth" }: ConnectionArro
   };
 
   const pathData = buildPath();
+  const safeId = id ? id.replace(/[^a-zA-Z0-9_-]/g, "") : "default";
+  const markerId = `arrowhead-${safeId}`;
+  const strokeColor = isInvalid ? "#F59E0B" : "#4F8FF7";
 
   // Arrow angle
   const angle = Math.atan2(endY - startY, endX - startX) * (180 / Math.PI);
@@ -46,10 +58,11 @@ const ConnectionArrow = ({ from, to, onClick, style = "smooth" }: ConnectionArro
       {/* Main Path */}
       <path
         d={pathData}
-        stroke="#4F8FF7"
+        stroke={strokeColor}
         strokeWidth="2"
+        strokeDasharray={isInvalid ? "6 4" : undefined}
         fill="none"
-        markerEnd="url(#arrowhead)"
+        markerEnd={`url(#${markerId})`}
         strokeLinecap="round"
         strokeLinejoin="round"
         style={{ transition: "opacity 0.2s" }}
@@ -67,7 +80,7 @@ const ConnectionArrow = ({ from, to, onClick, style = "smooth" }: ConnectionArro
       {/* Arrowhead */}
       <defs>
         <marker
-          id="arrowhead"
+          id={markerId}
           markerWidth="12"
           markerHeight="12"
           refX="10"
@@ -75,7 +88,7 @@ const ConnectionArrow = ({ from, to, onClick, style = "smooth" }: ConnectionArro
           orient="auto"
           style={{ overflow: "visible" }}
         >
-          <polygon points="0,0 12,3.5 0,7" fill="#4F8FF7" />
+          <polygon points="0,0 12,3.5 0,7" fill={strokeColor} />
         </marker>
       </defs>
     </g>
