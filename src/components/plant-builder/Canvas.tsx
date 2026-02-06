@@ -44,6 +44,7 @@ import {
   PlacedComponent as PlacedComponentType,
   Connection as ConnectionType,
 } from "@/app/plant-operator/plant-builder/types";
+import type { DigitalTwinValidationError } from "@/services/plant-builder/digitalTwins";
 import { buildConnectionPayloadForComponent, StoredConnectionPayload } from "@/lib/plant-builder/connection-utils";
 import { 
   createComponentInstance, 
@@ -63,6 +64,11 @@ type CanvasProps = {
     connections: ConnectionType[];
   }) => void;
   exportId?: string;
+  validationErrorsByComponent?: Record<string, DigitalTwinValidationError[]>;
+  invalidConnectionIds?: Set<string>;
+  focusRequest?: { id: string; ts: number } | null;
+  highlightedComponentId?: string | null;
+  topRightAddon?: React.ReactNode;
 };
 
 const CANVAS_BASE_WIDTH = 2400;
@@ -163,6 +169,11 @@ const Canvas = ({
   onConnect,
   onModelChange,
   exportId,
+  validationErrorsByComponent,
+  invalidConnectionIds,
+  focusRequest,
+  highlightedComponentId,
+  topRightAddon,
 }: CanvasProps) => {
   const [selectedComponent, setSelectedComponent] = useState<PlacedComponentType | null>(null);
   const [selectedConnection, setSelectedConnection] = useState<ConnectionType | null>(null);
@@ -183,6 +194,7 @@ const Canvas = ({
     scrollLeft: number;
     scrollTop: number;
   } | null>(null);
+  const lastFocusTsRef = useRef<number>(0);
   const clampZoom = useCallback((value: number) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, value)), []);
   const applyZoom = useCallback(
     (nextZoom: number, anchor?: { x: number; y: number }) => {
@@ -243,7 +255,7 @@ const Canvas = ({
     });
 
     return { minX, minY, maxX, maxY };
-  }, [components]);
+  }, [components, hasUserZoomed]);
 
   const canvasOffset = useMemo(
     () => ({
@@ -338,6 +350,25 @@ const Canvas = ({
     if (Math.abs(zoom - next) <= 0.01) return;
     applyZoom(next);
   }, [applyZoom, getFitZoom, hasUserZoomed, zoom]);
+
+  useEffect(() => {
+    if (!focusRequest?.id || !focusRequest.ts) return;
+    if (lastFocusTsRef.current === focusRequest.ts) return;
+    lastFocusTsRef.current = focusRequest.ts;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const comp = components.find((c) => c.id === focusRequest.id);
+    if (!comp) return;
+    const bounds = getComponentBounds(comp.type);
+    const x = toNumber(comp.position?.x);
+    const y = toNumber(comp.position?.y);
+    const left = x + bounds.offsetX + canvasOffset.x;
+    const top = y + bounds.offsetY + canvasOffset.y;
+    const centerX = left + bounds.width / 2;
+    const centerY = top + bounds.height / 2;
+    canvas.scrollLeft = Math.max(centerX * zoom - canvas.clientWidth / 2, 0);
+    canvas.scrollTop = Math.max(centerY * zoom - canvas.clientHeight / 2, 0);
+  }, [canvasOffset.x, canvasOffset.y, components, focusRequest, zoom]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -472,6 +503,7 @@ const Canvas = ({
     const target = e.target as HTMLElement;
     if (target.closest("[data-plant-component]")) return;
     e.preventDefault();
+    setHasUserZoomed(true);
     panRef.current = {
       active: true,
       startX: e.clientX,
@@ -530,6 +562,9 @@ const Canvas = ({
    */
   const handleComponentMove = useCallback((id: string, position: { x: number; y: number }) => {
     logJson(`[Canvas] Component moving: ${id}`, position);
+    if (!hasUserZoomed) {
+      setHasUserZoomed(true);
+    }
 
     // Optimistic UI update
     setComponents((prev) => prev.map((c) => (c.id === id ? { ...c, position } : c)));
@@ -897,6 +932,7 @@ const Canvas = ({
             <ZoomOut className="h-4 w-4" />
           </Button>
         </div>
+        {topRightAddon}
       </div>
 
       {connectingFrom && (
@@ -959,9 +995,11 @@ const Canvas = ({
               return (
                 <ConnectionArrow
                   key={conn.id}
+                  id={String(conn.id)}
                   from={from}
                   to={to}
                   style={connectionStyle}
+                  isInvalid={invalidConnectionIds?.has(String(conn.id)) ?? false}
                   onClick={() => setSelectedConnection(conn)}
                 />
               );
@@ -996,6 +1034,8 @@ const Canvas = ({
                     isConnectingActive={Boolean(connectingFrom)}
                     isConnecting={connectingFrom === comp.id}
                     onDelete={handleDeleteComponent}
+                    validationErrors={validationErrorsByComponent?.[String(comp.id)] ?? []}
+                    isHighlighted={highlightedComponentId === comp.id}
                   />
                 );
               })}
