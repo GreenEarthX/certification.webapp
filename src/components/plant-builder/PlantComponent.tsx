@@ -3,13 +3,28 @@ import { useState, useRef, useEffect } from "react";
 import type { RefObject } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Building2, Zap, ArrowRightLeft, X } from "lucide-react";
+import { AlertTriangle, Building2, Zap, ArrowRightLeft, X } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import type { Position, PlacedComponent } from "@/app/plant-operator/plant-builder/types";
+import type { DigitalTwinValidationError } from "@/services/plant-builder/digitalTwins";
+
+const formatValidationContext = (err: DigitalTwinValidationError) => {
+  if (err.relatedComponentId) {
+    return `From component ID: ${err.componentId} · To component ID: ${err.relatedComponentId}`;
+  }
+  return `Component ID: ${err.componentId}`;
+};
 
 interface PlantComponentProps {
   component: PlacedComponent;
@@ -24,6 +39,8 @@ interface PlantComponentProps {
   isConnectingActive: boolean;
   isConnecting: boolean;
   onDelete: (id: string) => void;   // ⬅️ NEW
+  validationErrors?: DigitalTwinValidationError[];
+  isHighlighted?: boolean;
 }
 
 /* ─────────────────────── REAL TAILWIND COLORS ─────────────────────── */
@@ -93,8 +110,11 @@ const PlantComponent = ({
   isConnectingActive,
   isConnecting,
   onDelete,
+  validationErrors = [],
+  isHighlighted = false,
 }: PlantComponentProps) => {
   const [position, setPosition] = useState(component.position);
+  const [showValidationModal, setShowValidationModal] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const didDragRef = useRef(false);
   const ignoreClickRef = useRef(false);
@@ -117,6 +137,7 @@ const PlantComponent = ({
     ? `${baseShape} rounded-md rotate-90 origin-center`
     : baseShape;
   const contentClasses = isGate ? "rotate-[-90deg] w-full" : "";
+  const hasErrors = validationErrors.length > 0;
 
   const typeIcon = getTypeIcon(component.type, colors.text);
 
@@ -179,7 +200,7 @@ const PlantComponent = ({
   const nodeCls = (side: "left" | "right") =>
     [
       "absolute",
-      isGate ? (side === "left" ? "left-6" : "right-6") : side === "left" ? "-left-2" : "-right-2",
+      isGate ? (side === "left" ? "-left-[1px]" : "-right-[1px]") : side === "left" ? "-left-2" : "-right-2",
       "top-1/2",
       "-translate-y-1/2",
       "opacity-0",
@@ -205,7 +226,9 @@ const PlantComponent = ({
       }}
     >
       <Card
-        className={`${shapeClasses} border-2 ${colors.border} ${colors.bg} shadow-md hover:shadow-lg transition-shadow relative group flex flex-col items-center justify-center p-2 overflow-visible`}
+        className={`${shapeClasses} border-2 ${colors.border} ${colors.bg} shadow-md hover:shadow-lg transition-shadow relative group flex flex-col items-center justify-center p-2 overflow-visible ${
+          isHighlighted ? "ring-2 ring-amber-300 ring-offset-2 ring-offset-white" : ""
+        }`}
         onClick={(e) => {
           if (ignoreClickRef.current) {
             ignoreClickRef.current = false;
@@ -220,12 +243,73 @@ const PlantComponent = ({
           type="button"
           onClick={(e) => {
             e.stopPropagation();       // don't open the detail dialog
-            onDelete(component.id);    // call parent handler
+          onDelete(component.id);    // call parent handler
           }}
           className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
         >
           <X className="w-3 h-3" />
         </button>
+
+        {hasErrors && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowValidationModal(true);
+                }}
+                className="absolute -top-2 -left-2 bg-amber-100 text-amber-700 border border-amber-300 rounded-full w-6 h-6 flex items-center justify-center text-[10px] font-bold shadow-md"
+              >
+                <AlertTriangle className={`w-3.5 h-3.5 ${isGate ? "-rotate-90" : ""}`} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent
+              side="top"
+              className="max-w-xs bg-white text-amber-900 border-amber-200"
+            >
+              <div className="text-xs font-semibold text-amber-900 mb-1">
+                {validationErrors.length} issue{validationErrors.length === 1 ? "" : "s"}
+              </div>
+              <ul className="text-xs text-amber-900 space-y-1">
+                {validationErrors.map((err, idx) => (
+                  <li key={`${err.errorCode}-${idx}`}>{err.errorMessage}</li>
+                ))}
+              </ul>
+            </TooltipContent>
+          </Tooltip>
+        )}
+
+        {hasErrors && (
+          <Dialog open={showValidationModal} onOpenChange={setShowValidationModal}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>
+                  {component.name} · ID {component.id}
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-3">
+                {validationErrors.map((err, idx) => (
+                  <div
+                    key={`${err.errorCode}-${idx}`}
+                    className="rounded-md border border-amber-200 bg-white p-3"
+                  >
+                    <div className="text-sm font-semibold text-amber-900">{err.errorCode}</div>
+                    <div className="text-sm text-amber-800">{err.errorMessage}</div>
+                    <div className="text-xs text-amber-700 mt-1">
+                      {formatValidationContext(err)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowValidationModal(false)}>
+                  Close
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
         
         <CardContent
           className={`p-2 flex flex-col items-center justify-center text-center ${contentClasses} max-w-full`}
