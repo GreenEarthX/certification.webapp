@@ -64,10 +64,36 @@ export type DigitalTwinJsonRecord = {
   digital_twin_json: DigitalTwinJson;
 };
 
+export type DigitalTwinValidationError = {
+  componentId: string;
+  componentName: string;
+  componentType: string;
+  errorCode: string;
+  errorMessage: string;
+  relatedConnectionId?: string;
+  relatedComponentId?: string;
+};
+
+export type DigitalTwinValidationResult = {
+  valid: boolean;
+  digitalTwinId: number;
+  checkedAt: string;
+  errors: DigitalTwinValidationError[];
+};
+
 export async function fetchDigitalTwinJsonForPlant(
   plantId: number
 ): Promise<DigitalTwinJsonRecord[]> {
   return apiFetch<DigitalTwinJsonRecord[]>(
     `${DIGITAL_TWINS_PATH}/digital-twin-json/plant/${plantId}`
+  );
+}
+
+export async function validateDigitalTwinHighLevel(
+  digitalTwinId: number
+): Promise<DigitalTwinValidationResult> {
+  return apiFetch<DigitalTwinValidationResult>(
+    `${DIGITAL_TWINS_PATH}/${digitalTwinId}/validate-high-level`,
+    { method: "POST" }
   );
 }

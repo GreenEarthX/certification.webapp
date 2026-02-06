@@ -8,11 +8,14 @@ const logJson = (label: string, data?: any) => {
 
 import "./plant-builder-vite.css";  //
 import "./App.css";
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
+  AlertTriangle,
   ArrowLeft,
+  CheckCircle2,
+  X,
   Save,
   Play,
   Plus,
@@ -61,7 +64,15 @@ import {
   Connection,
 } from "./types";
 import { createPlant, fetchPlantById, Plant } from "@/services/plant-builder/plants";
-import { createDigitalTwin, fetchDigitalTwinJsonForPlant } from "@/services/plant-builder/digitalTwins";
+import {
+  createDigitalTwin,
+  fetchDigitalTwinJsonForPlant,
+  validateDigitalTwinHighLevel,
+} from "@/services/plant-builder/digitalTwins";
+import type {
+  DigitalTwinValidationError,
+  DigitalTwinValidationResult,
+} from "@/services/plant-builder/digitalTwins";
 import { updateComponentInstance, deleteComponentInstance } from "@/services/plant-builder/componentInstances";
 import { buildConnectionPayloadForComponent, StoredConnectionPayload } from "@/lib/plant-builder/connection-utils";
 
@@ -70,6 +81,13 @@ const parseOptionalNumber = (value: unknown): number | undefined => {
   if (value === undefined || value === null) return undefined;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : undefined;
+};
+
+const formatValidationContext = (err: DigitalTwinValidationError) => {
+  if (err.relatedComponentId) {
+    return `From component ID: ${err.componentId} · To component ID: ${err.relatedComponentId}`;
+  }
+  return `Component ID: ${err.componentId}`;
 };
 
 /**
@@ -108,6 +126,12 @@ export const PlantBuilder = () => {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [error, setError] = useState<string | null>(null);
   const [plantModelJson, setPlantModelJson] = useState<string>("");
+  const [validationResult, setValidationResult] = useState<DigitalTwinValidationResult | null>(null);
+  const [isValidating, setIsValidating] = useState(false);
+  const [showValidationPanel, setShowValidationPanel] = useState(true);
+  const [focusRequest, setFocusRequest] = useState<{ id: string; ts: number } | null>(null);
+  const [highlightedComponentId, setHighlightedComponentId] = useState<string | null>(null);
+  const highlightTimerRef = useRef<number | null>(null);
 
   const normalizeComponentData = useCallback((component: PlacedComponent) => {
     const data = component.data ?? {};
@@ -223,6 +247,52 @@ export const PlantBuilder = () => {
     return Array.from(deduped.values());
   }, [connections]);
 
+  const validationErrorsByComponent = useMemo(() => {
+    if (!validationResult?.errors?.length) return {};
+    return validationResult.errors.reduce<Record<string, DigitalTwinValidationError[]>>((acc, err) => {
+      const key = String(err.componentId ?? "");
+      if (!key) return acc;
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(err);
+      return acc;
+    }, {});
+  }, [validationResult]);
+
+  const invalidConnectionIds = useMemo(() => {
+    if (!validationResult?.errors?.length) return new Set<string>();
+    const next = new Set<string>();
+    validationResult.errors.forEach((err) => {
+      if (err.relatedConnectionId) {
+        next.add(String(err.relatedConnectionId));
+      }
+    });
+    return next;
+  }, [validationResult]);
+
+  const groupedValidationErrors = useMemo(() => {
+    if (!validationResult?.errors?.length) return [];
+    const byComponent = new Map<
+      string,
+      { componentId: string; componentName: string; componentType: string; errors: DigitalTwinValidationError[] }
+    >();
+    validationResult.errors.forEach((err) => {
+      const componentId = String(err.componentId ?? "");
+      if (!componentId) return;
+      const existing = byComponent.get(componentId);
+      if (existing) {
+        existing.errors.push(err);
+        return;
+      }
+      byComponent.set(componentId, {
+        componentId,
+        componentName: err.componentName || "Unknown",
+        componentType: err.componentType || "component",
+        errors: [err],
+      });
+    });
+    return Array.from(byComponent.values());
+  }, [validationResult]);
+
   const hasDuplicateConnections = uniqueConnections.length !== connections.length;
 
   useEffect(() => {
@@ -276,6 +346,14 @@ export const PlantBuilder = () => {
   useEffect(() => {
     setError(null);
   }, [step]);
+
+  useEffect(() => {
+    return () => {
+      if (highlightTimerRef.current) {
+        window.clearTimeout(highlightTimerRef.current);
+      }
+    };
+  }, []);
 
   // Load existing plant from URL (edit mode)
     useEffect(() => {
@@ -472,14 +550,58 @@ export const PlantBuilder = () => {
     }
   };
 
-  const handleRunComplianceCheck = () => {
-    if (productInfo.length === 0 || components.length === 0) {
-      setError("Please define products and components before running compliance check.");
-      toast.error("Please define products and components.");
+  const handleFocusComponent = useCallback((componentId?: string) => {
+    if (!componentId) return;
+    setFocusRequest({ id: componentId, ts: Date.now() });
+    setHighlightedComponentId(componentId);
+    if (highlightTimerRef.current) {
+      window.clearTimeout(highlightTimerRef.current);
+    }
+    highlightTimerRef.current = window.setTimeout(() => {
+      setHighlightedComponentId(null);
+    }, 1600);
+  }, []);
+
+  const handleRunComplianceCheck = async () => {
+    if (components.length === 0) {
+      setError("Please define components before running validation.");
+      toast.error("Please define components.");
       return;
     }
-    setStep("compliance");
-    toast.info("Starting compliance check process.");
+
+    const twinId = Number((window as any).currentTwinId);
+    if (!twinId || Number.isNaN(twinId)) {
+      toast.error("No digital twin found. Please save or reload the plant model first.");
+      return;
+    }
+
+    setIsValidating(true);
+    try {
+      const result = await validateDigitalTwinHighLevel(twinId);
+      setValidationResult(result);
+      setShowValidationPanel(true);
+
+      if (result.valid) {
+        toast.success("Process flow validated successfully.");
+        if (productInfo.length === 0) {
+          toast.info("Add products to continue with compliance checks.");
+          return;
+        }
+        setStep("compliance");
+        toast.info("Starting compliance check process.");
+      } else {
+        toast.error(
+          `Validation failed with ${result.errors.length} issue${
+            result.errors.length === 1 ? "" : "s"
+          }.`
+        );
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err instanceof Error ? err.message : "Failed to validate process flow.");
+    } finally {
+      setIsValidating(false);
+    }
   };
 
   // Save plant model: update positions and delete removed components
@@ -1145,6 +1267,12 @@ export const PlantBuilder = () => {
     </div>
   );
 
+  const formatCheckedAt = (value?: string) => {
+    if (!value) return "";
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
+  };
+
   return (
     <div className="h-screen flex flex-col bg-gray-50 min-h-0">
       <header className="border-b border-gray-200 bg-white text-gray-900 flex items-center justify-between px-4 py-3 shadow-sm">
@@ -1218,6 +1346,25 @@ export const PlantBuilder = () => {
                 onConnect={onConnect}  // PASSED
                 onModelChange={handleCanvasModelChange}
                 exportId="main"
+                validationErrorsByComponent={validationErrorsByComponent}
+                invalidConnectionIds={invalidConnectionIds}
+                focusRequest={focusRequest}
+                highlightedComponentId={highlightedComponentId}
+                topRightAddon={
+                  validationResult && !showValidationPanel ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowValidationPanel(true)}
+                      className="bg-white text-slate-900 border-slate-200 hover:bg-slate-50"
+                    >
+                      Validation
+                      <span className="ml-2 bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-[10px] font-semibold">
+                        {validationResult.errors.length}
+                      </span>
+                    </Button>
+                  ) : null
+                }
               />
             </div>
             {/* Sidebar Container (overlay; does not shift canvas) */}
@@ -1243,6 +1390,111 @@ export const PlantBuilder = () => {
                 )}
               </div>
             </div>
+
+            {validationResult && showValidationPanel && (
+              <aside className="absolute top-0 right-0 h-full w-full max-w-[360px] z-30 bg-white/95 backdrop-blur border-l border-gray-200 shadow-xl flex flex-col">
+                <div className="p-4 border-b border-gray-200 flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`h-9 w-9 rounded-lg flex items-center justify-center ${
+                        validationResult.valid
+                          ? "bg-green-100 text-green-700"
+                          : "bg-amber-100 text-amber-700"
+                      }`}
+                    >
+                      {validationResult.valid ? (
+                        <CheckCircle2 className="h-5 w-5" />
+                      ) : (
+                        <AlertTriangle className="h-5 w-5" />
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900">
+                        {validationResult.valid ? "Validation Passed" : "Validation Failed"}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Digital Twin #{validationResult.digitalTwinId}
+                      </div>
+                      <div className="text-[11px] text-gray-400">
+                        {formatCheckedAt(validationResult.checkedAt)}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowValidationPanel(false)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <div className="px-4 pt-3 pb-2 flex items-center justify-between text-xs text-gray-500">
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${
+                      validationResult.valid
+                        ? "bg-green-100 text-green-700"
+                        : "bg-amber-100 text-amber-700"
+                    }`}
+                  >
+                    {validationResult.errors.length} error
+                    {validationResult.errors.length === 1 ? "" : "s"}
+                  </span>
+                  {!validationResult.valid && (
+                    <span className="text-[11px] text-gray-400">Click any item to focus</span>
+                  )}
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                  {validationResult.valid ? (
+                    <div className="text-xs text-green-700 bg-green-50 border border-green-200 rounded-md p-2">
+                      No structural issues detected. You can proceed to compliance checks.
+                    </div>
+                  ) : (
+                    groupedValidationErrors.map((group) => (
+                      <div
+                        key={group.componentId}
+                        className="rounded-lg border border-amber-200 bg-white p-3"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => handleFocusComponent(group.componentId)}
+                          className="w-full flex items-center justify-between gap-2 text-left"
+                        >
+                          <div>
+                            <div className="text-sm font-semibold text-amber-900">
+                              {group.componentName}
+                            </div>
+                            <div className="text-xs text-amber-700 capitalize">
+                              {group.componentType} · ID {group.componentId}
+                            </div>
+                          </div>
+                          <span className="text-[11px] font-semibold bg-amber-200 text-amber-900 rounded-full px-2 py-0.5">
+                            {group.errors.length}
+                          </span>
+                        </button>
+                        <div className="mt-2 space-y-2">
+                          {group.errors.map((err, idx) => (
+                            <button
+                              key={`${group.componentId}-${err.errorCode}-${idx}`}
+                              type="button"
+                              onClick={() => handleFocusComponent(group.componentId)}
+                              className="w-full text-left text-xs text-amber-900 bg-white border border-amber-100 rounded-md px-2 py-1 hover:bg-gray-50"
+                            >
+                              <div className="font-semibold">{err.errorCode}</div>
+                              <div className="text-amber-800">{err.errorMessage}</div>
+                              <div className="text-[10px] text-amber-700">
+                                {formatValidationContext(err)}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </aside>
+            )}
           </div>
         ) : step === "compliance" ? (
           <div className="h-full overflow-y-auto">
@@ -1285,11 +1537,11 @@ export const PlantBuilder = () => {
           </Button>
           <Button
             onClick={handleRunComplianceCheck}
-            disabled={productInfo.length === 0 || components.length === 0}
+            disabled={isValidating || components.length === 0}
             className="text-sm bg-green-600 hover:bg-green-700 text-white"
           >
             <Play className="h-4 w-4 mr-2" />
-            Check Process Flow
+            {isValidating ? "Checking..." : "Check Process Flow"}
           </Button>
           <Button
             className="bg-green-600 hover:bg-green-700 text-white text-sm"
