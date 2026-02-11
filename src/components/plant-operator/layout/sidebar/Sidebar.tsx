@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import Image from 'next/image';
@@ -33,6 +33,12 @@ const Sidebar: React.FC = () => {
   const isActive = (path: string) => pathname.startsWith(path);
 
   const toggleSidebar = () => setIsCollapsed(!isCollapsed);
+
+  useEffect(() => {
+    const handleClose = () => setIsCollapsed(true);
+    window.addEventListener("plant-builder:close-sidebar", handleClose);
+    return () => window.removeEventListener("plant-builder:close-sidebar", handleClose);
+  }, []);
 
   return (
     <Drawer

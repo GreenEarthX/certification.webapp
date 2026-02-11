@@ -260,14 +260,60 @@ export const PlantBuilder = () => {
 
   const invalidConnectionIds = useMemo(() => {
     if (!validationResult?.errors?.length) return new Set<string>();
-    const next = new Set<string>();
-    validationResult.errors.forEach((err) => {
-      if (err.relatedConnectionId) {
-        next.add(String(err.relatedConnectionId));
+
+    const connectionIds = new Set(connections.map((conn) => String(conn.id)));
+    const connectionPairs = new Map<string, string[]>();
+    connections.forEach((conn) => {
+      const key = `${conn.from}|${conn.to}`;
+      const list = connectionPairs.get(key);
+      if (list) {
+        list.push(String(conn.id));
+      } else {
+        connectionPairs.set(key, [String(conn.id)]);
       }
     });
+
+    const isConnectionError = (err: DigitalTwinValidationError) => {
+      const haystack = `${err.errorCode} ${err.errorMessage}`.toLowerCase();
+      const normalized = haystack.replace(/[_-]+/g, " ");
+      const disallow = [
+        "missing",
+        "required",
+        "empty",
+        "not provided",
+        "undefined",
+        "null",
+        "not set",
+      ];
+      if (disallow.some((term) => normalized.includes(term))) {
+        return false;
+      }
+      const allowRegex = /\b(connection|from|to|input|output|source|target|port)\b/;
+      return allowRegex.test(normalized);
+    };
+
+    const next = new Set<string>();
+    validationResult.errors.forEach((err) => {
+      if (!isConnectionError(err)) return;
+      if (err.relatedConnectionId) {
+        const id = String(err.relatedConnectionId);
+        if (connectionIds.has(id)) {
+          next.add(id);
+        }
+        return;
+      }
+      if (err.relatedComponentId) {
+        const forwardKey = `${err.componentId}|${err.relatedComponentId}`;
+        const reverseKey = `${err.relatedComponentId}|${err.componentId}`;
+        const forwardIds = connectionPairs.get(forwardKey);
+        const reverseIds = connectionPairs.get(reverseKey);
+        forwardIds?.forEach((id) => next.add(id));
+        reverseIds?.forEach((id) => next.add(id));
+      }
+    });
+
     return next;
-  }, [validationResult]);
+  }, [connections, validationResult]);
 
   const groupedValidationErrors = useMemo(() => {
     if (!validationResult?.errors?.length) return [];

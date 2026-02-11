@@ -22,18 +22,25 @@
 }
 
 .logo {
-  border-radius: 50%;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  object-fit: contain;
+  display: block;
 }
 
 .listItem {
   padding: 12px 24px;
   display: flex;
   align-items: center;
+  gap: 10px;
 }
 
 .listItemIcon {
   min-width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .listItemActive {
@@ -64,6 +71,10 @@ align-items: center;
 
 .collapsed .listItem {
 justify-content: center;
+}
+
+.collapsed .listItemIcon {
+  min-width: 0;
 }
 
 .collapsed .listItemText {
@@ -115,8 +126,8 @@ filter: drop-shadow(0 0 4px rgba(33, 150, 243, 0.5)); /* Blue reflection effect 
 
 /* Icon Styles */
 .listItemIcon svg {
-width: 20px; /* Adjust icon size */
-height: 20px; /* Adjust icon size */
+width: 22px; /* Adjust icon size */
+height: 22px; /* Adjust icon size */
 color: #666; /* Default icon color */
 }
 
