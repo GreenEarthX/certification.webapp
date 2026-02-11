@@ -328,7 +328,7 @@ const PlantComponent = ({
               isGate ? "whitespace-normal" : ""
             }`}
           >
-            {component.category}
+            ID {component.id}
           </div>
 
           {component.type !== "gate" && component.type !== "carrier" && (

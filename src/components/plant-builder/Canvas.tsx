@@ -195,6 +195,10 @@ const Canvas = ({
     scrollTop: number;
   } | null>(null);
   const lastFocusTsRef = useRef<number>(0);
+  useEffect(() => {
+    if (!selectedComponent && !showAddComponent) return;
+    window.dispatchEvent(new CustomEvent("plant-builder:close-sidebar"));
+  }, [selectedComponent, showAddComponent]);
   const clampZoom = useCallback((value: number) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, value)), []);
   const applyZoom = useCallback(
     (nextZoom: number, anchor?: { x: number; y: number }) => {
@@ -934,12 +938,6 @@ const Canvas = ({
         </div>
         {topRightAddon}
       </div>
-
-      {connectingFrom && (
-        <div className="absolute top-4 left-4 z-10 bg-primary text-primary-foreground px-4 py-2 rounded-lg shadow-lg">
-          Click another component to connect
-        </div>
-      )}
 
       <div
         ref={canvasRef}
