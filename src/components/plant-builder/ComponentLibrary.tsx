@@ -10,6 +10,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -103,6 +104,11 @@ const ComponentLibrary = () => {
     carrier: false,
     gate: false,
   });
+  const [searchTerms, setSearchTerms] = useState({
+    equipment: "",
+    carrier: "",
+    gate: "",
+  });
 
   const [library, setLibrary] = useState<ComponentLibraryJSON | null>(null);
   const [loading, setLoading] = useState(true);
@@ -166,7 +172,16 @@ const ComponentLibrary = () => {
     sectionKey: keyof typeof openSections
   ) => {
     const style = layerStyles[type];
-    const grouped = groupByCategory(components);
+    const searchValue = searchTerms[type];
+    const normalizedSearch = searchValue.trim().toLowerCase();
+    const filteredComponents = normalizedSearch
+      ? components.filter((component) => {
+          const name = component.name.toLowerCase();
+          const category = component.category.toLowerCase();
+          return name.includes(normalizedSearch) || category.includes(normalizedSearch);
+        })
+      : components;
+    const grouped = groupByCategory(filteredComponents);
     const sortedCategories = Object.entries(grouped).sort(([a], [b]) =>
       a.localeCompare(b, undefined, { sensitivity: "base" })
     );
@@ -190,6 +205,16 @@ const ComponentLibrary = () => {
         </CollapsibleTrigger>
 
         <CollapsibleContent className="space-y-3 pl-5 border-l border-muted/50 ml-2">
+          <div className="pr-3">
+            <Input
+              value={searchValue}
+              onChange={(e) =>
+                setSearchTerms((prev) => ({ ...prev, [type]: e.target.value }))
+              }
+              placeholder={`Search ${title.toLowerCase()}`}
+              className="h-8 text-xs"
+            />
+          </div>
           {sortedCategories.map(([category, items]) => {
             const normalized = category.trim().toLowerCase();
             const hideCategory =
@@ -213,7 +238,7 @@ const ComponentLibrary = () => {
                     className={`p-2 cursor-move border ${style.border} ${style.hover} transition-all text-sm rounded-md shadow-sm`}
                   >
                     <div
-                      className="font-medium truncate"
+                      className="font-medium whitespace-normal break-words leading-snug"
                       title={component.name}
                     >
                       {component.name}
