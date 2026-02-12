@@ -136,6 +136,13 @@ export const PlantBuilder = () => {
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
 
+  useEffect(() => {
+    if (showDataModel) {
+      setShowComponentLibrary(false);
+      window.dispatchEvent(new CustomEvent("plant-builder:close-sidebar"));
+    }
+  }, [showDataModel]);
+
   const normalizeComponentData = useCallback((component: PlacedComponent) => {
     const data = component.data ?? {};
     const normalized: Record<string, any> = { ...data };
@@ -996,6 +1003,7 @@ export const PlantBuilder = () => {
   // Prepare and export complete plant data model
   const handleSaveDataModel = async () => {
     try {
+      setShowComponentLibrary(false);
       setShowDataModel(true);
       const dataModel = buildDataModel();
       setPlantModelJson(JSON.stringify(dataModel, null, 2));
@@ -1315,28 +1323,30 @@ export const PlantBuilder = () => {
               />
             </div>
             {/* Sidebar Container (overlay; does not shift canvas) */}
-            <div
-              className={`absolute top-0 left-0 h-full flex transition-all duration-300 ease-in-out ${
-                showComponentLibrary ? "w-full sm:w-96" : "w-10"
-              } bg-white border-r border-gray-200 shadow-sm overflow-hidden z-20`}
-            >
-              {showComponentLibrary && (
-                <div className="flex-1 overflow-y-auto">
-                  <ComponentLibrary />
-                </div>
-              )}
+            {!showDataModel && (
               <div
-                className="w-10 bg-gray-100 hover:bg-[#4F8FF7]/10 cursor-pointer flex items-center justify-center transition-colors duration-200"
-                onClick={toggleComponentLibrary}
-                title={showComponentLibrary ? "Hide Library" : "Show Library"}
+                className={`absolute top-0 left-0 h-full flex transition-all duration-300 ease-in-out ${
+                  showComponentLibrary ? "w-full sm:w-96" : "w-10"
+                } bg-white border-r border-gray-200 shadow-sm overflow-hidden z-20`}
               >
-                {showComponentLibrary ? (
-                  <ChevronLeft className="h-5 w-5 text-[#4F8FF7]" />
-                ) : (
-                  <ChevronRight className="h-5 w-5 text-[#4F8FF7]" />
+                {showComponentLibrary && (
+                  <div className="flex-1 overflow-y-auto">
+                    <ComponentLibrary />
+                  </div>
                 )}
+                <div
+                  className="w-10 bg-gray-100 hover:bg-[#4F8FF7]/10 cursor-pointer flex items-center justify-center transition-colors duration-200"
+                  onClick={toggleComponentLibrary}
+                  title={showComponentLibrary ? "Hide Library" : "Show Library"}
+                >
+                  {showComponentLibrary ? (
+                    <ChevronLeft className="h-5 w-5 text-[#4F8FF7]" />
+                  ) : (
+                    <ChevronRight className="h-5 w-5 text-[#4F8FF7]" />
+                  )}
+                </div>
               </div>
-            </div>
+            )}
 
             {validationResult && showValidationPanel && (
               <aside className="absolute top-0 right-0 h-full w-full max-w-[360px] z-30 bg-white/95 backdrop-blur border-l border-gray-200 shadow-xl flex flex-col">
