@@ -155,6 +155,9 @@ const ComponentLibrary = () => {
     }, {} as Record<string, ComponentData[]>);
   };
 
+  const sortByName = (a: ComponentData, b: ComponentData) =>
+    a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+
   const renderLayer = (
     title: string,
     icon: React.ReactNode,
@@ -164,6 +167,9 @@ const ComponentLibrary = () => {
   ) => {
     const style = layerStyles[type];
     const grouped = groupByCategory(components);
+    const sortedCategories = Object.entries(grouped).sort(([a], [b]) =>
+      a.localeCompare(b, undefined, { sensitivity: "base" })
+    );
 
     return (
       <Collapsible
@@ -184,12 +190,13 @@ const ComponentLibrary = () => {
         </CollapsibleTrigger>
 
         <CollapsibleContent className="space-y-3 pl-5 border-l border-muted/50 ml-2">
-          {Object.entries(grouped).map(([category, items]) => {
+          {sortedCategories.map(([category, items]) => {
             const normalized = category.trim().toLowerCase();
             const hideCategory =
               (type === "equipment" && (normalized === "equipment" || normalized === "equipments")) ||
               (type === "carrier" && (normalized === "carrier" || normalized === "carriers")) ||
               (type === "gate" && (normalized === "gate" || normalized === "gates"));
+            const sortedItems = [...items].sort(sortByName);
             return (
             <div key={category} className="space-y-2">
               {!hideCategory && (
@@ -198,7 +205,7 @@ const ComponentLibrary = () => {
                 </div>
               )}
               <div className="space-y-1.5">
-                {items.map((component) => (
+                {sortedItems.map((component) => (
                   <Card
                     key={component.id}
                     draggable
