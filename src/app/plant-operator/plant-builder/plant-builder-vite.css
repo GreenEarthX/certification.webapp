@@ -76,3 +76,65 @@
     color: hsl(var(--foreground));
   }
 }
+
+/* Export mode: reduce visual noise for clearer snapshots */
+.plant-exporting .shadow,
+.plant-exporting .shadow-sm,
+.plant-exporting .shadow-md,
+.plant-exporting .shadow-lg,
+.plant-exporting .shadow-xl,
+.plant-exporting .shadow-2xl {
+  box-shadow: none !important;
+}
+
+.plant-exporting .truncate {
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+}
+
+.plant-exporting .pdf-page {
+  width: 794px;
+  min-height: 1123px;
+  margin: 0 auto 24px;
+  background: #ffffff;
+}
+
+.plant-exporting .pdf-page + .pdf-page {
+  page-break-before: always;
+}
+
+.plant-exporting .pdf-header {
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 12px;
+  margin-bottom: 16px;
+}
+
+.plant-exporting .pdf-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.plant-exporting .pdf-subtitle {
+  font-size: 12px;
+  color: #475569;
+  margin-top: 4px;
+}
+
+.plant-exporting table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.plant-exporting th,
+.plant-exporting td {
+  border: 1px solid #e2e8f0;
+  padding: 6px 8px;
+  font-size: 12px;
+  color: #0f172a;
+}
+
+.plant-exporting thead tr {
+  background: #f1f5f9 !important;
+}
