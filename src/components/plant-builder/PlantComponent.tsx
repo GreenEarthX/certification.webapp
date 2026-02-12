@@ -138,6 +138,7 @@ const PlantComponent = ({
     : baseShape;
   const contentClasses = isGate ? "rotate-[-90deg] w-full" : "";
   const hasErrors = validationErrors.length > 0;
+  const isPersisting = Boolean(component.isPersisting);
 
   const typeIcon = getTypeIcon(component.type, colors.text);
 
@@ -186,6 +187,7 @@ const PlantComponent = ({
   /* ───── ports ───── */
   const handleNodeClick = (e: React.MouseEvent, out: boolean) => {
     e.stopPropagation();
+    if (isPersisting) return;
     if (out) {
       onConnectStart(component.id);
       return;
@@ -228,7 +230,7 @@ const PlantComponent = ({
       <Card
         className={`${shapeClasses} border-2 ${colors.border} ${colors.bg} shadow-md hover:shadow-lg transition-shadow relative group flex flex-col items-center justify-center p-2 overflow-visible ${
           isHighlighted ? "ring-2 ring-amber-300 ring-offset-2 ring-offset-white" : ""
-        }`}
+        } ${isPersisting ? "opacity-80" : ""}`}
         onClick={(e) => {
           if (ignoreClickRef.current) {
             ignoreClickRef.current = false;
@@ -328,13 +330,14 @@ const PlantComponent = ({
               isGate ? "whitespace-normal" : ""
             }`}
           >
-            ID {component.id}
+            {isPersisting ? "ID loading..." : `ID ${component.id}`}
           </div>
 
           {component.type !== "gate" && component.type !== "carrier" && (
             <Button
               variant="ghost"
               size="sm"
+              disabled={isPersisting}
               className={`mt-1 w-full text-xs ${isConnecting ? "bg-primary/10" : ""}`}
               onClick={(e) => {
                 e.stopPropagation();
