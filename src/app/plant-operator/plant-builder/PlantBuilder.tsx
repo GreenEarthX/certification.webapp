@@ -8,7 +8,7 @@ const logJson = (label: string, data?: any) => {
 
 import "./plant-builder-vite.css";  //
 import "./App.css";
-import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,6 +25,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 import PlantInfoForm from "@/components/plant-builder/PlantInfoForm";
 import ProductForm from "@/components/plant-builder/ProductForm";
 import LoadingPage from "@/components/plant-builder/LoadingPage";
@@ -132,6 +133,15 @@ export const PlantBuilder = () => {
   const [focusRequest, setFocusRequest] = useState<{ id: string; ts: number } | null>(null);
   const [highlightedComponentId, setHighlightedComponentId] = useState<string | null>(null);
   const highlightTimerRef = useRef<number | null>(null);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+  const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
+
+  useEffect(() => {
+    if (showDataModel) {
+      setShowComponentLibrary(false);
+      window.dispatchEvent(new CustomEvent("plant-builder:close-sidebar"));
+    }
+  }, [showDataModel]);
 
   const normalizeComponentData = useCallback((component: PlacedComponent) => {
     const data = component.data ?? {};
@@ -843,57 +853,63 @@ export const PlantBuilder = () => {
     };
   }, [normalizedComponents, plantInfo, productInfo, uniqueConnections, userDetails]);
 
-  const escapeHtml = (value: unknown) => {
-    return String(value ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
-  };
-
-  const buildExcelTable = (title: string, headers: string[], rows: Array<Array<string | number>>) => {
-    const headerRow = headers.map((header) => `<th>${escapeHtml(header)}</th>`).join("");
-    const bodyRows = rows
-      .map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`)
-      .join("");
-    return `
-      <h3>${escapeHtml(title)}</h3>
-      <table border="1">
-        <thead><tr>${headerRow}</tr></thead>
-        <tbody>${bodyRows || "<tr><td colspan=\"" + headers.length + "\">N/A</td></tr>"}</tbody>
-      </table>
-      <br />
-    `;
-  };
-
-  const formatStreamList = (items?: Array<{ name: string; quantity: number; unit: string }>) => {
-    if (!items?.length) return "N/A";
-    return items.map((item) => `${item.name} (${item.quantity} ${item.unit})`).join(", ");
-  };
-
-  const formatCapacity = (capacity?: { value: number; unit: string } | number | string | null) => {
-    if (capacity == null) return "N/A";
-    if (typeof capacity === "object") {
-      return `${(capacity as { value: number; unit: string }).value} ${(capacity as { value: number; unit: string }).unit}`.trim();
+  const captureCanvasSnapshot = useCallback(async () => {
+    const canvasNode = document.querySelector(
+      '[data-plant-builder-canvas="main"]'
+    ) as HTMLElement | null;
+    if (!canvasNode) {
+      toast.error("Canvas not found.");
+      return null;
     }
-    return String(capacity);
-  };
+
+    const parent = canvasNode.parentElement;
+    const prevTransform = canvasNode.style.transform;
+    const prevOrigin = canvasNode.style.transformOrigin;
+    const prevParentOverflow = parent?.style.overflow;
+    const prevParentWidth = parent?.style.width;
+    const prevParentHeight = parent?.style.height;
+
+    try {
+      document.body.classList.add("plant-exporting");
+      canvasNode.style.transform = "scale(1)";
+      canvasNode.style.transformOrigin = "0 0";
+
+      if (parent) {
+        parent.style.overflow = "visible";
+        parent.style.width = `${canvasNode.scrollWidth}px`;
+        parent.style.height = `${canvasNode.scrollHeight}px`;
+      }
+
+      const exportWidth = canvasNode.scrollWidth || canvasNode.clientWidth;
+      const exportHeight = canvasNode.scrollHeight || canvasNode.clientHeight;
+
+      const canvas = await html2canvas(canvasNode, {
+        backgroundColor: "#ffffff",
+        scale: 2,
+        useCORS: true,
+        width: exportWidth,
+        height: exportHeight,
+        windowWidth: exportWidth,
+        windowHeight: exportHeight,
+      });
+
+      return canvas.toDataURL("image/png");
+    } finally {
+      if (parent) {
+        parent.style.overflow = prevParentOverflow ?? "";
+        parent.style.width = prevParentWidth ?? "";
+        parent.style.height = prevParentHeight ?? "";
+      }
+      canvasNode.style.transform = prevTransform;
+      canvasNode.style.transformOrigin = prevOrigin;
+      document.body.classList.remove("plant-exporting");
+    }
+  }, []);
 
   const handleExportCanvasImage = async () => {
     try {
-      const canvasNode = document.querySelector(
-        '[data-plant-builder-canvas="main"]'
-      ) as HTMLElement | null;
-      if (!canvasNode) {
-        toast.error("Canvas not found.");
-        return;
-      }
-      const canvas = await html2canvas(canvasNode, {
-        backgroundColor: "#f7f9fc",
-        scale: 2,
-      });
-      const url = canvas.toDataURL("image/png");
+      const url = await captureCanvasSnapshot();
+      if (!url) return;
       const link = document.createElement("a");
       link.href = url;
       link.download = "plant-canvas.png";
@@ -905,154 +921,103 @@ export const PlantBuilder = () => {
     }
   };
 
-  const handleExportExcel = () => {
+  const handleExportPDF = async () => {
     try {
-      const equipmentRows = normalizedComponents
-        .filter((c) => c.type === "equipment")
-        .map((c) => [
-          c.name,
-          c.category,
-          formatStreamList(c.data?.technicalData?.input),
-          formatStreamList(c.data?.technicalData?.output),
-          c.data?.technicalData?.efficiency != null ? `${c.data.technicalData.efficiency}%` : "N/A",
-          formatCapacity(c.data?.technicalData?.capacity),
-          c.data?.manufacturer || "N/A",
-          c.certifications?.length ? c.certifications.join(", ") : "None",
-        ]);
+      if (!previewImageUrl && !isGeneratingPreview) {
+        setIsGeneratingPreview(true);
+        const url = await captureCanvasSnapshot();
+        setPreviewImageUrl(url);
+        setIsGeneratingPreview(false);
+      }
 
-      const carrierRows = normalizedComponents
-        .filter((c) => c.type === "carrier")
-        .map((c) => [
-          c.name,
-          c.category,
-          c.data?.fuelType || "N/A",
-          c.data?.temperature != null ? `${c.data.temperature}C` : "N/A",
-          c.data?.pressure != null ? `${c.data.pressure} bar` : "N/A",
-          c.certifications?.length ? c.certifications.join(", ") : "None",
-        ]);
+      const exportNode = document.querySelector("#plant-data-export") as HTMLElement | null;
+      if (!exportNode) {
+        toast.error("Export content not found.");
+        return;
+      }
 
-      const gateRows = normalizedComponents
-        .filter((c) => c.type === "gate")
-        .map((c) => [
-          c.name,
-          c.category,
-          c.data?.gateType || "N/A",
-          c.data?.sourceOrigin || "N/A",
-          c.data?.endUse || "N/A",
-          c.certifications?.length ? c.certifications.join(", ") : "None",
-        ]);
+      const pages = Array.from(exportNode.querySelectorAll(".pdf-page")) as HTMLElement[];
+      if (!pages.length) {
+        toast.error("PDF pages not found.");
+        return;
+      }
 
-      const connectionRows = uniqueConnections.map((c) => [
-        getComponentName(c.from),
-        getComponentName(c.to),
-        c.type || "Untitled",
-        c.reason || "N/A",
-        Object.keys(c.data || {}).length > 0
-          ? Object.entries(c.data || {}).map(([key, value]) => `${key}: ${value}`).join(", ")
-          : "N/A",
-      ]);
+      document.body.classList.add("plant-exporting");
 
-      const plantRows = plantInfo
-        ? Object.entries(plantInfo).map(([key, value]) => [
-            key,
-            typeof value === "string"
-              ? value || "N/A"
-              : Array.isArray(value)
-              ? value.map((item: any) => JSON.stringify(item)).join(", ")
-              : typeof value === "object" && value !== null
-              ? JSON.stringify(value)
-              : String(value ?? "N/A"),
-          ])
-        : [["N/A", "N/A"]];
+      try {
+        const pdf = new jsPDF("p", "mm", "a4");
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
 
-      const productRows = productInfo.length
-        ? productInfo.map((p) => [
-            p.productName,
-            p.fuelType,
-            p.productionCapacity,
-            p.unit,
-            p.feedstock || "N/A",
-            p.offtakeLocations?.[0]?.country || "N/A",
-            p.downstreamOperations || p.downstreamOperationsArray?.join(", ") || "N/A",
-            p.verified ? "Yes" : "No",
-          ])
-        : [["N/A", "N/A", "N/A", "N/A", "N/A", "N/A", "N/A", "No"]];
+        for (let i = 0; i < pages.length; i += 1) {
+          const page = pages[i];
+          const images = Array.from(page.querySelectorAll("img"));
+          await Promise.all(
+            images.map(
+              (img) =>
+                new Promise<void>((resolve) => {
+                  if (img.complete) {
+                    resolve();
+                  } else {
+                    img.onload = () => resolve();
+                    img.onerror = () => resolve();
+                  }
+                })
+            )
+          );
 
-      const html = `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <meta charset="utf-8" />
-          </head>
-          <body>
-            ${buildExcelTable(
-              "Equipment Components",
-              ["Name", "Category", "Inputs", "Outputs", "Efficiency", "Capacity", "Manufacturer", "Certifications"],
-              equipmentRows
-            )}
-            ${buildExcelTable(
-              "Carrier Components",
-              ["Name", "Category", "Fuel Type", "Temperature", "Pressure", "Certifications"],
-              carrierRows
-            )}
-            ${buildExcelTable(
-              "Gate Components",
-              ["Name", "Category", "Input/Output", "Source Origin", "End Use", "Certifications"],
-              gateRows
-            )}
-            ${buildExcelTable(
-              "Connections",
-              ["From", "To", "Type", "Reason", "Details"],
-              connectionRows
-            )}
-            ${buildExcelTable("Plant Information", ["Field", "Value"], plantRows)}
-            ${buildExcelTable(
-              "Products",
-              [
-                "Product Name",
-                "Fuel Type",
-                "Production Capacity",
-                "Unit",
-                "Feedstock",
-                "Offtake Location",
-                "Downstream Operations",
-                "Verified",
-              ],
-              productRows
-            )}
-          </body>
-        </html>
-      `;
+          const canvas = await html2canvas(page, {
+            backgroundColor: "#ffffff",
+            scale: 2,
+            useCORS: true,
+            width: page.scrollWidth || page.clientWidth,
+            height: page.scrollHeight || page.clientHeight,
+            windowWidth: page.scrollWidth || page.clientWidth,
+            windowHeight: page.scrollHeight || page.clientHeight,
+          });
 
-      const blob = new Blob([html], { type: "application/vnd.ms-excel" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "plant-data.xls";
-      link.click();
-      URL.revokeObjectURL(url);
-      toast.success("Excel export ready!");
+          const imgData = canvas.toDataURL("image/png");
+          const imgWidth = pdfWidth;
+          const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+          const offsetY = Math.max(0, (pdfHeight - imgHeight) / 2);
+
+          if (i > 0) {
+            pdf.addPage();
+          }
+
+          pdf.addImage(imgData, "PNG", 0, offsetY, imgWidth, imgHeight);
+        }
+
+        pdf.save("plant-model.pdf");
+        toast.success("PDF export ready!");
+      } finally {
+        document.body.classList.remove("plant-exporting");
+      }
     } catch (err) {
-      console.error("Failed to export Excel:", err);
-      toast.error("Failed to export Excel data.");
+      console.error("Failed to export PDF:", err);
+      toast.error("Failed to export PDF.");
+      setIsGeneratingPreview(false);
     }
   };
 
   // Prepare and export complete plant data model
-  const handleSaveDataModel = () => {
+  const handleSaveDataModel = async () => {
     try {
+      setShowComponentLibrary(false);
       setShowDataModel(true);
       const dataModel = buildDataModel();
       setPlantModelJson(JSON.stringify(dataModel, null, 2));
       console.log("Data Model:", dataModel);
+      setIsGeneratingPreview(true);
+      setPreviewImageUrl(null);
+      const url = await captureCanvasSnapshot();
+      setPreviewImageUrl(url);
     } catch (err) {
       setError("Failed to save data model. Please try again.");
       toast.error("Error saving data model.");
+    } finally {
+      setIsGeneratingPreview(false);
     }
-  };
-
-  const getComponentName = (id: string) => {
-    return normalizedComponents.find((c) => c.id === id)?.name || "Unknown";
   };
 
   const onConnect = useCallback(
@@ -1115,108 +1080,97 @@ export const PlantBuilder = () => {
     setShowComponentLibrary((prev) => !prev);
   };
 
-  const renderComponentTable = (type: "equipment" | "carrier" | "gate", title: string) => {
-    const filteredComponents = normalizedComponents.filter((c) => c.type === type);
+  const componentById = useMemo(
+    () => new Map(normalizedComponents.map((c) => [String(c.id), c])),
+    [normalizedComponents]
+  );
+
+  const getComponentLabel = (id: string) => {
+    const component = componentById.get(String(id));
+    if (!component) return `Unknown (ID ${id})`;
+    return `${component.name} (ID ${component.id})`;
+  };
+
+  const renderComponentsSummaryTable = () => {
+    const grouped = (["equipment", "carrier", "gate"] as const).map((type) => ({
+      type,
+      label: type.charAt(0).toUpperCase() + type.slice(1),
+      items: normalizedComponents.filter((c) => c.type === type),
+    }));
+
     return (
       <div className="w-full">
-        <h3 className="font-semibold text-base sm:text-lg text-gray-800 mb-4">{title}</h3>
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="bg-[#4F8FF7]/10">
-                <TableHead className="font-semibold text-gray-700 text-sm">Name</TableHead>
-                <TableHead className="font-semibold text-gray-700 text-sm">Category</TableHead>
-                {type === "equipment" && (
-                  <>
-                    <TableHead className="font-semibold text-gray-700 text-sm">Inputs</TableHead>
-                    <TableHead className="font-semibold text-gray-700 text-sm">Outputs</TableHead>
-                    <TableHead className="font-semibold text-gray-700 text-sm">Efficiency</TableHead>
-                    <TableHead className="font-semibold text-gray-700 text-sm">Capacity</TableHead>
-                    <TableHead className="font-semibold text-gray-700 text-sm">Manufacturer</TableHead>
-                  </>
-                )}
-                {type === "carrier" && (
-                  <>
-                    <TableHead className="font-semibold text-gray-700 text-sm">Fuel Type</TableHead>
-                    <TableHead className="font-semibold text-gray-700 text-sm">Temperature</TableHead>
-                    <TableHead className="font-semibold text-gray-700 text-sm">Pressure</TableHead>
-                  </>
-                )}
-                {type === "gate" && (
-                  <>
-                    <TableHead className="font-semibold text-gray-700 text-sm">Input/Output</TableHead>
-                    <TableHead className="font-semibold text-gray-700 text-sm">Source Origin</TableHead>
-                    <TableHead className="font-semibold text-gray-700 text-sm">End Use</TableHead>
-                  </>
-                )}
-                <TableHead className="font-semibold text-gray-700 text-sm">Certifications</TableHead>
+                <TableHead className="font-semibold text-gray-700 text-sm">Component ID</TableHead>
+                <TableHead className="font-semibold text-gray-700 text-sm">Component Name</TableHead>
+                <TableHead className="font-semibold text-gray-700 text-sm">Type</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredComponents.length === 0 ? (
+              {grouped.map((group) => (
+                <Fragment key={group.type}>
+                  <TableRow className="bg-slate-50">
+                    <TableCell colSpan={3} className="text-gray-700 text-sm font-semibold">
+                      {group.label}
+                    </TableCell>
+                  </TableRow>
+                  {group.items.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center text-gray-500 text-sm">
+                        No {group.label.toLowerCase()} components
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    group.items.map((c) => (
+                      <TableRow key={c.id} className="hover:bg-[#4F8FF7]/5">
+                        <TableCell className="text-gray-900 text-sm">{c.id}</TableCell>
+                        <TableCell className="text-gray-900 text-sm">{c.name}</TableCell>
+                        <TableCell className="text-gray-900 text-sm">{group.label}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </Fragment>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+    );
+  };
+
+  const renderConnectionsTable = () => {
+    const filteredConnections = uniqueConnections.filter((connection) => {
+      const fromType = componentById.get(String(connection.from))?.type;
+      const toType = componentById.get(String(connection.to))?.type;
+      const isAllowed = (type?: string) => type === "equipment" || type === "gate";
+      return isAllowed(fromType) && isAllowed(toType);
+    });
+
+    return (
+      <div className="w-full">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-[#4F8FF7]/10">
+                <TableHead className="font-semibold text-gray-700 text-sm">From</TableHead>
+                <TableHead className="font-semibold text-gray-700 text-sm">To</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredConnections.length === 0 ? (
                 <TableRow>
-                  <TableCell
-                    colSpan={type === "equipment" ? 7 : type === "carrier" ? 6 : 5}
-                    className="text-center text-gray-500 text-sm"
-                  >
-                    No {type} components
+                  <TableCell colSpan={2} className="text-center text-gray-500 text-sm">
+                    No equipment/gate connections
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredComponents.map((c) => (
+                filteredConnections.map((c) => (
                   <TableRow key={c.id} className="hover:bg-[#4F8FF7]/5">
-                    <TableCell className="text-gray-900 text-sm">{c.name}</TableCell>
-                    <TableCell className="text-gray-900 text-sm">{c.category}</TableCell>
-                    {type === "equipment" && (
-                      <>
-                        <TableCell className="text-gray-900 text-sm">
-                          {c.data?.technicalData?.input?.length
-                            ? c.data.technicalData.input
-                                .map((inp:any) => `${inp.name} (${inp.quantity} ${inp.unit})`)
-                                .join(", ")
-                            : "N/A"}
-                        </TableCell>
-                        <TableCell className="text-gray-900 text-sm">
-                          {c.data?.technicalData?.output?.length
-                            ? c.data.technicalData.output
-                                .map((out:any) => `${out.name} (${out.quantity} ${out.unit})`)
-                                .join(", ")
-                            : "N/A"}
-                        </TableCell>
-                        <TableCell className="text-gray-900 text-sm">
-                          {c.data?.technicalData?.efficiency ? `${c.data.technicalData.efficiency}%` : "N/A"}
-                        </TableCell>
-                        <TableCell className="text-gray-900 text-sm">
-                          {c.data?.technicalData?.capacity
-                            ? `${c.data.technicalData.capacity.value} ${c.data.technicalData.capacity.unit}`
-                            : "N/A"}
-                        </TableCell>
-                        <TableCell className="text-gray-900 text-sm">{c.data?.manufacturer || "N/A"}</TableCell>
-                      </>
-                    )}
-                    {type === "carrier" && (
-                      <>
-                        <TableCell className="text-gray-900 text-sm">
-                          {c.data?.fuelType || "N/A"}
-                        </TableCell>
-                        <TableCell className="text-gray-900 text-sm">
-                          {c.data?.temperature != null ? `${c.data.temperature}°C` : "N/A"}
-                        </TableCell>
-                        <TableCell className="text-gray-900 text-sm">
-                          {c.data?.pressure != null ? `${c.data.pressure} bar` : "N/A"}
-                        </TableCell>
-                      </>
-                    )}
-                    {type === "gate" && (
-                      <>
-                        <TableCell className="text-gray-900 text-sm">{c.data?.gateType || "N/A"}</TableCell>
-                        <TableCell className="text-gray-900 text-sm">{c.data?.sourceOrigin || "N/A"}</TableCell>
-                        <TableCell className="text-gray-900 text-sm">{c.data?.endUse || "N/A"}</TableCell>
-                      </>
-                    )}
-                    <TableCell className="text-gray-900 text-sm">
-                      {c.certifications?.length ? c.certifications.join(", ") : "None"}
-                    </TableCell>
+                    <TableCell className="text-gray-900 text-sm">{getComponentLabel(c.from)}</TableCell>
+                    <TableCell className="text-gray-900 text-sm">{getComponentLabel(c.to)}</TableCell>
                   </TableRow>
                 ))
               )}
@@ -1227,53 +1181,8 @@ export const PlantBuilder = () => {
     );
   };
 
-  const renderConnectionsTable = () => (
-    <div className="w-full">
-      <h3 className="font-semibold text-base sm:text-lg text-gray-800 mb-4">Connections</h3>
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-[#4F8FF7]/10">
-              <TableHead className="font-semibold text-gray-700 text-sm">From</TableHead>
-              <TableHead className="font-semibold text-gray-700 text-sm">To</TableHead>
-              <TableHead className="font-semibold text-gray-700 text-sm">Type</TableHead>
-              <TableHead className="font-semibold text-gray-700 text-sm">Reason</TableHead>
-              <TableHead className="font-semibold text-gray-700 text-sm">Details</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {uniqueConnections.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center text-gray-500 text-sm">
-                  No connections
-                </TableCell>
-              </TableRow>
-            ) : (
-              uniqueConnections.map((c) => (
-                <TableRow key={c.id} className="hover:bg-[#4F8FF7]/5">
-                  <TableCell className="text-gray-900 text-sm">{getComponentName(c.from)}</TableCell>
-                  <TableCell className="text-gray-900 text-sm">{getComponentName(c.to)}</TableCell>
-                  <TableCell className="text-gray-900 text-sm">{c.type || "Untitled"}</TableCell>
-                  <TableCell className="text-gray-900 text-sm">{c.reason || "N/A"}</TableCell>
-                  <TableCell className="text-gray-900 text-sm">
-                    {Object.keys(c.data || {}).length > 0
-                      ? Object.entries(c.data || {})
-                          .map(([key, value]) => `${key}: ${value}`)
-                          .join(", ")
-                      : "N/A"}
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
-  );
-
   const renderPlantInfoTable = () => (
     <div className="w-full">
-      <h3 className="font-semibold text-base sm:text-lg text-gray-800 mb-4">Plant Information</h3>
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
@@ -1414,28 +1323,30 @@ export const PlantBuilder = () => {
               />
             </div>
             {/* Sidebar Container (overlay; does not shift canvas) */}
-            <div
-              className={`absolute top-0 left-0 h-full flex transition-all duration-300 ease-in-out ${
-                showComponentLibrary ? "w-full sm:w-96" : "w-10"
-              } bg-white border-r border-gray-200 shadow-sm overflow-hidden z-20`}
-            >
-              {showComponentLibrary && (
-                <div className="flex-1 overflow-y-auto">
-                  <ComponentLibrary />
-                </div>
-              )}
+            {!showDataModel && (
               <div
-                className="w-10 bg-gray-100 hover:bg-[#4F8FF7]/10 cursor-pointer flex items-center justify-center transition-colors duration-200"
-                onClick={toggleComponentLibrary}
-                title={showComponentLibrary ? "Hide Library" : "Show Library"}
+                className={`absolute top-0 left-0 h-full flex transition-all duration-300 ease-in-out ${
+                  showComponentLibrary ? "w-full sm:w-96" : "w-10"
+                } bg-white border-r border-gray-200 shadow-sm overflow-hidden z-20`}
               >
-                {showComponentLibrary ? (
-                  <ChevronLeft className="h-5 w-5 text-[#4F8FF7]" />
-                ) : (
-                  <ChevronRight className="h-5 w-5 text-[#4F8FF7]" />
+                {showComponentLibrary && (
+                  <div className="flex-1 overflow-y-auto">
+                    <ComponentLibrary />
+                  </div>
                 )}
+                <div
+                  className="w-10 bg-gray-100 hover:bg-[#4F8FF7]/10 cursor-pointer flex items-center justify-center transition-colors duration-200"
+                  onClick={toggleComponentLibrary}
+                  title={showComponentLibrary ? "Hide Library" : "Show Library"}
+                >
+                  {showComponentLibrary ? (
+                    <ChevronLeft className="h-5 w-5 text-[#4F8FF7]" />
+                  ) : (
+                    <ChevronRight className="h-5 w-5 text-[#4F8FF7]" />
+                  )}
+                </div>
               </div>
-            </div>
+            )}
 
             {validationResult && showValidationPanel && (
               <aside className="absolute top-0 right-0 h-full w-full max-w-[360px] z-30 bg-white/95 backdrop-blur border-l border-gray-200 shadow-xl flex flex-col">
@@ -1603,81 +1514,59 @@ export const PlantBuilder = () => {
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-gray-900">Plant Data Model</DialogTitle>
           </DialogHeader>
-          <div className="space-y-6 p-4">
-            <div>
-              <h3 className="font-semibold text-base sm:text-lg text-gray-800">Incentivization Message</h3>
-              <p className="text-sm text-gray-600 mb-4">
-                To ensure the most accurate digital twin of your plant, please build the process flow
-                diagram with precise connections and component details. Accurate representations
-                enhance compliance checks and optimize plant performance analysis.
-              </p>
-            </div>
-            <div>
-              <h3 className="font-semibold text-base sm:text-lg text-gray-800">Process Flow Diagram</h3>
-              <div className="border border-gray-200 rounded-lg p-4 bg-gray-50 relative">
-                <div className="h-[300px] flex overflow-hidden">
-                  <Canvas
-                    components={components}
-                    setComponents={setComponents}
-                    connections={connections}
-                    setConnections={setConnections}
-                    onConnect={onConnect}  // PASSED
-                    onModelChange={handleCanvasModelChange}
-                    exportId="preview"
-                  />
+          <div id="plant-data-export" className="space-y-6 p-4 bg-white">
+            <section className="pdf-page rounded-lg border border-slate-200 p-6 shadow-sm">
+              <div className="pdf-header">
+                <div className="pdf-title">{plantInfo?.plantName || "Plant Model Report"}</div>
+                <div className="pdf-subtitle">
+                  Generated {new Date().toLocaleString()}
                 </div>
               </div>
-            </div>
-            {renderComponentTable("equipment", "Equipment Components (Physical Infrastructure)")}
-            {renderComponentTable("carrier", "Carrier Components (Energy & Material Flow)")}
-            {renderComponentTable("gate", "Gate Components (Input/Output Points)")}
-            {renderConnectionsTable()}
-            {renderPlantInfoTable()}
-            <div>
-              <h3 className="font-semibold text-base sm:text-lg text-gray-800 mb-4">Products</h3>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-[#4F8FF7]/10">
-                      <TableHead className="font-semibold text-gray-700 text-sm">Product Name</TableHead>
-                      <TableHead className="font-semibold text-gray-700 text-sm">Fuel Type</TableHead>
-                      <TableHead className="font-semibold text-gray-700 text-sm">Production Capacity</TableHead>
-                      <TableHead className="font-semibold text-gray-700 text-sm">Unit</TableHead>
-                      <TableHead className="font-semibold text-gray-700 text-sm">Feedstock</TableHead>
-                      <TableHead className="font-semibold text-gray-700 text-sm">Offtake Location</TableHead>
-                      <TableHead className="font-semibold text-gray-700 text-sm">Downstream Operations</TableHead>
-                      <TableHead className="font-semibold text-gray-700 text-sm">Verified</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {productInfo.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={8} className="text-center text-gray-500 text-sm">
-                          No products
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      productInfo.map((p, index) => (
-                        <TableRow key={index} className="hover:bg-[#4F8FF7]/5">
-                          <TableCell className="text-gray-900 text-sm">{p.productName}</TableCell>
-                          <TableCell className="text-gray-900 text-sm">{p.fuelType}</TableCell>
-                          <TableCell className="text-gray-900 text-sm">{p.productionCapacity}</TableCell>
-                          <TableCell className="text-gray-900 text-sm">{p.unit}</TableCell>
-                          <TableCell className="text-gray-900 text-sm">{p.feedstock || "N/A"}</TableCell>
-                          <TableCell className="text-gray-900 text-sm">
-                            {p.offtakeLocations?.[0]?.country || "N/A"}
-                          </TableCell>
-                          <TableCell className="text-gray-900 text-sm">
-                            {p.downstreamOperations || p.downstreamOperationsArray?.join(", ") || "N/A"}
-                          </TableCell>
-                          <TableCell className="text-gray-900 text-sm">{p.verified ? "Yes" : "No"}</TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
+              <div className="text-sm text-gray-600">
+                This report summarizes the plant model layout, components, and connections.
               </div>
-            </div>
+            </section>
+
+            <section className="rounded-lg border border-slate-200 p-6 shadow-sm">
+              <div className="pdf-header">
+                <div className="text-lg font-semibold text-gray-800">Process Flow Diagram</div>
+              </div>
+              <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                {isGeneratingPreview ? (
+                  <div className="text-sm text-gray-500">Generating preview…</div>
+                ) : previewImageUrl ? (
+                  <img
+                    src={previewImageUrl}
+                    alt="Plant model preview"
+                    className="w-full h-auto rounded-md border border-gray-200 bg-white"
+                  />
+                ) : (
+                  <div className="text-sm text-gray-500">Preview unavailable.</div>
+                )}
+              </div>
+              <p className="text-xs text-gray-500 mt-2">Preview only. You can export it.</p>
+            </section>
+
+            <section className="pdf-page rounded-lg border border-slate-200 p-6 shadow-sm">
+              <div className="pdf-header">
+                <div className="text-lg font-semibold text-gray-800">Components</div>
+              </div>
+              {renderComponentsSummaryTable()}
+            </section>
+
+            <section className="pdf-page rounded-lg border border-slate-200 p-6 shadow-sm">
+              <div className="pdf-header">
+                <div className="text-lg font-semibold text-gray-800">Connections</div>
+              </div>
+              {renderConnectionsTable()}
+            </section>
+
+            <section className="pdf-page rounded-lg border border-slate-200 p-6 shadow-sm">
+              <div className="pdf-header">
+                <div className="text-lg font-semibold text-gray-800">Plant Information</div>
+              </div>
+              {renderPlantInfoTable()}
+            </section>
             <div className="flex flex-col sm:flex-row justify-between gap-4">
               <div className="flex flex-col sm:flex-row gap-2">
                 <Button
@@ -1689,10 +1578,10 @@ export const PlantBuilder = () => {
                 </Button>
                 <Button
                   className="bg-green-600 hover:bg-green-700 text-white text-sm"
-                  onClick={handleExportExcel}
+                  onClick={handleExportPDF}
                 >
                   <Download className="h-4 w-4 mr-2" />
-                  Export Excel Data
+                  Export PDF
                 </Button>
               </div>
             </div>
