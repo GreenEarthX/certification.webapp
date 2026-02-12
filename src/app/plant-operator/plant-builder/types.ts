@@ -128,6 +128,7 @@ export interface PlacedComponent {
   // Optional backend linkage
   componentDefinitionId?: number;
   instanceId?: number; // database primary key for component_instances
+  isPersisting?: boolean;
 }
 
 export interface Connection {

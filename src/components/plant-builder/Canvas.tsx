@@ -77,6 +77,7 @@ const CANVAS_PADDING = 200;
 const ZOOM_MIN = 0.25;
 const ZOOM_MAX = 2;
 const ZOOM_STEP = 0.1;
+type PortSide = "left" | "right" | "top" | "bottom";
 
 const getComponentBounds = (type: PlacedComponentType["type"]) => {
   switch (type) {
@@ -411,24 +412,22 @@ const Canvas = ({
       const componentData = JSON.parse(raw);
       const point = getCanvasPoint(e.clientX, e.clientY);
       if (!point) return;
+      const mappedData = mapDroppedComponentData(componentData);
+      const tempId = `pending-${Date.now()}`;
 
-      const newComp: PlacedComponentType = {
+      const pendingComp: PlacedComponentType = {
         ...componentData,
-        id: `${componentData.id}-${Date.now()}`,
+        id: tempId,
         position: {
           x: point.x,
           y: point.y,
         },
-        data: mapDroppedComponentData(componentData),
+        data: mappedData,
         certifications: componentData.certifications || [],
+        isPersisting: true,
       };
 
-      // optimistic add to UI and immediately print full frontend model for debugging
-      setComponents((prev) => {
-        const next = [...prev, newComp];
-        console.log("[plant-builder] model after drop:", JSON.stringify({ components: next, connections }, null, 2));
-        return next;
-      });
+      setComponents((prev) => [...prev, pendingComp]);
 
       // attempt to persist: find or create component_definition and persist instance
       (async () => {
@@ -451,6 +450,7 @@ const Canvas = ({
           if (!twinId) {
             console.warn("[plant-builder] no twin id set; skipping persistence for:", componentData);
             toast("Create a plant / digital twin first to persist components.", { icon: "ℹ️" });
+            setComponents((prev) => prev.filter((c) => c.id !== tempId));
             return;
           }
 
@@ -459,8 +459,7 @@ const Canvas = ({
             console.warn("[plant-builder] component definition not found for:", componentData);
             console.warn("[plant-builder] searching for: name=", componentData.name, "type=", componentData.type);
             toast(`Component "${componentData.name}" not available in library. Contact admin to add it.`, { icon: "⚠️" });
-            // Remove the UI component we added optimistically
-            setComponents((prev) => prev.filter((c) => c.id !== newComp.id));
+            setComponents((prev) => prev.filter((c) => c.id !== tempId));
             return;
           }
 
@@ -468,9 +467,9 @@ const Canvas = ({
           const payload = {
             digital_twin_id: twinId,
             component_definition_id: def.id,
-            instance_name: newComp.name || componentData.name,
-            position: newComp.position,
-            field_values: newComp.data || {},
+            instance_name: componentData.name,
+            position: point,
+            field_values: mappedData,
             connections: [],
             metadata: {},
           };
@@ -479,23 +478,39 @@ const Canvas = ({
           const created = await createComponentInstance(payload as any);
           console.log("[plant-builder] createComponentInstance response:", created);
 
-          // Update UI component with database IDs
+          // Replace the pending component with database ID directly
           setComponents((prev) => {
-            const next = prev.map((c) => (c.id === newComp.id ? { ...c, componentDefinitionId: def!.id, instanceId: created.id } : c));
+            const next = prev.map((c) =>
+              c.id === tempId
+                ? {
+                    ...c,
+                    id: String(created.id),
+                    componentDefinitionId: def.id,
+                    instanceId: created.id,
+                    isPersisting: false,
+                  }
+                : c
+            );
             console.log("[plant-builder] model after persist:", JSON.stringify({ components: next, connections }, null, 2));
             return next;
           });
+          setConnections((prev) =>
+            prev.map((conn) => ({
+              ...conn,
+              from: conn.from === tempId ? String(created.id) : conn.from,
+              to: conn.to === tempId ? String(created.id) : conn.to,
+            }))
+          );
 
-          toast.success(`${newComp.name} persisted (id ${created.id})`);
+          toast.success(`${componentData.name} persisted (id ${created.id})`);
         } catch (err) {
           console.warn("Failed to persist component instance:", err);
           toast.error("Failed to persist component to server.");
-          // Clean up the optimistically added component on error
-          setComponents((prev) => prev.filter((c) => c.id !== newComp.id));
+          setComponents((prev) => prev.filter((c) => c.id !== tempId));
         }
       })();
     },
-    [getCanvasPoint, setComponents]
+    [connections, getCanvasPoint, setComponents, setConnections]
   );
 
   const handleDragOver = (e: React.DragEvent) => e.preventDefault();
@@ -770,16 +785,59 @@ const Canvas = ({
     }
   };
 
-  const getPortPoint = (component: PlacedComponentType, side: "left" | "right") => {
+  const getPortPoint = (component: PlacedComponentType, side: PortSide) => {
     const x = toNumber(component.position?.x);
     const y = toNumber(component.position?.y);
     const bounds = getComponentBounds(component.type);
     const left = x + bounds.offsetX + canvasOffset.x;
     const top = y + bounds.offsetY + canvasOffset.y;
+    const centerX = left + bounds.width / 2;
+    const centerY = top + bounds.height / 2;
+
+    if (side === "right") {
+      return { x: left + bounds.width, y: centerY };
+    }
+    if (side === "left") {
+      return { x: left, y: centerY };
+    }
+    if (side === "top") {
+      return { x: centerX, y: top };
+    }
+
     return {
-      x: left + (side === "right" ? bounds.width : 0),
-      y: top + bounds.height / 2,
+      x: centerX,
+      y: top + bounds.height,
     };
+  };
+
+  const getConnectionSides = (
+    fromComp: PlacedComponentType,
+    toComp: PlacedComponentType
+  ): { fromSide: PortSide; toSide: PortSide } => {
+    const fromX = toNumber(fromComp.position?.x);
+    const fromY = toNumber(fromComp.position?.y);
+    const toX = toNumber(toComp.position?.x);
+    const toY = toNumber(toComp.position?.y);
+    const fromBounds = getComponentBounds(fromComp.type);
+    const toBounds = getComponentBounds(toComp.type);
+
+    const fromCenterX = fromX + fromBounds.offsetX + fromBounds.width / 2;
+    const fromCenterY = fromY + fromBounds.offsetY + fromBounds.height / 2;
+    const toCenterX = toX + toBounds.offsetX + toBounds.width / 2;
+    const toCenterY = toY + toBounds.offsetY + toBounds.height / 2;
+
+    const dx = toCenterX - fromCenterX;
+    const dy = toCenterY - fromCenterY;
+
+    if (Math.abs(dx) >= Math.abs(dy)) {
+      return dx >= 0
+        ? { fromSide: "right", toSide: "left" }
+        : { fromSide: "left", toSide: "right" };
+    }
+
+    return dy >= 0
+      ? { fromSide: "bottom", toSide: "top" }
+      : { fromSide: "top", toSide: "bottom" };
   };
 
   const createCarrierBetween = useCallback(
@@ -987,8 +1045,9 @@ const Canvas = ({
               const toComp = components.find((c) => c.id === conn.to);
               if (!fromComp || !toComp) return null;
 
-              const from = getPortPoint(fromComp, "right");
-              const to = getPortPoint(toComp, "left");
+              const { fromSide, toSide } = getConnectionSides(fromComp, toComp);
+              const from = getPortPoint(fromComp, fromSide);
+              const to = getPortPoint(toComp, toSide);
 
               return (
                 <ConnectionArrow
@@ -996,6 +1055,8 @@ const Canvas = ({
                   id={String(conn.id)}
                   from={from}
                   to={to}
+                  fromSide={fromSide}
+                  toSide={toSide}
                   style={connectionStyle}
                   isInvalid={invalidConnectionIds?.has(String(conn.id)) ?? false}
                   onClick={() => setSelectedConnection(conn)}
