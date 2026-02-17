@@ -64,7 +64,7 @@ import {
   PlacedComponent,
   Connection,
 } from "./types";
-import { createPlant, fetchPlantById, Plant } from "@/services/plant-builder/plants";
+import { createPlant, fetchPlantById, Plant, updatePlant } from "@/services/plant-builder/plants";
 import {
   createDigitalTwin,
   fetchDigitalTwinJsonForPlant,
@@ -135,6 +135,11 @@ export const PlantBuilder = () => {
   const highlightTimerRef = useRef<number | null>(null);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
+  const [isEditingPlantInfo, setIsEditingPlantInfo] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareMode, setShareMode] = useState<"template" | "private">("private");
+  const [shareEmailInput, setShareEmailInput] = useState("");
+  const [shareEmails, setShareEmails] = useState<string[]>([]);
 
   useEffect(() => {
     if (showDataModel) {
@@ -415,13 +420,15 @@ export const PlantBuilder = () => {
     useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
     const plantIdParam = searchParams.get("plantId");
+    const editMode = searchParams.get("edit") === "info";
 
     if (!plantIdParam) return;
 
     const plantId = Number(plantIdParam);
     if (Number.isNaN(plantId)) return;
 
-    setStep("builder");
+    setIsEditingPlantInfo(editMode);
+    setStep(editMode ? "info" : "builder");
 
     const mapPlantToInfo = (plant: Plant): PlantInfo => {
       const metadata = plant.metadata || {};
@@ -603,6 +610,35 @@ export const PlantBuilder = () => {
     } catch (err) {
       setError("Failed to save products. Please try again.");
       toast.error("Error saving products.");
+    }
+  };
+
+  const handleInfoUpdate = async (info: PlantInfo) => {
+    try {
+      const plantId = Number((window as any).currentPlantId);
+      if (!plantId) {
+        toast.error("Missing plant id.");
+        return;
+      }
+      await updatePlant(plantId, {
+        name: info.plantName,
+        location: info.country,
+        status: info.status,
+        metadata: {
+          projectName: info.projectName,
+          projectType: info.projectType,
+          primaryFuelType: info.primaryFuelType,
+          commercialOperationalDate: info.commercialOperationalDate,
+          investment: info.investment,
+        },
+      });
+      setPlantInfo(info);
+      setIsEditingPlantInfo(false);
+      setStep("builder");
+      toast.success("Plant info updated.");
+    } catch (err: any) {
+      console.error("Failed to update plant info:", err);
+      toast.error(err?.message || "Failed to update plant info.");
     }
   };
 
@@ -1020,6 +1056,38 @@ export const PlantBuilder = () => {
     }
   };
 
+  const isValidEmail = (value: string) =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+
+  const handleAddShareEmail = () => {
+    const value = shareEmailInput.trim().toLowerCase();
+    if (!value) return;
+    if (!isValidEmail(value)) {
+      toast.error("Enter a valid email address.");
+      return;
+    }
+    if (shareEmails.includes(value)) {
+      toast.info("Email already added.");
+      setShareEmailInput("");
+      return;
+    }
+    setShareEmails((prev) => [...prev, value]);
+    setShareEmailInput("");
+  };
+
+  const handleRemoveShareEmail = (email: string) => {
+    setShareEmails((prev) => prev.filter((item) => item !== email));
+  };
+
+  const handleSendShare = () => {
+    if (shareMode === "private" && shareEmails.length === 0) {
+      toast.error("Add at least one email.");
+      return;
+    }
+    toast.success("Share request prepared. Backend not connected yet.");
+    setShowShareModal(false);
+  };
+
   const onConnect = useCallback(
     (params: any) => {
       try {
@@ -1262,12 +1330,19 @@ export const PlantBuilder = () => {
         </div>
         <div className="flex items-center gap-2">
           {(step === "builder" || step === "compliance") && (
+            // <Button
+            //   className="text-sm bg-green-600 hover:bg-green-700 text-white"
+            //   onClick={() => setShowAssistantModal(true)}
+            // >
+            //   <MessageSquare className="h-4 w-4 mr-2" />
+            //   Assistant / Reach Out
+            // </Button>
             <Button
               className="text-sm bg-green-600 hover:bg-green-700 text-white"
-              onClick={() => setShowAssistantModal(true)}
+              onClick={() => setShowShareModal(true)}
             >
               <MessageSquare className="h-4 w-4 mr-2" />
-              Assistant / Reach Out
+              Share
             </Button>
           )}
         </div>
@@ -1284,7 +1359,11 @@ export const PlantBuilder = () => {
 
         {step === "info" ? (
           <div className="min-h-[calc(100vh-80px)] max-h-[calc(100vh-80px)] flex items-start justify-center p-4 overflow-y-auto">
-            <PlantInfoForm onSubmit={handleInfoSubmit} />
+            <PlantInfoForm
+              onSubmit={isEditingPlantInfo ? handleInfoUpdate : handleInfoSubmit}
+              initialData={plantInfo || undefined}
+              submitLabel={isEditingPlantInfo ? "Save Plant Info" : undefined}
+            />
           </div>
         ) : step === "product" ? (
           <div className="min-h-[calc(100vh-80px)] max-h-[calc(100vh-80px)] flex items-start justify-center p-4 overflow-y-auto">
@@ -1686,6 +1765,87 @@ export const PlantBuilder = () => {
                 </Button>
               </form>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showShareModal} onOpenChange={setShowShareModal}>
+        <DialogContent className="max-w-md bg-white rounded-lg">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-gray-900">Share Digital Twin</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-sm">Share Mode</Label>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant={shareMode === "private" ? "default" : "outline"}
+                  className={shareMode === "private" ? "bg-[#4F8FF7] text-white" : ""}
+                  onClick={() => setShareMode("private")}
+                >
+                  Specific People
+                </Button>
+                <Button
+                  type="button"
+                  variant={shareMode === "template" ? "default" : "outline"}
+                  className={shareMode === "template" ? "bg-[#4F8FF7] text-white" : ""}
+                  onClick={() => setShareMode("template")}
+                >
+                  Public Template
+                </Button>
+              </div>
+            </div>
+
+            {shareMode === "private" ? (
+              <div className="space-y-3">
+                <Label className="text-sm">Invite by Email</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={shareEmailInput}
+                    onChange={(e) => setShareEmailInput(e.target.value)}
+                    placeholder="email@example.com"
+                  />
+                  <Button type="button" onClick={handleAddShareEmail}>
+                    Add
+                  </Button>
+                </div>
+                {shareEmails.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {shareEmails.map((email) => (
+                      <span
+                        key={email}
+                        className="flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-700"
+                      >
+                        {email}
+                        <button
+                          type="button"
+                          className="text-slate-500 hover:text-slate-700"
+                          onClick={() => handleRemoveShareEmail(email)}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-600">
+                This will publish the digital twin as a template. You can manage templates later.
+              </p>
+            )}
+          </div>
+          <div className="mt-5 flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowShareModal(false)}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-[#4F8FF7] hover:bg-[#3b73c4] text-white"
+              onClick={handleSendShare}
+            >
+              Send
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
