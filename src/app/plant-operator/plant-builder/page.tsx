@@ -15,16 +15,23 @@ import {
   Pencil,
   Users,
   Search,
+  MoreVertical,
+  Trash2,
 } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import {
   fetchPlantsForCurrentUser,
   Plant,
-  updatePlant,
 } from "@/services/plant-builder/plants";
 
 export default function ChoosePlantPage() {
@@ -36,19 +43,6 @@ export default function ChoosePlantPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showTemplates, setShowTemplates] = useState(false);
-  const [editingPlant, setEditingPlant] = useState<Plant | null>(null);
-  const [editForm, setEditForm] = useState({
-    name: "",
-    location: "",
-    status: "",
-    projectName: "",
-    projectType: "",
-    primaryFuelType: "",
-    commercialOperationalDate: "",
-    investmentAmount: "",
-    investmentUnit: "",
-  });
-  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -99,68 +93,13 @@ export default function ChoosePlantPage() {
 
   const handleOpenTemplates = () => setShowTemplates(true);
 
-  const handleStartEdit = (plant: Plant) => {
-    const metadata = plant.metadata || {};
-    const investment = (metadata as any).investment || {};
-    setEditingPlant(plant);
-    setEditForm({
-      name: plant.name || "",
-      location: plant.location || "",
-      status: plant.status || "",
-      projectName: (metadata as any).projectName || "",
-      projectType: (metadata as any).projectType || "",
-      primaryFuelType: (metadata as any).primaryFuelType || "",
-      commercialOperationalDate: (metadata as any).commercialOperationalDate || "",
-      investmentAmount:
-        investment.amount != null ? String(investment.amount) : "",
-      investmentUnit: investment.unit || "",
-    });
-  };
-
-  const handleSaveEdit = async () => {
-    if (!editingPlant) return;
-    if (!editForm.name.trim()) {
-      toast.error("Plant name is required.");
-      return;
-    }
-    try {
-      setIsSaving(true);
-      const amountValue = Number.parseFloat(editForm.investmentAmount);
-      const investment =
-        Number.isFinite(amountValue) || editForm.investmentUnit.trim()
-          ? {
-              amount: Number.isFinite(amountValue) ? amountValue : editForm.investmentAmount,
-              unit: editForm.investmentUnit.trim(),
-            }
-          : undefined;
-
-      const metadata = {
-        projectName: editForm.projectName.trim(),
-        projectType: editForm.projectType.trim(),
-        primaryFuelType: editForm.primaryFuelType.trim(),
-        commercialOperationalDate: editForm.commercialOperationalDate.trim(),
-        ...(investment ? { investment } : {}),
-      };
-
-      const updated = await updatePlant(editingPlant.id, {
-        name: editForm.name.trim(),
-        location: editForm.location?.trim() || undefined,
-        status: editForm.status?.trim() || undefined,
-        metadata,
-      });
-      setPlants((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
-      toast.success("Plant updated.");
-      setEditingPlant(null);
-    } catch (err: any) {
-      console.error("Failed to update plant:", err);
-      toast.error(err?.message || "Failed to update plant.");
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   const handleArchivePlant = (plant: Plant) => {
     toast.info(`Archive "${plant.name}" is not available yet.`);
+  };
+
+  const handleDeletePlant = (plant: Plant) => {
+    toast.info(`Delete "${plant.name}" is not available yet.`);
   };
 
   const filteredPlants = plants.filter((plant) => {
@@ -357,30 +296,6 @@ export default function ChoosePlantPage() {
                 <div className="mt-4 flex justify-end">
                   <div className="flex items-center gap-2">
                     <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-xs"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleArchivePlant(plant);
-                      }}
-                    >
-                      <Archive className="h-3 w-3 mr-1" />
-                      Archive
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-xs"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleStartEdit(plant);
-                      }}
-                    >
-                      <Pencil className="h-3 w-3 mr-1" />
-                      Edit
-                    </Button>
-                    <Button
                       size="sm"
                       className="bg-[#4F8FF7] hover:bg-[#3b73c4] text-white text-xs"
                       onClick={(e) => {
@@ -390,6 +305,48 @@ export default function ChoosePlantPage() {
                     >
                       Open
                     </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="bg-white">
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(`/plant-operator/plant-builder/builder?plantId=${plant.id}&edit=info`);
+                          }}
+                        >
+                          <Pencil className="mr-2 h-4 w-4" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleArchivePlant(plant);
+                          }}
+                        >
+                          <Archive className="mr-2 h-4 w-4" />
+                          Archive
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-red-600 focus:text-red-600"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeletePlant(plant);
+                          }}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               </Card>
@@ -414,109 +371,6 @@ export default function ChoosePlantPage() {
         </div>
       )}
 
-      {editingPlant && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <Card className="w-full max-w-lg p-6 bg-white max-h-[85vh] overflow-y-auto">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">Edit Plant</h2>
-              <Button variant="ghost" size="sm" onClick={() => setEditingPlant(null)}>
-                Close
-              </Button>
-            </div>
-            <div className="mt-4 space-y-3">
-              <div>
-                <label className="text-xs font-medium text-gray-600">Name</label>
-                <input
-                  className="mt-1 w-full border border-gray-200 rounded-md px-3 py-2 text-sm"
-                  value={editForm.name}
-                  onChange={(e) => setEditForm((prev) => ({ ...prev, name: e.target.value }))}
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-gray-600">Location</label>
-                <input
-                  className="mt-1 w-full border border-gray-200 rounded-md px-3 py-2 text-sm"
-                  value={editForm.location}
-                  onChange={(e) => setEditForm((prev) => ({ ...prev, location: e.target.value }))}
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-gray-600">Status</label>
-                <input
-                  className="mt-1 w-full border border-gray-200 rounded-md px-3 py-2 text-sm"
-                  value={editForm.status}
-                  onChange={(e) => setEditForm((prev) => ({ ...prev, status: e.target.value }))}
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-gray-600">Project Name</label>
-                <input
-                  className="mt-1 w-full border border-gray-200 rounded-md px-3 py-2 text-sm"
-                  value={editForm.projectName}
-                  onChange={(e) => setEditForm((prev) => ({ ...prev, projectName: e.target.value }))}
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-gray-600">Project Type</label>
-                <input
-                  className="mt-1 w-full border border-gray-200 rounded-md px-3 py-2 text-sm"
-                  value={editForm.projectType}
-                  onChange={(e) => setEditForm((prev) => ({ ...prev, projectType: e.target.value }))}
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-gray-600">Primary Fuel Type</label>
-                <input
-                  className="mt-1 w-full border border-gray-200 rounded-md px-3 py-2 text-sm"
-                  value={editForm.primaryFuelType}
-                  onChange={(e) => setEditForm((prev) => ({ ...prev, primaryFuelType: e.target.value }))}
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-gray-600">Commercial Operational Date</label>
-                <input
-                  className="mt-1 w-full border border-gray-200 rounded-md px-3 py-2 text-sm"
-                  placeholder="YYYY-MM-DD"
-                  value={editForm.commercialOperationalDate}
-                  onChange={(e) =>
-                    setEditForm((prev) => ({ ...prev, commercialOperationalDate: e.target.value }))
-                  }
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-medium text-gray-600">Investment Amount</label>
-                  <input
-                    className="mt-1 w-full border border-gray-200 rounded-md px-3 py-2 text-sm"
-                    value={editForm.investmentAmount}
-                    onChange={(e) => setEditForm((prev) => ({ ...prev, investmentAmount: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-600">Investment Unit</label>
-                  <input
-                    className="mt-1 w-full border border-gray-200 rounded-md px-3 py-2 text-sm"
-                    value={editForm.investmentUnit}
-                    onChange={(e) => setEditForm((prev) => ({ ...prev, investmentUnit: e.target.value }))}
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="mt-5 flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setEditingPlant(null)}>
-                Cancel
-              </Button>
-              <Button
-                className="bg-[#4F8FF7] hover:bg-[#3b73c4] text-white"
-                disabled={isSaving}
-                onClick={handleSaveEdit}
-              >
-                {isSaving ? "Saving..." : "Save"}
-              </Button>
-            </div>
-          </Card>
-        </div>
-      )}
     </div>
   );
 }

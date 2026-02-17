@@ -23,9 +23,11 @@ import type { PlantInfo } from "@/app/plant-operator/plant-builder/types";
 
 type PlantInfoFormProps = {
   onSubmit: (info: PlantInfo) => void;
+  initialData?: Partial<PlantInfo>;
+  submitLabel?: string;
 };
 
-const PlantInfoForm = ({ onSubmit }: PlantInfoFormProps) => {
+const PlantInfoForm = ({ onSubmit, initialData, submitLabel }: PlantInfoFormProps) => {
   const [formData, setFormData] = useState<{
     projectName: string;
     plantName: string;
@@ -50,6 +52,34 @@ const PlantInfoForm = ({ onSubmit }: PlantInfoFormProps) => {
   useEffect(() => {
     document.documentElement.classList.remove("dark");
   }, []);
+
+  useEffect(() => {
+    if (!initialData) return;
+    const investmentAmount =
+      initialData.investment && typeof initialData.investment === "object"
+        ? String(initialData.investment.amount ?? "")
+        : "";
+    const statusYear = (() => {
+      const raw = initialData.commercialOperationalDate;
+      if (!raw) return "";
+      if (typeof raw === "string") {
+        const match = raw.match(/\d{4}/);
+        return match ? match[0] : raw;
+      }
+      return "";
+    })();
+
+    setFormData((prev) => ({
+      ...prev,
+      projectName: initialData.projectName ?? prev.projectName,
+      plantName: initialData.plantName ?? prev.plantName,
+      country: initialData.country ?? prev.country,
+      status: initialData.status ?? prev.status,
+      projectType: initialData.projectType ?? prev.projectType,
+      statusDate: statusYear || prev.statusDate,
+      investment: investmentAmount || prev.investment,
+    }));
+  }, [initialData]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -193,7 +223,7 @@ const PlantInfoForm = ({ onSubmit }: PlantInfoFormProps) => {
               <div className="flex justify-end pt-6">
                 <Button type="submit" size="lg"
                   className="min-w-[200px] bg-[#4F8FF7] hover:bg-[#3A78E0] text-white font-medium px-6 py-3 rounded-lg shadow-md transition-all duration-200 hover:shadow-lg">
-                  Continue to Product Form
+                  {submitLabel || "Continue to Product Form"}
                 </Button>
               </div>
             </form>
