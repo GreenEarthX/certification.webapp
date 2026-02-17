@@ -32,3 +32,18 @@ export async function createPlant(payload: {
     body: JSON.stringify(payload),
   });
 }
+
+export async function updatePlant(
+  plantId: number,
+  payload: Partial<{
+    name: string;
+    location?: string;
+    status?: string;
+    metadata?: Record<string, any>;
+  }>
+): Promise<Plant> {
+  return apiFetch<Plant>(`${PLANTS_PATH}/${plantId}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
