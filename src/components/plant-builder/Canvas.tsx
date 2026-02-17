@@ -77,6 +77,7 @@ const CANVAS_PADDING = 200;
 const ZOOM_MIN = 0.25;
 const ZOOM_MAX = 2;
 const ZOOM_STEP = 0.1;
+const GATE_EDGE_GUTTER = 120;
 type PortSide = "left" | "right" | "top" | "bottom";
 
 const getComponentBounds = (type: PlacedComponentType["type"]) => {
@@ -99,6 +100,54 @@ const toNumber = (value: unknown) => {
     return Number.isFinite(parsed) ? parsed : 0;
   }
   return 0;
+};
+
+const getGateDirection = (
+  component: PlacedComponentType,
+  connections: ConnectionType[]
+) => {
+  const raw =
+    (component as any)?.data?.gateType ??
+    (component as any)?.data?.inputOrOutput ??
+    (component as any)?.data?.input_or_output ??
+    (component as any)?.data?.gate_type ??
+    (component as any)?.data?.gateData?.inputOrOutput;
+  if (typeof raw === "string") {
+    const value = raw.toLowerCase();
+    if (value === "input" || value === "output") return value;
+  }
+
+  const hasOutgoing = connections.some((conn) => conn.from === component.id);
+  const hasIncoming = connections.some((conn) => conn.to === component.id);
+  if (hasOutgoing && !hasIncoming) return "input";
+  if (hasIncoming && !hasOutgoing) return "output";
+  return null;
+};
+
+const calculateGateZones = (components: PlacedComponentType[]) => {
+  if (!components.length) return null;
+  const referenceComponents = components.filter((comp) => comp.type !== "gate");
+  const source = referenceComponents.length ? referenceComponents : components;
+
+  let minX = Infinity;
+  let maxX = -Infinity;
+
+  source.forEach((comp) => {
+    const x = toNumber(comp.position?.x);
+    const bounds = getComponentBounds(comp.type);
+    const left = x + bounds.offsetX;
+    const right = left + bounds.width;
+    minX = Math.min(minX, left);
+    maxX = Math.max(maxX, right);
+  });
+
+  if (!Number.isFinite(minX) || !Number.isFinite(maxX)) return null;
+
+  const gateBounds = getComponentBounds("gate");
+  return {
+    inputLeft: minX - GATE_EDGE_GUTTER - gateBounds.width,
+    outputLeft: maxX + GATE_EDGE_GUTTER,
+  };
 };
 
 const mapDroppedComponentData = (componentData: any) => {
@@ -262,6 +311,38 @@ const Canvas = ({
     return { minX, minY, maxX, maxY };
   }, [components, hasUserZoomed]);
 
+  useEffect(() => {
+    const zones = calculateGateZones(components);
+    if (!zones) return;
+    const gateBounds = getComponentBounds("gate");
+    const { inputLeft, outputLeft } = zones;
+
+    let changed = false;
+    const next = components.map((comp) => {
+      if (comp.type !== "gate") return comp;
+      const direction = getGateDirection(comp, connections);
+      if (!direction) return comp;
+
+      const desiredLeft = direction === "input" ? inputLeft : outputLeft;
+      const desiredX = desiredLeft - gateBounds.offsetX;
+      const currentX = toNumber(comp.position?.x);
+      if (Math.abs(desiredX - currentX) < 1) return comp;
+      changed = true;
+      return {
+        ...comp,
+        position: {
+          ...comp.position,
+          x: desiredX,
+        },
+      };
+    });
+
+    if (changed) {
+      setComponents(next);
+    }
+  }, [components, connections, setComponents]);
+
+
   const canvasOffset = useMemo(
     () => ({
       x: zoomPadding - Math.min(canvasBounds.minX, 0),
@@ -269,6 +350,15 @@ const Canvas = ({
     }),
     [canvasBounds.minX, canvasBounds.minY, zoomPadding]
   );
+
+  const gateZones = useMemo(() => {
+    const zones = calculateGateZones(components);
+    if (!zones) return null;
+    return {
+      inputX: zones.inputLeft + canvasOffset.x,
+      outputX: zones.outputLeft + canvasOffset.x,
+    };
+  }, [canvasOffset.x, components]);
 
   const canvasSize = useMemo(() => {
     if (!components.length) {
@@ -1034,6 +1124,23 @@ const Canvas = ({
             </div>
             <div className="absolute top-0 bottom-0 right-0 w-1/3 bg-layer-gate/5" />
           </div>
+
+          {gateZones && (
+            <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 1 }}>
+              <div
+                className="absolute top-0 bottom-0"
+                style={{ left: gateZones.inputX }}
+              >
+                <div className="h-full w-px bg-slate-300 shadow-[0_0_8px_rgba(59,130,246,0.45)]" />
+              </div>
+              <div
+                className="absolute top-0 bottom-0"
+                style={{ left: gateZones.outputX }}
+              >
+                <div className="h-full w-px bg-slate-300 shadow-[0_0_8px_rgba(34,197,94,0.45)]" />
+              </div>
+            </div>
+          )}
 
           {/* Connections */}
           <svg
