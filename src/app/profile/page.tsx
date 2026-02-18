@@ -19,6 +19,7 @@ import { clearTokens, getToken } from '@/lib/shared-auth';
 import { fetchUser } from '@/services/users/fetchUserAPI';
 import { submitUserProfile } from '@/services/users/fetchUserAPI';
 import type { User } from '@/models/user';
+import Navbar from '@/components/plant-operator/layout/navbar/Navbar';
 
 type SessionPayload = {
   userId?: string;
@@ -175,23 +176,29 @@ export default function Home() {
 
   if (loading) {
     return (
-      <Box
-        height="100vh"
-        display="flex"
-        alignItems="center"
-        justifyContent="center"
-      >
-        <CircularProgress />
-      </Box>
+      <div className="min-h-screen bg-blue-50">
+        <Navbar />
+        <Box
+          height="100vh"
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+        >
+          <CircularProgress />
+        </Box>
+      </div>
     );
   }
 
 
   if (error) {
     return (
-      <Container maxWidth="sm" sx={{ mt: 4 }}>
-        <Alert severity="error">Error: {error}</Alert>
-      </Container>
+      <div className="min-h-screen bg-blue-50">
+        <Navbar />
+        <Container maxWidth="sm" sx={{ mt: 4 }}>
+          <Alert severity="error">Error: {error}</Alert>
+        </Container>
+      </div>
     );
   }
 
@@ -211,17 +218,19 @@ export default function Home() {
   );
 
   return (
-    <Container maxWidth="md" sx={{ mt: 6, mb: 6 }}>
-      <Paper
-        elevation={0}
-        sx={{
-          p: { xs: 3, md: 4 },
-          borderRadius: 3,
-          border: '1px solid #e5e7eb',
-          background:
-            'linear-gradient(135deg, #f8fafc 0%, #ffffff 55%, #f1f5f9 100%)',
-        }}
-      >
+    <div className="min-h-screen bg-blue-50">
+      <Navbar />
+      <Container maxWidth="md" sx={{ mt: 6, mb: 6 }}>
+        <Paper
+          elevation={0}
+          sx={{
+            p: { xs: 3, md: 4 },
+            borderRadius: 3,
+            border: '1px solid #e5e7eb',
+            background:
+              'linear-gradient(135deg, #f8fafc 0%, #ffffff 55%, #f1f5f9 100%)',
+          }}
+        >
         <Stack
           direction={{ xs: 'column', sm: 'row' }}
           alignItems={{ xs: 'flex-start', sm: 'center' }}
@@ -471,7 +480,8 @@ export default function Home() {
             </Box>
           </Box>
         )}
-      </Paper>
-    </Container>
+        </Paper>
+      </Container>
+    </div>
   );
 }
