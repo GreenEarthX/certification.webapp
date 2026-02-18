@@ -31,15 +31,20 @@ import {
 
 import {
   fetchPlantsForCurrentUser,
+  fetchArchivedPlantsForCurrentUser,
+  archivePlant,
+  unarchivePlant,
+  deactivatePlant,
   Plant,
 } from "@/services/plant-builder/plants";
 
 export default function ChoosePlantPage() {
   const router = useRouter();
   const [plants, setPlants] = useState<Plant[]>([]);
+  const [archivedPlants, setArchivedPlants] = useState<Plant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"mine" | "shared">("mine");
+  const [activeTab, setActiveTab] = useState<"mine" | "shared" | "archived">("mine");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showTemplates, setShowTemplates] = useState(false);
@@ -50,9 +55,13 @@ export default function ChoosePlantPage() {
     async function loadPlants() {
       try {
         setLoading(true);
-        const result = await fetchPlantsForCurrentUser();
+        const [result, archived] = await Promise.all([
+          fetchPlantsForCurrentUser(),
+          fetchArchivedPlantsForCurrentUser(),
+        ]);
         if (!isMounted) return;
         setPlants(result);
+        setArchivedPlants(archived);
         setError(null);
       } catch (err: any) {
         console.error("Failed to load plants:", err);
@@ -94,22 +103,68 @@ export default function ChoosePlantPage() {
   const handleOpenTemplates = () => setShowTemplates(true);
 
 
-  const handleArchivePlant = (plant: Plant) => {
-    toast.info(`Archive "${plant.name}" is not available yet.`);
+  const handleArchivePlant = async (plant: Plant) => {
+    try {
+      await archivePlant(plant.id);
+      const archivedAt = new Date().toISOString();
+      setPlants((prev) => prev.filter((item) => item.id !== plant.id));
+      setArchivedPlants((prev) => [
+        { ...plant, archived_at: archivedAt },
+        ...prev,
+      ]);
+      toast.success(`Archived "${plant.name}".`);
+    } catch (err: any) {
+      console.error("Failed to archive plant:", err);
+      toast.error(err?.message || "Failed to archive plant.");
+    }
   };
 
-  const handleDeletePlant = (plant: Plant) => {
-    toast.info(`Delete "${plant.name}" is not available yet.`);
+  const handleUnarchivePlant = async (plant: Plant) => {
+    try {
+      await unarchivePlant(plant.id);
+      setArchivedPlants((prev) => prev.filter((item) => item.id !== plant.id));
+      setPlants((prev) => [{ ...plant, archived_at: null }, ...prev]);
+      toast.success(`Unarchived "${plant.name}".`);
+    } catch (err: any) {
+      console.error("Failed to unarchive plant:", err);
+      toast.error(err?.message || "Failed to unarchive plant.");
+    }
   };
 
-  const filteredPlants = plants.filter((plant) => {
+  const handleDeletePlant = async (plant: Plant) => {
+    try {
+      await deactivatePlant(plant.id);
+      setPlants((prev) => prev.filter((item) => item.id !== plant.id));
+      setArchivedPlants((prev) => prev.filter((item) => item.id !== plant.id));
+      toast.success(`Deleted "${plant.name}".`);
+    } catch (err: any) {
+      console.error("Failed to delete plant:", err);
+      toast.error(err?.message || "Failed to delete plant.");
+    }
+  };
+
+  const isActive = (plant: Plant) => plant.active !== false;
+  const activePlants = plants.filter(
+    (plant) => isActive(plant) && !plant.archived_at
+  );
+  const archivedOnly = archivedPlants.filter(
+    (plant) => isActive(plant) && !!plant.archived_at
+  );
+
+  const tabPlants = activeTab === "archived" ? archivedOnly : activePlants;
+
+  const filteredPlants = tabPlants.filter((plant) => {
     const matchesSearch = searchQuery
       ? `${plant.name ?? ""} ${plant.location ?? ""} ${plant.status ?? ""}`
           .toLowerCase()
           .includes(searchQuery.toLowerCase())
       : true;
     const matchesStatus =
-      statusFilter === "all" ? true : (plant.status || "").toLowerCase() === statusFilter;
+      activeTab !== "mine"
+        ? true
+        : statusFilter === "all"
+          ? true
+          : (plant.status || "").toLowerCase() === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
@@ -162,7 +217,7 @@ export default function ChoosePlantPage() {
                 className={activeTab === "mine" ? "bg-[#4F8FF7] text-white" : ""}
                 onClick={() => setActiveTab("mine")}
               >
-                My Plants ({plants.length})
+                My Plants ({activePlants.length})
               </Button>
               <Button
                 variant={activeTab === "shared" ? "default" : "outline"}
@@ -172,8 +227,16 @@ export default function ChoosePlantPage() {
               >
                 Shared Plants
               </Button>
+              <Button
+                variant={activeTab === "archived" ? "default" : "outline"}
+                size="sm"
+                className={activeTab === "archived" ? "bg-[#4F8FF7] text-white" : ""}
+                onClick={() => setActiveTab("archived")}
+              >
+                Archived ({archivedOnly.length})
+              </Button>
             </div>
-            {activeTab === "mine" && (
+            {activeTab !== "shared" && (
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -184,16 +247,18 @@ export default function ChoosePlantPage() {
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
                 </div>
-                <select
-                  className="rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-[#4F8FF7] focus:outline-none"
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                >
-                  <option value="all">All statuses</option>
-                  <option value="feasibility">Feasibility</option>
-                  <option value="operational">Operational</option>
-                  <option value="planned">Planned</option>
-                </select>
+                {activeTab === "mine" && (
+                  <select
+                    className="rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-[#4F8FF7] focus:outline-none"
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                  >
+                    <option value="all">All statuses</option>
+                    <option value="feasibility">Feasibility</option>
+                    <option value="operational">Operational</option>
+                    <option value="planned">Planned</option>
+                  </select>
+                )}
               </div>
             )}
           </div>
@@ -249,18 +314,24 @@ export default function ChoosePlantPage() {
             <Card className="p-6 flex flex-col items-center text-center">
               <Factory className="h-10 w-10 text-gray-400 mb-3" />
               <h2 className="text-base font-semibold text-gray-900">
-                No plants match your filters
+                {activeTab === "archived"
+                  ? "No archived plants"
+                  : "No plants match your filters"}
               </h2>
               <p className="text-sm text-gray-600 mt-2">
-                Try adjusting the search or status filter.
+                {activeTab === "archived"
+                  ? "Archived plants will appear here."
+                  : "Try adjusting the search or status filter."}
               </p>
-              <Button
-                className="mt-4 bg-[#4F8FF7] hover:bg-[#3b73c4] text-white text-sm"
-                onClick={handleAddNewPlant}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Create Plant
-              </Button>
+              {activeTab !== "archived" && (
+                <Button
+                  className="mt-4 bg-[#4F8FF7] hover:bg-[#3b73c4] text-white text-sm"
+                  onClick={handleAddNewPlant}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Plant
+                </Button>
+              )}
             </Card>
           </div>
         ) : (
@@ -268,8 +339,14 @@ export default function ChoosePlantPage() {
             {filteredPlants.map((plant) => (
               <Card
                 key={plant.id}
-                className="p-4 flex flex-col justify-between hover:shadow-md transition-shadow cursor-pointer"
-                onClick={() => handleOpenPlant(plant)}
+                className={`p-4 flex flex-col justify-between hover:shadow-md transition-shadow ${
+                  activeTab === "archived" ? "" : "cursor-pointer"
+                }`}
+                onClick={
+                  activeTab === "archived"
+                    ? undefined
+                    : () => handleOpenPlant(plant)
+                }
               >
                 <div className="flex items-start gap-3">
                   <div className="mt-0.5">
@@ -295,16 +372,30 @@ export default function ChoosePlantPage() {
                 </div>
                 <div className="mt-4 flex justify-end">
                   <div className="flex items-center gap-2">
-                    <Button
-                      size="sm"
-                      className="bg-[#4F8FF7] hover:bg-[#3b73c4] text-white text-xs"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOpenPlant(plant);
-                      }}
-                    >
-                      Open
-                    </Button>
+                    {activeTab === "archived" ? (
+                      <Button
+                        size="sm"
+                        className="bg-[#4F8FF7] hover:bg-[#3b73c4] text-white text-xs"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleUnarchivePlant(plant);
+                        }}
+                      >
+                        <RefreshCw className="mr-2 h-3.5 w-3.5" />
+                        Unarchive
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        className="bg-[#4F8FF7] hover:bg-[#3b73c4] text-white text-xs"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenPlant(plant);
+                        }}
+                      >
+                        Open
+                      </Button>
+                    )}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
@@ -317,24 +408,38 @@ export default function ChoosePlantPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="bg-white">
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            router.push(`/plant-operator/plant-builder/builder?plantId=${plant.id}&edit=info`);
-                          }}
-                        >
-                          <Pencil className="mr-2 h-4 w-4" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleArchivePlant(plant);
-                          }}
-                        >
-                          <Archive className="mr-2 h-4 w-4" />
-                          Archive
-                        </DropdownMenuItem>
+                        {activeTab !== "archived" ? (
+                          <>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                router.push(`/plant-operator/plant-builder/builder?plantId=${plant.id}&edit=info`);
+                              }}
+                            >
+                              <Pencil className="mr-2 h-4 w-4" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleArchivePlant(plant);
+                              }}
+                            >
+                              <Archive className="mr-2 h-4 w-4" />
+                              Archive
+                            </DropdownMenuItem>
+                          </>
+                        ) : (
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleUnarchivePlant(plant);
+                            }}
+                          >
+                            <RefreshCw className="mr-2 h-4 w-4" />
+                            Unarchive
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem
                           className="text-red-600 focus:text-red-600"
                           onClick={(e) => {
