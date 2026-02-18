@@ -985,6 +985,37 @@ export const PlantBuilder = () => {
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = pdf.internal.pageSize.getHeight();
 
+        const addCanvasToPdf = (canvas: HTMLCanvasElement, addNewPage: boolean) => {
+          const imgData = canvas.toDataURL("image/png");
+          const imgWidth = pdfWidth;
+          const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+
+          if (imgHeight <= pdfHeight) {
+            if (addNewPage) {
+              pdf.addPage();
+            }
+            const offsetY = Math.max(0, (pdfHeight - imgHeight) / 2);
+            pdf.addImage(imgData, "PNG", 0, offsetY, imgWidth, imgHeight);
+            return;
+          }
+
+          if (addNewPage) {
+            pdf.addPage();
+          }
+
+          let heightLeft = imgHeight;
+          let position = 0;
+          pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+          heightLeft -= pdfHeight;
+
+          while (heightLeft > 0) {
+            pdf.addPage();
+            position = heightLeft - imgHeight;
+            pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+            heightLeft -= pdfHeight;
+          }
+        };
+
         for (let i = 0; i < pages.length; i += 1) {
           const page = pages[i];
           const images = Array.from(page.querySelectorAll("img"));
@@ -1012,16 +1043,7 @@ export const PlantBuilder = () => {
             windowHeight: page.scrollHeight || page.clientHeight,
           });
 
-          const imgData = canvas.toDataURL("image/png");
-          const imgWidth = pdfWidth;
-          const imgHeight = (canvas.height * pdfWidth) / canvas.width;
-          const offsetY = Math.max(0, (pdfHeight - imgHeight) / 2);
-
-          if (i > 0) {
-            pdf.addPage();
-          }
-
-          pdf.addImage(imgData, "PNG", 0, offsetY, imgWidth, imgHeight);
+          addCanvasToPdf(canvas, i > 0);
         }
 
         pdf.save("plant-model.pdf");
@@ -1210,12 +1232,44 @@ export const PlantBuilder = () => {
   };
 
   const renderConnectionsTable = () => {
-    const filteredConnections = uniqueConnections.filter((connection) => {
-      const fromType = componentById.get(String(connection.from))?.type;
-      const toType = componentById.get(String(connection.to))?.type;
-      const isAllowed = (type?: string) => type === "equipment" || type === "gate";
-      return isAllowed(fromType) && isAllowed(toType);
+    const isEndpoint = (type?: string) => type === "equipment" || type === "gate";
+    const isCarrier = (type?: string) => type === "carrier";
+
+    const outgoingByFrom = new Map<string, Connection[]>();
+    uniqueConnections.forEach((conn) => {
+      const key = String(conn.from);
+      if (!outgoingByFrom.has(key)) outgoingByFrom.set(key, []);
+      outgoingByFrom.get(key)!.push(conn);
     });
+
+    const derivedPairs = new Map<string, { from: string; to: string }>();
+
+    uniqueConnections.forEach((conn) => {
+      const fromType = componentById.get(String(conn.from))?.type;
+      const toType = componentById.get(String(conn.to))?.type;
+
+      // Direct equipment/gate connections stay as-is.
+      if (isEndpoint(fromType) && isEndpoint(toType)) {
+        const key = `${conn.from}->${conn.to}`;
+        derivedPairs.set(key, { from: String(conn.from), to: String(conn.to) });
+        return;
+      }
+
+      // Collapse equipment/gate -> carrier -> equipment/gate
+      if (isEndpoint(fromType) && isCarrier(toType)) {
+        const carrierId = String(conn.to);
+        const carrierOutgoing = outgoingByFrom.get(carrierId) || [];
+        carrierOutgoing.forEach((next) => {
+          const nextType = componentById.get(String(next.to))?.type;
+          if (isEndpoint(nextType)) {
+            const key = `${conn.from}->${next.to}`;
+            derivedPairs.set(key, { from: String(conn.from), to: String(next.to) });
+          }
+        });
+      }
+    });
+
+    const filteredConnections = Array.from(derivedPairs.values());
 
     return (
       <div className="w-full">
@@ -1231,12 +1285,12 @@ export const PlantBuilder = () => {
               {filteredConnections.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={2} className="text-center text-gray-500 text-sm">
-                    No equipment/gate connections
+                    No connections
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredConnections.map((c) => (
-                  <TableRow key={c.id} className="hover:bg-[#4F8FF7]/5">
+                  <TableRow key={`${c.from}->${c.to}`} className="hover:bg-[#4F8FF7]/5">
                     <TableCell className="text-gray-900 text-sm">{getComponentLabel(c.from)}</TableCell>
                     <TableCell className="text-gray-900 text-sm">{getComponentLabel(c.to)}</TableCell>
                   </TableRow>
