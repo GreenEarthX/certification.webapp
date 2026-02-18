@@ -3,13 +3,59 @@ import pool from "@/lib/db";
 export class UserService {
 
   static async getUserBySub(auth0Sub: string) {
-
     const result = await pool.query(
-      `SELECT user_id, first_name, last_name, email FROM users WHERE auth0sub = $1`,
+      `
+      SELECT
+        u.user_id,
+        u.first_name,
+        u.last_name,
+        u.email,
+        u.phone_number,
+        u.user_role,
+        u.position,
+        u.company,
+        u.auth0sub,
+        u.created_at,
+        a.address_id,
+        a.street,
+        a.city,
+        a.state,
+        a.postal_code,
+        a.country,
+        a.region
+      FROM users u
+      LEFT JOIN address a ON a.address_id = u.address_id
+      WHERE u.auth0sub = $1
+      `,
       [auth0Sub]
     );
-    
-    return result.rows[0] || null;
+
+    const row = result.rows[0];
+    if (!row) return null;
+
+    return {
+      user_id: row.user_id,
+      first_name: row.first_name,
+      last_name: row.last_name,
+      email: row.email,
+      phone_number: row.phone_number,
+      user_role: row.user_role,
+      position: row.position,
+      company: row.company,
+      auth0sub: row.auth0sub,
+      created_at: row.created_at,
+      address: row.address_id
+        ? {
+            address_id: row.address_id,
+            street: row.street,
+            city: row.city,
+            state: row.state,
+            postal_code: row.postal_code,
+            country: row.country,
+            region: row.region,
+          }
+        : null,
+    };
   }
 
   static async createUser(email: string, auth0Sub: string) {
