@@ -1,8 +1,16 @@
-import {User} from "../../models/user";
+import { User } from "../../models/user";
+import { getToken } from "@/lib/shared-auth";
 
 export async function fetchUser(): Promise<User | null> {
   try {
-    const res = await fetch("/api/users/me");
+    const token = getToken();
+    if (!token) {
+      console.error("No auth token found.");
+      return null;
+    }
+    const res = await fetch("/api/users/me", {
+      headers: { "x-auth-token": token },
+    });
     if (!res.ok) throw new Error("User not found");
 
     return await res.json();

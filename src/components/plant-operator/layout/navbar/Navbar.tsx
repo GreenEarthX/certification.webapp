@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useCurrentUser } from "@/hooks/useCurrentUser"; // 👈 Import the new hook
@@ -38,6 +39,8 @@ const Navbar: React.FC = () => {
       setTitle("Add Plant");
     } else if (pathname.includes("/plant-operator/manage-plants")) {
       setTitle("Manage Plant Details");
+    } else if (pathname.startsWith("/plant-operator/plausibility-check")) {
+      setTitle("Plausibility Check");
     } else if (pathname.startsWith("/plant-operator/plant-builder")) {
       setTitle("Plant Builder");    
     } else if (pathname.startsWith("/plant-operator/dashboard")) {
@@ -57,13 +60,27 @@ const Navbar: React.FC = () => {
   
 
   return (
-    <div className="sticky top-0 z-50 bg-blue-100/30 backdrop-blur-md shadow-lg border-b border-blue-200">
-      <div className="flex justify-between items-center max-w-7xl mx-auto px-4 py-2">
+    <div className="sticky top-0 z-50 border-b border-slate-200 bg-white backdrop-blur-md shadow-sm">
+      <div className="flex justify-between items-center w-full px-6 h-[80px]">
         {/* Left Section */}
-        <h1 className="text-2xl font-bold text-blue-700">{title}</h1>
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-full bg-white shadow-sm ring-1 ring-slate-200 flex items-center justify-center">
+            <Image
+              src="/logoGEX.png"
+              alt="Green Fuel Compliance"
+              width={32}
+              height={32}
+              className="rounded-full"
+            />
+          </div>
+          <div>
+            <h1 className="text-2xl font-semibold text-slate-900">Green Fuel Compliance</h1>
+            <p className="text-xs text-slate-500">{title}</p>
+          </div>
+        </div>
 
         {/* Right Section */}
-        <div className="flex items-center space-x-4 rounded-full p-2 shadow-sm relative">
+        <div className="flex items-center space-x-3">
           {/* Notifications */}
           <Notifications
             notifications={notifications}

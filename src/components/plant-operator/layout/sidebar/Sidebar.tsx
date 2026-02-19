@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import Image from 'next/image';
 import {
   Drawer,
   List,
@@ -45,29 +44,13 @@ const Sidebar: React.FC = () => {
       variant="permanent"
       className={`${styles.sidebar} ${isCollapsed ? styles.collapsed : ''}`}
       classes={{ paper: `${styles.sidebarPaper} ${isCollapsed ? styles.collapsed : ''}` }}
+      PaperProps={{
+        sx: {
+          top: "var(--navbar-height, 80px)",
+          height: "calc(100vh - var(--navbar-height, 80px))",
+        },
+      }}
     >
-      {/* Logo */}
-      <Box
-        className={styles.logoBox}
-        sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          padding: '16px',
-          cursor: 'pointer',
-        }}
-        onClick={toggleSidebar}
-      >
-        <Image
-          src="/logoGEX.png"
-          alt="Logo"
-          width={isCollapsed ? 40 : 50}
-          height={isCollapsed ? 40 : 50}
-          className={styles.logo}
-          style={{ borderRadius: '50%' }}
-        />
-      </Box>
-
       {/* Toggle Arrow */}
       <Box
         className={styles.toggleButtonContainer}
@@ -106,15 +89,16 @@ const Sidebar: React.FC = () => {
             sx={{
               display: 'flex',
               justifyContent: isCollapsed ? 'center' : 'flex-start',
-              padding: '10px 16px',
+              padding: '10px 14px',
             }}
           >
             <ListItemIcon
               className={styles.listItemIcon}
               sx={{
-                minWidth: isCollapsed ? 'auto' : '40px',
+                minWidth: isCollapsed ? 'auto' : '36px',
                 display: 'flex',
                 justifyContent: 'center',
+                alignItems: 'center',
               }}
             >
               {item.icon}
@@ -124,6 +108,8 @@ const Sidebar: React.FC = () => {
                 primary={item.text}
                 primaryTypographyProps={{
                   fontWeight: isActive(item.path) ? 'medium' : 'normal',
+                  fontSize: '0.9rem',
+                  color: isActive(item.path) ? '#1e40af' : '#0f172a',
                 }}
               />
             )}

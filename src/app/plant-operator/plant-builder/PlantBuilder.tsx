@@ -64,7 +64,7 @@ import {
   PlacedComponent,
   Connection,
 } from "./types";
-import { createPlant, fetchPlantById, Plant } from "@/services/plant-builder/plants";
+import { createPlant, fetchPlantById, Plant, updatePlant } from "@/services/plant-builder/plants";
 import {
   createDigitalTwin,
   fetchDigitalTwinJsonForPlant,
@@ -135,6 +135,11 @@ export const PlantBuilder = () => {
   const highlightTimerRef = useRef<number | null>(null);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
+  const [isEditingPlantInfo, setIsEditingPlantInfo] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareMode, setShareMode] = useState<"template" | "private">("private");
+  const [shareEmailInput, setShareEmailInput] = useState("");
+  const [shareEmails, setShareEmails] = useState<string[]>([]);
 
   useEffect(() => {
     if (showDataModel) {
@@ -415,13 +420,15 @@ export const PlantBuilder = () => {
     useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
     const plantIdParam = searchParams.get("plantId");
+    const editMode = searchParams.get("edit") === "info";
 
     if (!plantIdParam) return;
 
     const plantId = Number(plantIdParam);
     if (Number.isNaN(plantId)) return;
 
-    setStep("builder");
+    setIsEditingPlantInfo(editMode);
+    setStep(editMode ? "info" : "builder");
 
     const mapPlantToInfo = (plant: Plant): PlantInfo => {
       const metadata = plant.metadata || {};
@@ -603,6 +610,35 @@ export const PlantBuilder = () => {
     } catch (err) {
       setError("Failed to save products. Please try again.");
       toast.error("Error saving products.");
+    }
+  };
+
+  const handleInfoUpdate = async (info: PlantInfo) => {
+    try {
+      const plantId = Number((window as any).currentPlantId);
+      if (!plantId) {
+        toast.error("Missing plant id.");
+        return;
+      }
+      await updatePlant(plantId, {
+        name: info.plantName,
+        location: info.country,
+        status: info.status,
+        metadata: {
+          projectName: info.projectName,
+          projectType: info.projectType,
+          primaryFuelType: info.primaryFuelType,
+          commercialOperationalDate: info.commercialOperationalDate,
+          investment: info.investment,
+        },
+      });
+      setPlantInfo(info);
+      setIsEditingPlantInfo(false);
+      setStep("builder");
+      toast.success("Plant info updated.");
+    } catch (err: any) {
+      console.error("Failed to update plant info:", err);
+      toast.error(err?.message || "Failed to update plant info.");
     }
   };
 
@@ -923,11 +959,17 @@ export const PlantBuilder = () => {
 
   const handleExportPDF = async () => {
     try {
+      const waitForNextFrame = () =>
+        new Promise<void>((resolve) => {
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+        });
+
       if (!previewImageUrl && !isGeneratingPreview) {
         setIsGeneratingPreview(true);
         const url = await captureCanvasSnapshot();
         setPreviewImageUrl(url);
         setIsGeneratingPreview(false);
+        await waitForNextFrame();
       }
 
       const exportNode = document.querySelector("#plant-data-export") as HTMLElement | null;
@@ -948,6 +990,21 @@ export const PlantBuilder = () => {
         const pdf = new jsPDF("p", "mm", "a4");
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = pdf.internal.pageSize.getHeight();
+
+        const addCanvasToPdf = (canvas: HTMLCanvasElement, addNewPage: boolean) => {
+          const imgData = canvas.toDataURL("image/png");
+          const scale = Math.min(pdfWidth / canvas.width, pdfHeight / canvas.height);
+          const imgWidth = canvas.width * scale;
+          const imgHeight = canvas.height * scale;
+          const offsetX = Math.max(0, (pdfWidth - imgWidth) / 2);
+          const offsetY = Math.max(0, (pdfHeight - imgHeight) / 2);
+
+          if (addNewPage) {
+            pdf.addPage();
+          }
+
+          pdf.addImage(imgData, "PNG", offsetX, offsetY, imgWidth, imgHeight);
+        };
 
         for (let i = 0; i < pages.length; i += 1) {
           const page = pages[i];
@@ -976,16 +1033,7 @@ export const PlantBuilder = () => {
             windowHeight: page.scrollHeight || page.clientHeight,
           });
 
-          const imgData = canvas.toDataURL("image/png");
-          const imgWidth = pdfWidth;
-          const imgHeight = (canvas.height * pdfWidth) / canvas.width;
-          const offsetY = Math.max(0, (pdfHeight - imgHeight) / 2);
-
-          if (i > 0) {
-            pdf.addPage();
-          }
-
-          pdf.addImage(imgData, "PNG", 0, offsetY, imgWidth, imgHeight);
+          addCanvasToPdf(canvas, i > 0);
         }
 
         pdf.save("plant-model.pdf");
@@ -1018,6 +1066,38 @@ export const PlantBuilder = () => {
     } finally {
       setIsGeneratingPreview(false);
     }
+  };
+
+  const isValidEmail = (value: string) =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+
+  const handleAddShareEmail = () => {
+    const value = shareEmailInput.trim().toLowerCase();
+    if (!value) return;
+    if (!isValidEmail(value)) {
+      toast.error("Enter a valid email address.");
+      return;
+    }
+    if (shareEmails.includes(value)) {
+      toast.info("Email already added.");
+      setShareEmailInput("");
+      return;
+    }
+    setShareEmails((prev) => [...prev, value]);
+    setShareEmailInput("");
+  };
+
+  const handleRemoveShareEmail = (email: string) => {
+    setShareEmails((prev) => prev.filter((item) => item !== email));
+  };
+
+  const handleSendShare = () => {
+    if (shareMode === "private" && shareEmails.length === 0) {
+      toast.error("Add at least one email.");
+      return;
+    }
+    toast.success("Share request prepared. Backend not connected yet.");
+    setShowShareModal(false);
   };
 
   const onConnect = useCallback(
@@ -1098,87 +1178,184 @@ export const PlantBuilder = () => {
       items: normalizedComponents.filter((c) => c.type === type),
     }));
 
-    return (
-      <div className="w-full">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-[#4F8FF7]/10">
-                <TableHead className="font-semibold text-gray-700 text-sm">Component ID</TableHead>
-                <TableHead className="font-semibold text-gray-700 text-sm">Component Name</TableHead>
-                <TableHead className="font-semibold text-gray-700 text-sm">Type</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {grouped.map((group) => (
-                <Fragment key={group.type}>
-                  <TableRow className="bg-slate-50">
-                    <TableCell colSpan={3} className="text-gray-700 text-sm font-semibold">
-                      {group.label}
-                    </TableCell>
-                  </TableRow>
-                  {group.items.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={3} className="text-center text-gray-500 text-sm">
-                        No {group.label.toLowerCase()} components
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    group.items.map((c) => (
-                      <TableRow key={c.id} className="hover:bg-[#4F8FF7]/5">
-                        <TableCell className="text-gray-900 text-sm">{c.id}</TableCell>
-                        <TableCell className="text-gray-900 text-sm">{c.name}</TableCell>
-                        <TableCell className="text-gray-900 text-sm">{group.label}</TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </Fragment>
-              ))}
-            </TableBody>
-          </Table>
+    const rows: Array<
+      | { kind: "group"; label: string }
+      | { kind: "empty"; label: string }
+      | { kind: "item"; id: string; name: string; typeLabel: string }
+    > = [];
+
+    grouped.forEach((group) => {
+      rows.push({ kind: "group", label: group.label });
+      if (group.items.length === 0) {
+        rows.push({ kind: "empty", label: group.label });
+      } else {
+        group.items.forEach((c) =>
+          rows.push({
+            kind: "item",
+            id: String(c.id),
+            name: c.name,
+            typeLabel: group.label,
+          })
+        );
+      }
+    });
+
+    const chunkRows = <T,>(data: T[], size: number) => {
+      const chunks: T[][] = [];
+      for (let i = 0; i < data.length; i += size) {
+        chunks.push(data.slice(i, i + size));
+      }
+      return chunks;
+    };
+
+    const MAX_COMPONENT_ROWS = 21;
+    const pages = chunkRows(rows, MAX_COMPONENT_ROWS);
+
+    return pages.map((pageRows, pageIndex) => (
+      <section
+        key={`components-page-${pageIndex}`}
+        className="pdf-page rounded-lg border border-slate-200 p-6 shadow-sm"
+      >
+        <div className="pdf-header">
+          <div className="text-lg font-semibold text-gray-800">Components</div>
         </div>
-      </div>
-    );
+        <div className="w-full">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-[#4F8FF7]/10">
+                  <TableHead className="font-semibold text-gray-700 text-sm">Component ID</TableHead>
+                  <TableHead className="font-semibold text-gray-700 text-sm">Component Name</TableHead>
+                  <TableHead className="font-semibold text-gray-700 text-sm">Type</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pageRows.map((row, idx) => {
+                  if (row.kind === "group") {
+                    return (
+                      <TableRow key={`group-${row.label}-${idx}`} className="bg-slate-50">
+                        <TableCell colSpan={3} className="text-gray-700 text-sm font-semibold">
+                          {row.label}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  }
+                  if (row.kind === "empty") {
+                    return (
+                      <TableRow key={`empty-${row.label}-${idx}`}>
+                        <TableCell colSpan={3} className="text-center text-gray-500 text-sm">
+                          No {row.label.toLowerCase()} components
+                        </TableCell>
+                      </TableRow>
+                    );
+                  }
+                  return (
+                    <TableRow key={`item-${row.id}-${idx}`} className="hover:bg-[#4F8FF7]/5">
+                      <TableCell className="text-gray-900 text-sm">{row.id}</TableCell>
+                      <TableCell className="text-gray-900 text-sm">{row.name}</TableCell>
+                      <TableCell className="text-gray-900 text-sm">{row.typeLabel}</TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      </section>
+    ));
   };
 
   const renderConnectionsTable = () => {
-    const filteredConnections = uniqueConnections.filter((connection) => {
-      const fromType = componentById.get(String(connection.from))?.type;
-      const toType = componentById.get(String(connection.to))?.type;
-      const isAllowed = (type?: string) => type === "equipment" || type === "gate";
-      return isAllowed(fromType) && isAllowed(toType);
+    const isEndpoint = (type?: string) => type === "equipment" || type === "gate";
+    const isCarrier = (type?: string) => type === "carrier";
+
+    const outgoingByFrom = new Map<string, Connection[]>();
+    uniqueConnections.forEach((conn) => {
+      const key = String(conn.from);
+      if (!outgoingByFrom.has(key)) outgoingByFrom.set(key, []);
+      outgoingByFrom.get(key)!.push(conn);
     });
 
-    return (
-      <div className="w-full">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-[#4F8FF7]/10">
-                <TableHead className="font-semibold text-gray-700 text-sm">From</TableHead>
-                <TableHead className="font-semibold text-gray-700 text-sm">To</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredConnections.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={2} className="text-center text-gray-500 text-sm">
-                    No equipment/gate connections
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredConnections.map((c) => (
-                  <TableRow key={c.id} className="hover:bg-[#4F8FF7]/5">
-                    <TableCell className="text-gray-900 text-sm">{getComponentLabel(c.from)}</TableCell>
-                    <TableCell className="text-gray-900 text-sm">{getComponentLabel(c.to)}</TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+    const derivedPairs = new Map<string, { from: string; to: string }>();
+
+    uniqueConnections.forEach((conn) => {
+      const fromType = componentById.get(String(conn.from))?.type;
+      const toType = componentById.get(String(conn.to))?.type;
+
+      // Direct equipment/gate connections stay as-is.
+      if (isEndpoint(fromType) && isEndpoint(toType)) {
+        const key = `${conn.from}->${conn.to}`;
+        derivedPairs.set(key, { from: String(conn.from), to: String(conn.to) });
+        return;
+      }
+
+      // Collapse equipment/gate -> carrier -> equipment/gate
+      if (isEndpoint(fromType) && isCarrier(toType)) {
+        const carrierId = String(conn.to);
+        const carrierOutgoing = outgoingByFrom.get(carrierId) || [];
+        carrierOutgoing.forEach((next) => {
+          const nextType = componentById.get(String(next.to))?.type;
+          if (isEndpoint(nextType)) {
+            const key = `${conn.from}->${next.to}`;
+            derivedPairs.set(key, { from: String(conn.from), to: String(next.to) });
+          }
+        });
+      }
+    });
+
+    const filteredConnections = Array.from(derivedPairs.values());
+
+    const chunkRows = <T,>(data: T[], size: number) => {
+      const chunks: T[][] = [];
+      for (let i = 0; i < data.length; i += size) {
+        chunks.push(data.slice(i, i + size));
+      }
+      return chunks;
+    };
+
+    const MAX_CONNECTION_ROWS = 23;
+    const pages = filteredConnections.length
+      ? chunkRows(filteredConnections, MAX_CONNECTION_ROWS)
+      : [[]];
+
+    return pages.map((pageRows, pageIndex) => (
+      <section
+        key={`connections-page-${pageIndex}`}
+        className="pdf-page rounded-lg border border-slate-200 p-6 shadow-sm"
+      >
+        <div className="pdf-header">
+          <div className="text-lg font-semibold text-gray-800">Connections</div>
         </div>
-      </div>
-    );
+        <div className="w-full">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-[#4F8FF7]/10">
+                  <TableHead className="font-semibold text-gray-700 text-sm">From</TableHead>
+                  <TableHead className="font-semibold text-gray-700 text-sm">To</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pageRows.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={2} className="text-center text-gray-500 text-sm">
+                      No connections
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  pageRows.map((c) => (
+                    <TableRow key={`${c.from}->${c.to}`} className="hover:bg-[#4F8FF7]/5">
+                      <TableCell className="text-gray-900 text-sm">{getComponentLabel(c.from)}</TableCell>
+                      <TableCell className="text-gray-900 text-sm">{getComponentLabel(c.to)}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      </section>
+    ));
   };
 
   const renderPlantInfoTable = () => (
@@ -1262,12 +1439,19 @@ export const PlantBuilder = () => {
         </div>
         <div className="flex items-center gap-2">
           {(step === "builder" || step === "compliance") && (
+            // <Button
+            //   className="text-sm bg-green-600 hover:bg-green-700 text-white"
+            //   onClick={() => setShowAssistantModal(true)}
+            // >
+            //   <MessageSquare className="h-4 w-4 mr-2" />
+            //   Assistant / Reach Out
+            // </Button>
             <Button
               className="text-sm bg-green-600 hover:bg-green-700 text-white"
-              onClick={() => setShowAssistantModal(true)}
+              onClick={() => setShowShareModal(true)}
             >
               <MessageSquare className="h-4 w-4 mr-2" />
-              Assistant / Reach Out
+              Share
             </Button>
           )}
         </div>
@@ -1284,7 +1468,11 @@ export const PlantBuilder = () => {
 
         {step === "info" ? (
           <div className="min-h-[calc(100vh-80px)] max-h-[calc(100vh-80px)] flex items-start justify-center p-4 overflow-y-auto">
-            <PlantInfoForm onSubmit={handleInfoSubmit} />
+            <PlantInfoForm
+              onSubmit={isEditingPlantInfo ? handleInfoUpdate : handleInfoSubmit}
+              initialData={plantInfo || undefined}
+              submitLabel={isEditingPlantInfo ? "Save Plant Info" : undefined}
+            />
           </div>
         ) : step === "product" ? (
           <div className="min-h-[calc(100vh-80px)] max-h-[calc(100vh-80px)] flex items-start justify-center p-4 overflow-y-auto">
@@ -1527,7 +1715,7 @@ export const PlantBuilder = () => {
               </div>
             </section>
 
-            <section className="rounded-lg border border-slate-200 p-6 shadow-sm">
+            <section className="pdf-page rounded-lg border border-slate-200 p-6 shadow-sm">
               <div className="pdf-header">
                 <div className="text-lg font-semibold text-gray-800">Process Flow Diagram</div>
               </div>
@@ -1544,21 +1732,9 @@ export const PlantBuilder = () => {
                   <div className="text-sm text-gray-500">Preview unavailable.</div>
                 )}
               </div>
-              <p className="text-xs text-gray-500 mt-2">Preview only. You can export it.</p>
-            </section>
-
-            <section className="pdf-page rounded-lg border border-slate-200 p-6 shadow-sm">
-              <div className="pdf-header">
-                <div className="text-lg font-semibold text-gray-800">Components</div>
-              </div>
-              {renderComponentsSummaryTable()}
-            </section>
-
-            <section className="pdf-page rounded-lg border border-slate-200 p-6 shadow-sm">
-              <div className="pdf-header">
-                <div className="text-lg font-semibold text-gray-800">Connections</div>
-              </div>
-              {renderConnectionsTable()}
+              <p className="text-xs text-gray-500 mt-2">
+                You can export it as image for better visualization.
+              </p>
             </section>
 
             <section className="pdf-page rounded-lg border border-slate-200 p-6 shadow-sm">
@@ -1567,6 +1743,10 @@ export const PlantBuilder = () => {
               </div>
               {renderPlantInfoTable()}
             </section>
+
+            {renderComponentsSummaryTable()}
+
+            {renderConnectionsTable()}
             <div className="flex flex-col sm:flex-row justify-between gap-4">
               <div className="flex flex-col sm:flex-row gap-2">
                 <Button
@@ -1582,6 +1762,15 @@ export const PlantBuilder = () => {
                 >
                   <Download className="h-4 w-4 mr-2" />
                   Export PDF
+                </Button>
+              </div>
+              <div className="flex justify-end">
+                <Button
+                  variant="outline"
+                  className="text-sm"
+                  onClick={() => setShowDataModel(false)}
+                >
+                  Close
                 </Button>
               </div>
             </div>
@@ -1686,6 +1875,87 @@ export const PlantBuilder = () => {
                 </Button>
               </form>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showShareModal} onOpenChange={setShowShareModal}>
+        <DialogContent className="max-w-md bg-white rounded-lg">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-gray-900">Share Digital Twin</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-sm">Share Mode</Label>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant={shareMode === "private" ? "default" : "outline"}
+                  className={shareMode === "private" ? "bg-[#4F8FF7] text-white" : ""}
+                  onClick={() => setShareMode("private")}
+                >
+                  Specific People
+                </Button>
+                <Button
+                  type="button"
+                  variant={shareMode === "template" ? "default" : "outline"}
+                  className={shareMode === "template" ? "bg-[#4F8FF7] text-white" : ""}
+                  onClick={() => setShareMode("template")}
+                >
+                  Public Template
+                </Button>
+              </div>
+            </div>
+
+            {shareMode === "private" ? (
+              <div className="space-y-3">
+                <Label className="text-sm">Invite by Email</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={shareEmailInput}
+                    onChange={(e) => setShareEmailInput(e.target.value)}
+                    placeholder="email@example.com"
+                  />
+                  <Button type="button" onClick={handleAddShareEmail}>
+                    Add
+                  </Button>
+                </div>
+                {shareEmails.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {shareEmails.map((email) => (
+                      <span
+                        key={email}
+                        className="flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-700"
+                      >
+                        {email}
+                        <button
+                          type="button"
+                          className="text-slate-500 hover:text-slate-700"
+                          onClick={() => handleRemoveShareEmail(email)}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-600">
+                This will publish the digital twin as a template. You can manage templates later.
+              </p>
+            )}
+          </div>
+          <div className="mt-5 flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowShareModal(false)}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-[#4F8FF7] hover:bg-[#3b73c4] text-white"
+              onClick={handleSendShare}
+            >
+              Send
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

@@ -19,13 +19,13 @@ const Notifications: React.FC<NotificationsProps> = ({ notifications, loading, e
     <div className="relative">
       <button
         onClick={() => setIsNotificationOpen(!isNotificationOpen)}
-        className="text-gray-500 hover:text-gray-800 relative"
+        className="relative h-10 w-10 rounded-full bg-blue-50 text-blue-700 ring-1 ring-blue-200 flex items-center justify-center hover:bg-blue-100 transition"
         aria-label="View Notifications"
       >
         {/* Notification Icon */}
         <svg
           xmlns="http://www.w3.org/2000/svg"
-          className="h-8 w-8"
+          className="h-5 w-5"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -38,14 +38,14 @@ const Notifications: React.FC<NotificationsProps> = ({ notifications, loading, e
           />
         </svg>
         {notifications.filter((n) => !n.read).length > 0 && (
-          <span className="absolute top-0 right-0 px-1.5 py-0.5 text-[10px] font-bold text-red-100 bg-red-600 rounded-full">
+          <span className="absolute -top-1 -right-1 px-1.5 py-0.5 text-[10px] font-bold text-white bg-red-600 rounded-full shadow-sm">
             {notifications.filter((n) => !n.read).length}
           </span>
         )}
       </button>
 
       {isNotificationOpen && (
-        <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200">
+        <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-lg border border-gray-200">
           <div className="p-4 border-b">
             <p className="text-sm font-medium text-gray-800">Notifications</p>
           </div>
