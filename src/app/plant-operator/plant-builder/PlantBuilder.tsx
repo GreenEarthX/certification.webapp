@@ -959,11 +959,17 @@ export const PlantBuilder = () => {
 
   const handleExportPDF = async () => {
     try {
+      const waitForNextFrame = () =>
+        new Promise<void>((resolve) => {
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+        });
+
       if (!previewImageUrl && !isGeneratingPreview) {
         setIsGeneratingPreview(true);
         const url = await captureCanvasSnapshot();
         setPreviewImageUrl(url);
         setIsGeneratingPreview(false);
+        await waitForNextFrame();
       }
 
       const exportNode = document.querySelector("#plant-data-export") as HTMLElement | null;
@@ -987,33 +993,17 @@ export const PlantBuilder = () => {
 
         const addCanvasToPdf = (canvas: HTMLCanvasElement, addNewPage: boolean) => {
           const imgData = canvas.toDataURL("image/png");
-          const imgWidth = pdfWidth;
-          const imgHeight = (canvas.height * pdfWidth) / canvas.width;
-
-          if (imgHeight <= pdfHeight) {
-            if (addNewPage) {
-              pdf.addPage();
-            }
-            const offsetY = Math.max(0, (pdfHeight - imgHeight) / 2);
-            pdf.addImage(imgData, "PNG", 0, offsetY, imgWidth, imgHeight);
-            return;
-          }
+          const scale = Math.min(pdfWidth / canvas.width, pdfHeight / canvas.height);
+          const imgWidth = canvas.width * scale;
+          const imgHeight = canvas.height * scale;
+          const offsetX = Math.max(0, (pdfWidth - imgWidth) / 2);
+          const offsetY = Math.max(0, (pdfHeight - imgHeight) / 2);
 
           if (addNewPage) {
             pdf.addPage();
           }
 
-          let heightLeft = imgHeight;
-          let position = 0;
-          pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-          heightLeft -= pdfHeight;
-
-          while (heightLeft > 0) {
-            pdf.addPage();
-            position = heightLeft - imgHeight;
-            pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-            heightLeft -= pdfHeight;
-          }
+          pdf.addImage(imgData, "PNG", offsetX, offsetY, imgWidth, imgHeight);
         };
 
         for (let i = 0; i < pages.length; i += 1) {
@@ -1188,47 +1178,91 @@ export const PlantBuilder = () => {
       items: normalizedComponents.filter((c) => c.type === type),
     }));
 
-    return (
-      <div className="w-full">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-[#4F8FF7]/10">
-                <TableHead className="font-semibold text-gray-700 text-sm">Component ID</TableHead>
-                <TableHead className="font-semibold text-gray-700 text-sm">Component Name</TableHead>
-                <TableHead className="font-semibold text-gray-700 text-sm">Type</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {grouped.map((group) => (
-                <Fragment key={group.type}>
-                  <TableRow className="bg-slate-50">
-                    <TableCell colSpan={3} className="text-gray-700 text-sm font-semibold">
-                      {group.label}
-                    </TableCell>
-                  </TableRow>
-                  {group.items.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={3} className="text-center text-gray-500 text-sm">
-                        No {group.label.toLowerCase()} components
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    group.items.map((c) => (
-                      <TableRow key={c.id} className="hover:bg-[#4F8FF7]/5">
-                        <TableCell className="text-gray-900 text-sm">{c.id}</TableCell>
-                        <TableCell className="text-gray-900 text-sm">{c.name}</TableCell>
-                        <TableCell className="text-gray-900 text-sm">{group.label}</TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </Fragment>
-              ))}
-            </TableBody>
-          </Table>
+    const rows: Array<
+      | { kind: "group"; label: string }
+      | { kind: "empty"; label: string }
+      | { kind: "item"; id: string; name: string; typeLabel: string }
+    > = [];
+
+    grouped.forEach((group) => {
+      rows.push({ kind: "group", label: group.label });
+      if (group.items.length === 0) {
+        rows.push({ kind: "empty", label: group.label });
+      } else {
+        group.items.forEach((c) =>
+          rows.push({
+            kind: "item",
+            id: String(c.id),
+            name: c.name,
+            typeLabel: group.label,
+          })
+        );
+      }
+    });
+
+    const chunkRows = <T,>(data: T[], size: number) => {
+      const chunks: T[][] = [];
+      for (let i = 0; i < data.length; i += size) {
+        chunks.push(data.slice(i, i + size));
+      }
+      return chunks;
+    };
+
+    const MAX_COMPONENT_ROWS = 21;
+    const pages = chunkRows(rows, MAX_COMPONENT_ROWS);
+
+    return pages.map((pageRows, pageIndex) => (
+      <section
+        key={`components-page-${pageIndex}`}
+        className="pdf-page rounded-lg border border-slate-200 p-6 shadow-sm"
+      >
+        <div className="pdf-header">
+          <div className="text-lg font-semibold text-gray-800">Components</div>
         </div>
-      </div>
-    );
+        <div className="w-full">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-[#4F8FF7]/10">
+                  <TableHead className="font-semibold text-gray-700 text-sm">Component ID</TableHead>
+                  <TableHead className="font-semibold text-gray-700 text-sm">Component Name</TableHead>
+                  <TableHead className="font-semibold text-gray-700 text-sm">Type</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pageRows.map((row, idx) => {
+                  if (row.kind === "group") {
+                    return (
+                      <TableRow key={`group-${row.label}-${idx}`} className="bg-slate-50">
+                        <TableCell colSpan={3} className="text-gray-700 text-sm font-semibold">
+                          {row.label}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  }
+                  if (row.kind === "empty") {
+                    return (
+                      <TableRow key={`empty-${row.label}-${idx}`}>
+                        <TableCell colSpan={3} className="text-center text-gray-500 text-sm">
+                          No {row.label.toLowerCase()} components
+                        </TableCell>
+                      </TableRow>
+                    );
+                  }
+                  return (
+                    <TableRow key={`item-${row.id}-${idx}`} className="hover:bg-[#4F8FF7]/5">
+                      <TableCell className="text-gray-900 text-sm">{row.id}</TableCell>
+                      <TableCell className="text-gray-900 text-sm">{row.name}</TableCell>
+                      <TableCell className="text-gray-900 text-sm">{row.typeLabel}</TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      </section>
+    ));
   };
 
   const renderConnectionsTable = () => {
@@ -1271,36 +1305,57 @@ export const PlantBuilder = () => {
 
     const filteredConnections = Array.from(derivedPairs.values());
 
-    return (
-      <div className="w-full">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-[#4F8FF7]/10">
-                <TableHead className="font-semibold text-gray-700 text-sm">From</TableHead>
-                <TableHead className="font-semibold text-gray-700 text-sm">To</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredConnections.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={2} className="text-center text-gray-500 text-sm">
-                    No connections
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredConnections.map((c) => (
-                  <TableRow key={`${c.from}->${c.to}`} className="hover:bg-[#4F8FF7]/5">
-                    <TableCell className="text-gray-900 text-sm">{getComponentLabel(c.from)}</TableCell>
-                    <TableCell className="text-gray-900 text-sm">{getComponentLabel(c.to)}</TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+    const chunkRows = <T,>(data: T[], size: number) => {
+      const chunks: T[][] = [];
+      for (let i = 0; i < data.length; i += size) {
+        chunks.push(data.slice(i, i + size));
+      }
+      return chunks;
+    };
+
+    const MAX_CONNECTION_ROWS = 23;
+    const pages = filteredConnections.length
+      ? chunkRows(filteredConnections, MAX_CONNECTION_ROWS)
+      : [[]];
+
+    return pages.map((pageRows, pageIndex) => (
+      <section
+        key={`connections-page-${pageIndex}`}
+        className="pdf-page rounded-lg border border-slate-200 p-6 shadow-sm"
+      >
+        <div className="pdf-header">
+          <div className="text-lg font-semibold text-gray-800">Connections</div>
         </div>
-      </div>
-    );
+        <div className="w-full">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-[#4F8FF7]/10">
+                  <TableHead className="font-semibold text-gray-700 text-sm">From</TableHead>
+                  <TableHead className="font-semibold text-gray-700 text-sm">To</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pageRows.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={2} className="text-center text-gray-500 text-sm">
+                      No connections
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  pageRows.map((c) => (
+                    <TableRow key={`${c.from}->${c.to}`} className="hover:bg-[#4F8FF7]/5">
+                      <TableCell className="text-gray-900 text-sm">{getComponentLabel(c.from)}</TableCell>
+                      <TableCell className="text-gray-900 text-sm">{getComponentLabel(c.to)}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      </section>
+    ));
   };
 
   const renderPlantInfoTable = () => (
@@ -1660,7 +1715,7 @@ export const PlantBuilder = () => {
               </div>
             </section>
 
-            <section className="rounded-lg border border-slate-200 p-6 shadow-sm">
+            <section className="pdf-page rounded-lg border border-slate-200 p-6 shadow-sm">
               <div className="pdf-header">
                 <div className="text-lg font-semibold text-gray-800">Process Flow Diagram</div>
               </div>
@@ -1677,21 +1732,9 @@ export const PlantBuilder = () => {
                   <div className="text-sm text-gray-500">Preview unavailable.</div>
                 )}
               </div>
-              <p className="text-xs text-gray-500 mt-2">Preview only. You can export it.</p>
-            </section>
-
-            <section className="pdf-page rounded-lg border border-slate-200 p-6 shadow-sm">
-              <div className="pdf-header">
-                <div className="text-lg font-semibold text-gray-800">Components</div>
-              </div>
-              {renderComponentsSummaryTable()}
-            </section>
-
-            <section className="pdf-page rounded-lg border border-slate-200 p-6 shadow-sm">
-              <div className="pdf-header">
-                <div className="text-lg font-semibold text-gray-800">Connections</div>
-              </div>
-              {renderConnectionsTable()}
+              <p className="text-xs text-gray-500 mt-2">
+                You can export it as image for better visualization.
+              </p>
             </section>
 
             <section className="pdf-page rounded-lg border border-slate-200 p-6 shadow-sm">
@@ -1700,6 +1743,10 @@ export const PlantBuilder = () => {
               </div>
               {renderPlantInfoTable()}
             </section>
+
+            {renderComponentsSummaryTable()}
+
+            {renderConnectionsTable()}
             <div className="flex flex-col sm:flex-row justify-between gap-4">
               <div className="flex flex-col sm:flex-row gap-2">
                 <Button
@@ -1715,6 +1762,15 @@ export const PlantBuilder = () => {
                 >
                   <Download className="h-4 w-4 mr-2" />
                   Export PDF
+                </Button>
+              </div>
+              <div className="flex justify-end">
+                <Button
+                  variant="outline"
+                  className="text-sm"
+                  onClick={() => setShowDataModel(false)}
+                >
+                  Close
                 </Button>
               </div>
             </div>
