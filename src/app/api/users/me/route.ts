@@ -4,12 +4,11 @@ import { getSessionUser } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   try {
-    const auth0User = await getSessionUser(req);
-    if (!auth0User) {
+    const sessionUserId = await getSessionUser(req);
+    if (!sessionUserId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    console.log("Auth0 User:", auth0User);
-    const user = await UserService.getUserBySub(auth0User);
+    const user = await UserService.getUserBySub(sessionUserId);
     return user 
       ? NextResponse.json(user, { status: 200 })
       : NextResponse.json({ error: "User not found" }, { status: 404 });

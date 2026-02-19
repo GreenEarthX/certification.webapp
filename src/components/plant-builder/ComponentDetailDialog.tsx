@@ -96,6 +96,8 @@ const ComponentDetailDialog = ({
     setFieldValues(sanitizeFieldValues(component.data));
     setCertifications(component.certifications || []);
     setActiveDefinitionId(component.componentDefinitionId ?? null);
+    setInputStreams([]);
+    setOutputStreams([]);
   }, [component]);
 
   useEffect(() => {
@@ -356,7 +358,7 @@ const ComponentDetailDialog = ({
           )}
         </div>
 
-        {/* Streams Section */}
+        {/*
         <div className="mt-8 border-t pt-6">
           <h4 className="font-semibold text-lg mb-4">Ports Configuration</h4>
           <div className="space-y-6">
@@ -380,6 +382,7 @@ const ComponentDetailDialog = ({
             </div>
           </div>
         </div>
+        */}
 
         {/* Existing Connections */}
         <div className="mt-8 border-t pt-6 space-y-4">
@@ -405,7 +408,7 @@ const ComponentDetailDialog = ({
           </div>
         </div>
 
-        {/* Certifications */}
+        {/*
         <div className="mt-8 border-t pt-6">
           <h4 className="font-semibold text-lg mb-3">Certifications</h4>
           <label>
@@ -422,6 +425,7 @@ const ComponentDetailDialog = ({
             </ul>
           )}
         </div>
+        */}
 
         <DialogFooter className="mt-6 flex justify-end gap-3">
           <Button variant="outline" onClick={onClose} className="border-gray-300">Cancel</Button>

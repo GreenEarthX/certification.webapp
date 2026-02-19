@@ -202,7 +202,7 @@ const PlantComponent = ({
   const nodeCls = (side: "left" | "right") =>
     [
       "absolute",
-      isGate ? (side === "left" ? "-left-[1px]" : "-right-[1px]") : side === "left" ? "-left-2" : "-right-2",
+      isGate ? (side === "left" ? "-left-[4px]" : "-right-[4px]") : side === "left" ? "-left-3" : "-right-3",
       "top-1/2",
       "-translate-y-1/2",
       "opacity-0",
@@ -361,15 +361,23 @@ const PlantComponent = ({
             <TooltipTrigger asChild>
               <svg
                 className={`${nodeCls("left")} cursor-pointer z-10`}
-                width="16"
-                height="16"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
                 onClick={(e) => handleNodeClick(e, false)}
               >
                 <circle
-                  cx="8"
-                  cy="8"
-                  r="7"
-                  className={`${colors.fill} fill-opacity-60 hover:fill-opacity-80`}
+                  cx="12"
+                  cy="12"
+                  r="11"
+                  className="fill-transparent"
+                  pointerEvents="all"
+                />
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="6.5"
+                  className={`${colors.fill} fill-opacity-70 hover:fill-opacity-90`}
                 />
               </svg>
             </TooltipTrigger>
@@ -383,15 +391,23 @@ const PlantComponent = ({
             <TooltipTrigger asChild>
               <svg
                 className={`${nodeCls("right")} cursor-pointer z-10`}
-                width="16"
-                height="16"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
                 onClick={(e) => handleNodeClick(e, true)}
               >
                 <circle
-                  cx="8"
-                  cy="8"
-                  r="7"
-                  className={`${colors.fill} fill-opacity-60 hover:fill-opacity-80`}
+                  cx="12"
+                  cy="12"
+                  r="11"
+                  className="fill-transparent"
+                  pointerEvents="all"
+                />
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="6.5"
+                  className={`${colors.fill} fill-opacity-70 hover:fill-opacity-90`}
                 />
               </svg>
             </TooltipTrigger>

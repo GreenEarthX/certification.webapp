@@ -35,6 +35,14 @@ async function proxyRequest(req: Request, params: RouteParams) {
   const resHeaders = new Headers(res.headers);
   resHeaders.delete("content-encoding");
 
+  // 204/205 responses must not include a body per Fetch spec.
+  if (res.status === 204 || res.status === 205) {
+    return new Response(null, {
+      status: res.status,
+      headers: resHeaders,
+    });
+  }
+
   return new Response(await res.arrayBuffer(), {
     status: res.status,
     headers: resHeaders,
