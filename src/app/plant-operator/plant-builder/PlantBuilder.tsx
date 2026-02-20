@@ -15,11 +15,15 @@ import {
   AlertTriangle,
   ArrowLeft,
   CheckCircle2,
+  Building2,
+  Zap,
+  ArrowRightLeft,
   X,
   Save,
   Play,
   Plus,
   MessageSquare,
+  Share2,
   Download,
   ChevronLeft,
   ChevronRight,
@@ -49,6 +53,7 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -64,7 +69,12 @@ import {
   PlacedComponent,
   Connection,
 } from "./types";
-import { createPlant, fetchPlantById, Plant, updatePlant } from "@/services/plant-builder/plants";
+import {
+  createPlant,
+  fetchPlantById,
+  Plant,
+  updatePlant,
+} from "@/services/plant-builder/plants";
 import {
   createDigitalTwin,
   fetchDigitalTwinJsonForPlant,
@@ -76,6 +86,12 @@ import type {
 } from "@/services/plant-builder/digitalTwins";
 import { updateComponentInstance, deleteComponentInstance } from "@/services/plant-builder/componentInstances";
 import { buildConnectionPayloadForComponent, StoredConnectionPayload } from "@/lib/plant-builder/connection-utils";
+import {
+  createTemplateFromDigitalTwin,
+  fetchTemplates,
+  instantiateTemplate,
+  TemplateDto,
+} from "@/services/plant-builder/templates";
 
 // Coerce optional id fields from persisted JSON (string/number) into usable numbers.
 const parseOptionalNumber = (value: unknown): number | undefined => {
@@ -91,13 +107,360 @@ const formatValidationContext = (err: DigitalTwinValidationError) => {
   return `Component ID: ${err.componentId}`;
 };
 
+const TEMPLATE_NODE_COLORS: Record<string, string> = {
+  equipment: "#4F8FF7",
+  carrier: "#10B981",
+  gate: "#F59E0B",
+  default: "#94A3B8",
+};
+
+type TemplateComponent = {
+  id: string | number;
+  name?: string;
+  type?: string;
+  position?: { x: number; y: number };
+};
+
+const PREVIEW_NODE_SIZE_SCALE = 1.2;
+
+const getPreviewShape = (type?: string) => {
+  switch (type) {
+    case "equipment":
+      return {
+        width: Math.round(192 * PREVIEW_NODE_SIZE_SCALE),
+        height: Math.round(128 * PREVIEW_NODE_SIZE_SCALE),
+        rounded: "rounded-lg",
+        bg: "bg-blue-50",
+        border: "border-blue-500",
+        text: "text-blue-700",
+        rotate: false,
+        icon: Building2,
+        rotateIcon: false,
+      };
+    case "carrier":
+      return {
+        width: Math.round(128 * PREVIEW_NODE_SIZE_SCALE),
+        height: Math.round(128 * PREVIEW_NODE_SIZE_SCALE),
+        rounded: "rounded-full",
+        bg: "bg-green-50",
+        border: "border-green-500",
+        text: "text-green-700",
+        rotate: false,
+        icon: Zap,
+        rotateIcon: false,
+      };
+    case "gate":
+      return {
+        width: Math.round(160 * PREVIEW_NODE_SIZE_SCALE),
+        height: Math.round(96 * PREVIEW_NODE_SIZE_SCALE),
+        rounded: "rounded-md",
+        bg: "bg-purple-50",
+        border: "border-purple-500",
+        text: "text-purple-700",
+        rotate: true,
+        icon: ArrowRightLeft,
+        rotateIcon: true,
+      };
+    default:
+      return {
+        width: Math.round(192 * PREVIEW_NODE_SIZE_SCALE),
+        height: Math.round(128 * PREVIEW_NODE_SIZE_SCALE),
+        rounded: "rounded-lg",
+        bg: "bg-slate-100",
+        border: "border-slate-300",
+        text: "text-slate-600",
+        rotate: false,
+        icon: Building2,
+        rotateIcon: false,
+      };
+  }
+};
+
+const buildTemplatePreviewLayout = (
+  components: NonNullable<TemplateDto["template_json"]>["components"] = [],
+  width: number,
+  height: number,
+  padding = 12
+) => {
+  if (!components || components.length === 0) {
+    return { nodes: [] as Array<{ id: string; x: number; y: number; type?: string }> };
+  }
+
+  const hasPositions = components.every(
+    (comp) =>
+      comp.position &&
+      Number.isFinite(comp.position.x) &&
+      Number.isFinite(comp.position.y)
+  );
+
+  if (!hasPositions) {
+    const cols = Math.ceil(Math.sqrt(components.length)) || 1;
+    const rows = Math.ceil(components.length / cols) || 1;
+    const cellW = (width - padding * 2) / cols;
+    const cellH = (height - padding * 2) / rows;
+    const nodes = components.map((comp, index) => {
+      const col = index % cols;
+      const row = Math.floor(index / cols);
+      return {
+        id: String(comp.id),
+        type: comp.type,
+        x: padding + col * cellW + cellW / 2,
+        y: padding + row * cellH + cellH / 2,
+      };
+    });
+    return { nodes };
+  }
+
+  const xs = components.map((comp) => comp.position!.x);
+  const ys = components.map((comp) => comp.position!.y);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+  const rangeX = maxX - minX || 1;
+  const rangeY = maxY - minY || 1;
+  const scale = Math.min(
+    (width - padding * 2) / rangeX,
+    (height - padding * 2) / rangeY
+  );
+
+  const nodes = components.map((comp) => ({
+    id: String(comp.id),
+    type: comp.type,
+    x: padding + (comp.position!.x - minX) * scale,
+    y: padding + (comp.position!.y - minY) * scale,
+  }));
+
+  return { nodes };
+};
+
+const getTemplateStats = (template: TemplateDto) => {
+  const components = template.template_json?.components || [];
+  const connections = template.template_json?.connections || [];
+  const byType = components.reduce(
+    (acc, comp) => {
+      const type = comp.type || "other";
+      acc[type] = (acc[type] || 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>
+  );
+  return {
+    total: components.length,
+    equipment: byType.equipment || 0,
+    carrier: byType.carrier || 0,
+    gate: byType.gate || 0,
+    connections: connections.length,
+  };
+};
+
+const renderTemplatePreviewCanvas = (template: TemplateDto, baseScale = 1) => {
+  const components = template.template_json?.components || [];
+  const connections = template.template_json?.connections || [];
+
+  if (!components.length) {
+    return (
+      <div className="text-xs text-gray-500 text-center py-6">
+        Preview not available.
+      </div>
+    );
+  }
+
+  const hasPositions = components.every(
+    (comp) =>
+      comp.position &&
+      Number.isFinite(comp.position.x) &&
+      Number.isFinite(comp.position.y)
+  );
+
+  const rawNodes = hasPositions
+    ? components.map((comp) => ({
+        id: String(comp.id),
+        x: comp.position!.x,
+        y: comp.position!.y,
+        type: comp.type,
+      }))
+    : (() => {
+        const cols = Math.ceil(Math.sqrt(components.length)) || 1;
+        const rows = Math.ceil(components.length / cols) || 1;
+        const cellW = 260;
+        const cellH = 200;
+        return components.map((comp, index) => {
+          const col = index % cols;
+          const row = Math.floor(index / cols);
+          return {
+            id: String(comp.id),
+            x: col * cellW,
+            y: row * cellH,
+            type: comp.type,
+          };
+        });
+      })();
+
+  const nodeMap = new Map(rawNodes.map((n) => [n.id, n]));
+  const shapes: Array<{
+    component: TemplateComponent;
+    node: { id: string; x: number; y: number; type?: string };
+    shape: ReturnType<typeof getPreviewShape>;
+    width: number;
+    height: number;
+    effectiveWidth: number;
+    effectiveHeight: number;
+    boundsLeft: number;
+    boundsTop: number;
+    boundsRight: number;
+    boundsBottom: number;
+  }> = [];
+
+  for (const component of components) {
+    const node = nodeMap.get(String(component.id));
+    if (!node) continue;
+    const shape = getPreviewShape(component.type);
+    const width = shape.width * baseScale;
+    const height = shape.height * baseScale;
+    const effectiveWidth = (shape.rotate ? shape.height : shape.width) * baseScale;
+    const effectiveHeight = (shape.rotate ? shape.width : shape.height) * baseScale;
+    const rotateOffsetX = shape.rotate ? ((shape.width - shape.height) / 2) * baseScale : 0;
+    const rotateOffsetY = shape.rotate ? ((shape.height - shape.width) / 2) * baseScale : 0;
+    const boundsLeft = node.x * baseScale + rotateOffsetX;
+    const boundsTop = node.y * baseScale + rotateOffsetY;
+    const boundsRight = boundsLeft + effectiveWidth;
+    const boundsBottom = boundsTop + effectiveHeight;
+    shapes.push({
+      component,
+      node,
+      shape,
+      width,
+      height,
+      effectiveWidth,
+      effectiveHeight,
+      boundsLeft,
+      boundsTop,
+      boundsRight,
+      boundsBottom,
+    });
+  }
+
+  if (!shapes.length) {
+    return (
+      <div className="text-xs text-gray-500 text-center py-6">
+        Preview not available.
+      </div>
+    );
+  }
+
+  const minX = Math.min(...shapes.map((item) => item.boundsLeft));
+  const minY = Math.min(...shapes.map((item) => item.boundsTop));
+  const maxX = Math.max(...shapes.map((item) => item.boundsRight));
+  const maxY = Math.max(...shapes.map((item) => item.boundsBottom));
+
+  const padding = 80;
+  const width = Math.max(1, maxX - minX) + padding * 2;
+  const height = Math.max(1, maxY - minY) + padding * 2;
+  const offsetX = padding - minX;
+  const offsetY = padding - minY;
+
+  const shapeById = new Map(
+    shapes.map((item) => [
+      item.node.id,
+      {
+        centerX: item.node.x * baseScale + item.width / 2,
+        centerY: item.node.y * baseScale + item.height / 2,
+      },
+    ])
+  );
+
+  return (
+    <div
+      className="relative pointer-events-none select-none"
+      style={{ width, height }}
+    >
+      <svg
+        width={width}
+        height={height}
+        viewBox={`0 0 ${width} ${height}`}
+        className="absolute inset-0"
+      >
+        {connections.map((conn, idx) => {
+          const from = nodeMap.get(String(conn.from));
+          const to = nodeMap.get(String(conn.to));
+          if (!from || !to) return null;
+          return (
+            <line
+              key={`preview-${template.id}-c-${idx}`}
+              x1={(shapeById.get(from.id)?.centerX ?? from.x * baseScale) + offsetX}
+              y1={(shapeById.get(from.id)?.centerY ?? from.y * baseScale) + offsetY}
+              x2={(shapeById.get(to.id)?.centerX ?? to.x * baseScale) + offsetX}
+              y2={(shapeById.get(to.id)?.centerY ?? to.y * baseScale) + offsetY}
+              stroke="#cbd5f5"
+              strokeWidth={2}
+            />
+          );
+        })}
+      </svg>
+      {shapes.map(({ component, node, shape, width, height }) => {
+        const Icon = shape.icon;
+        const isGate = (component.type || "").toLowerCase() === "gate";
+
+        return (
+          <div
+            key={`preview-${template.id}-node-${component.id}`}
+            className={`absolute border-2 shadow-sm overflow-visible ${shape.bg} ${shape.border} ${shape.rounded}`}
+            style={{
+              width,
+              height,
+              left: node.x * baseScale + offsetX,
+              top: node.y * baseScale + offsetY,
+              transform: shape.rotate ? "rotate(90deg)" : undefined,
+              transformOrigin: "center",
+            }}
+          >
+            <div
+              className={`w-full h-full flex flex-col items-center justify-center gap-0.5 p-2 text-center overflow-visible ${
+                shape.rotate ? "rotate-[-90deg]" : ""
+              }`}
+            >
+              <Icon
+                className={`mb-1 h-6 w-6 ${shape.text}`}
+                style={{ transform: shape.rotateIcon ? "rotate(90deg)" : undefined }}
+              />
+              <div
+                className={
+                  isGate
+                    ? "text-sm font-semibold text-gray-900 max-w-full leading-normal whitespace-normal"
+                    : "text-sm font-semibold text-gray-900 max-w-full leading-normal truncate"
+                }
+              >
+                {component.name || "Unnamed"}
+              </div>
+              <div
+                className={
+                  isGate
+                    ? "text-xs text-gray-500 max-w-full leading-normal whitespace-normal"
+                    : "text-xs text-gray-500 max-w-full leading-normal truncate"
+                }
+              >
+                ID {component.id}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 /**
  * Plant Builder Component
  * 
  * Multi-step workflow: User Details → Plant Info → Products → Canvas Builder → Compliance Check
  * Manages component persistence to backend and process flow visualization.
  */
-export const PlantBuilder = () => {
+type PlantBuilderProps = {
+  initialView?: "builder" | "templates";
+};
+
+export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => {
   const router = useRouter();
   const [step, setStep] = useState<"info" | "product" | "builder" | "compliance" | "loading">("info");
   const [userDetails, setUserDetails] = useState<UserDetails | null>(null);
@@ -137,9 +500,24 @@ export const PlantBuilder = () => {
   const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
   const [isEditingPlantInfo, setIsEditingPlantInfo] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
-  const [shareMode, setShareMode] = useState<"template" | "private">("private");
-  const [shareEmailInput, setShareEmailInput] = useState("");
-  const [shareEmails, setShareEmails] = useState<string[]>([]);
+  const [templateNameInput, setTemplateNameInput] = useState("");
+  const [templateDescriptionInput, setTemplateDescriptionInput] = useState("");
+  const [showTemplatesModal, setShowTemplatesModal] = useState(
+    initialView === "templates"
+  );
+  const [templates, setTemplates] = useState<TemplateDto[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [templatesError, setTemplatesError] = useState<string | null>(null);
+  const [instantiateName, setInstantiateName] = useState("");
+  const [isApplyingTemplate, setIsApplyingTemplate] = useState(false);
+  const [isSharingPlant, setIsSharingPlant] = useState(false);
+  const [previewTemplate, setPreviewTemplate] = useState<TemplateDto | null>(null);
+  const [previewZoom, setPreviewZoom] = useState(1);
+  const [templatePreviewImages, setTemplatePreviewImages] = useState<Record<number, string>>({});
+  const [templatePreviewQueue, setTemplatePreviewQueue] = useState<TemplateDto[]>([]);
+  const [templatePreviewTarget, setTemplatePreviewTarget] = useState<TemplateDto | null>(null);
+  const [isRenderingTemplatePreview, setIsRenderingTemplatePreview] = useState(false);
+  const templatePreviewRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (showDataModel) {
@@ -147,6 +525,70 @@ export const PlantBuilder = () => {
       window.dispatchEvent(new CustomEvent("plant-builder:close-sidebar"));
     }
   }, [showDataModel]);
+
+  useEffect(() => {
+    const pending = templates.filter(
+      (template) =>
+        template.template_json?.components?.length &&
+        !templatePreviewImages[template.id]
+    );
+    setTemplatePreviewQueue(pending);
+  }, [templates, templatePreviewImages]);
+
+  useEffect(() => {
+    if (isRenderingTemplatePreview || templatePreviewQueue.length === 0) return;
+    setTemplatePreviewTarget(templatePreviewQueue[0]);
+    setTemplatePreviewQueue((prev) => prev.slice(1));
+    setIsRenderingTemplatePreview(true);
+  }, [templatePreviewQueue, isRenderingTemplatePreview]);
+
+  useEffect(() => {
+    if (!templatePreviewTarget) return;
+    const node = templatePreviewRef.current;
+    if (!node) {
+      setIsRenderingTemplatePreview(false);
+      setTemplatePreviewTarget(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    const run = async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      const exportWidth = node.scrollWidth || node.clientWidth;
+      const exportHeight = node.scrollHeight || node.clientHeight;
+      const canvas = await html2canvas(node, {
+        backgroundColor: "#ffffff",
+        scale: 5,
+        useCORS: true,
+        width: exportWidth,
+        height: exportHeight,
+        windowWidth: exportWidth,
+        windowHeight: exportHeight,
+      });
+      if (cancelled) return;
+      const url = canvas.toDataURL("image/png");
+      setTemplatePreviewImages((prev) => ({
+        ...prev,
+        [templatePreviewTarget.id]: url,
+      }));
+    };
+
+    run()
+      .catch((err) => {
+        console.error("Failed to render template preview:", err);
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsRenderingTemplatePreview(false);
+          setTemplatePreviewTarget(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [templatePreviewTarget]);
 
   const normalizeComponentData = useCallback((component: PlacedComponent) => {
     const data = component.data ?? {};
@@ -1068,36 +1510,111 @@ export const PlantBuilder = () => {
     }
   };
 
-  const isValidEmail = (value: string) =>
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+  const handleSendShare = async () => {
+    const twinId = Number((window as any).currentTwinId);
+    if (!twinId || Number.isNaN(twinId)) {
+      toast.error("No digital twin found. Save or reload the plant model first.");
+      return;
+    }
+    if (!templateNameInput.trim()) {
+      toast.error("Template name is required.");
+      return;
+    }
 
-  const handleAddShareEmail = () => {
-    const value = shareEmailInput.trim().toLowerCase();
-    if (!value) return;
-    if (!isValidEmail(value)) {
-      toast.error("Enter a valid email address.");
-      return;
-    }
-    if (shareEmails.includes(value)) {
-      toast.info("Email already added.");
-      setShareEmailInput("");
-      return;
-    }
-    setShareEmails((prev) => [...prev, value]);
-    setShareEmailInput("");
+    createTemplateFromDigitalTwin({
+      digitalTwinId: twinId,
+      name: templateNameInput.trim(),
+      description: templateDescriptionInput.trim() || undefined,
+    })
+      .then(() => {
+        toast.success("Template shared successfully.");
+        setShowShareModal(false);
+        setTemplateNameInput("");
+        setTemplateDescriptionInput("");
+      })
+      .catch((err) => {
+        console.error("Failed to share template:", err);
+        toast.error(err?.message || "Failed to share template.");
+      });
   };
 
-  const handleRemoveShareEmail = (email: string) => {
-    setShareEmails((prev) => prev.filter((item) => item !== email));
+  const handleOpenTemplatesModal = async () => {
+    if (step !== "builder") {
+      setStep("builder");
+    }
+    setShowTemplatesModal(true);
+    setInstantiateName(
+      plantInfo?.plantName ? `${plantInfo.plantName} Digital Twin` : ""
+    );
+    setTemplatesLoading(true);
+    setTemplatesError(null);
+    try {
+      const data = await fetchTemplates();
+      setTemplates(data);
+    } catch (err: any) {
+      console.error("Failed to load templates:", err);
+      setTemplatesError(err?.message || "Failed to load templates.");
+    } finally {
+      setTemplatesLoading(false);
+    }
   };
 
-  const handleSendShare = () => {
-    if (shareMode === "private" && shareEmails.length === 0) {
-      toast.error("Add at least one email.");
+  useEffect(() => {
+    if (initialView === "templates") {
+      handleOpenTemplatesModal();
+    }
+  }, [initialView]);
+
+  const handleBrowseTemplates = () => {
+    const params = new URLSearchParams(window.location.search);
+    const plantId = params.get("plantId");
+    const target = plantId
+      ? `/plant-operator/plant-builder/builder/templates?plantId=${plantId}`
+      : "/plant-operator/plant-builder/builder/templates";
+    router.push(target);
+  };
+
+  const handleCloseTemplates = () => {
+    if (initialView === "templates") {
+      const params = new URLSearchParams(window.location.search);
+      const plantId = params.get("plantId");
+      const target = plantId
+        ? `/plant-operator/plant-builder/builder?plantId=${plantId}`
+        : "/plant-operator/plant-builder/builder";
+      router.push(target);
       return;
     }
-    toast.success("Share request prepared. Backend not connected yet.");
-    setShowShareModal(false);
+    setShowTemplatesModal(false);
+  };
+
+  const handleInstantiateTemplate = async (template: TemplateDto) => {
+    const plantId = Number((window as any).currentPlantId);
+    if (!plantId || Number.isNaN(plantId)) {
+      toast.error("Create or load a plant before applying a template.");
+      return;
+    }
+    const name = (instantiateName || template.name || "Digital Twin").trim();
+    if (!name) {
+      toast.error("Instance name is required.");
+      return;
+    }
+
+    try {
+      setIsApplyingTemplate(true);
+      setShowTemplatesModal(false);
+      setStep("loading");
+      toast.info("Applying template. Please wait...");
+      await instantiateTemplate(template.id, { plantId, name });
+      toast.success("Template instantiated.");
+      window.location.href = `/plant-operator/plant-builder/builder?plantId=${plantId}`;
+    } catch (err: any) {
+      console.error("Failed to instantiate template:", err);
+      toast.error(err?.message || "Failed to instantiate template.");
+      setStep("builder");
+      setShowTemplatesModal(true);
+    } finally {
+      setIsApplyingTemplate(false);
+    }
   };
 
   const onConnect = useCallback(
@@ -1439,20 +1956,22 @@ export const PlantBuilder = () => {
         </div>
         <div className="flex items-center gap-2">
           {(step === "builder" || step === "compliance") && (
-            // <Button
-            //   className="text-sm bg-green-600 hover:bg-green-700 text-white"
-            //   onClick={() => setShowAssistantModal(true)}
-            // >
-            //   <MessageSquare className="h-4 w-4 mr-2" />
-            //   Assistant / Reach Out
-            // </Button>
-            <Button
-              className="text-sm bg-green-600 hover:bg-green-700 text-white"
-              onClick={() => setShowShareModal(true)}
-            >
-              <MessageSquare className="h-4 w-4 mr-2" />
-              Share
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                className="text-sm border-[#4F8FF7] text-[#1d4ed8] hover:bg-[#4F8FF7]/10"
+                onClick={handleBrowseTemplates}
+              >
+                Browse Templates
+              </Button>
+              <Button
+                className="text-sm bg-green-600 hover:bg-green-700 text-white"
+                onClick={() => setShowShareModal(true)}
+              >
+                <Share2 className="h-4 w-4 mr-2" />
+                Share
+              </Button>
+            </>
           )}
         </div>
       </header>
@@ -1480,38 +1999,162 @@ export const PlantBuilder = () => {
           </div>
         ) : step === "builder" ? (
           <div className="h-full min-h-0 relative overflow-hidden">
-            <div className="absolute inset-0 min-h-0">
-              <Canvas
-                components={components}
-                setComponents={setComponents}
-                connections={connections}
-                setConnections={setConnections}
-                onConnect={onConnect}  // PASSED
-                onModelChange={handleCanvasModelChange}
-                exportId="main"
-                validationErrorsByComponent={validationErrorsByComponent}
-                invalidConnectionIds={invalidConnectionIds}
-                focusRequest={focusRequest}
-                highlightedComponentId={highlightedComponentId}
-                topRightAddon={
-                  validationResult && !showValidationPanel ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowValidationPanel(true)}
-                      className="bg-white text-slate-900 border-slate-200 hover:bg-slate-50"
-                    >
-                      Validation
-                      <span className="ml-2 bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-[10px] font-semibold">
-                        {validationResult.errors.length}
-                      </span>
-                    </Button>
-                  ) : null
-                }
-              />
-            </div>
+            {showTemplatesModal ? (
+              <div className="absolute inset-0 z-30 bg-white flex flex-col">
+                <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+                  <div>
+                    <div className="text-lg font-bold text-gray-900">Browse Templates</div>
+                    <div className="text-xs text-gray-500">
+                      Select a template to instantiate for this plant.
+                    </div>
+                  </div>
+                  <Button variant="outline" onClick={handleCloseTemplates}>
+                    Close
+                  </Button>
+                </div>
+                <div className="flex-1 overflow-y-auto p-4">
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm">Digital Twin Name</Label>
+                      <Input
+                        value={instantiateName}
+                        onChange={(e) => setInstantiateName(e.target.value)}
+                        placeholder="Name for the instantiated digital twin"
+                      />
+                    </div>
+                    {templatesLoading ? (
+                      <div className="text-sm text-gray-500">Loading templates…</div>
+                    ) : templatesError ? (
+                      <div className="text-sm text-red-600">{templatesError}</div>
+                    ) : isApplyingTemplate ? (
+                      <div className="text-sm text-gray-500">Applying template…</div>
+                    ) : templates.length === 0 ? (
+                      <div className="text-sm text-gray-500">No templates available.</div>
+                    ) : (
+                      <div className="space-y-3">
+                        {templates.map((template) => {
+                          const stats = getTemplateStats(template);
+
+                          return (
+                            <div
+                              key={template.id}
+                              className="rounded-lg border border-slate-200 p-4 bg-white"
+                            >
+                              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                                <div className="flex-1">
+                                  <div className="text-sm font-semibold text-gray-900">
+                                    {template.name}
+                                  </div>
+                                  {template.description && (
+                                    <div className="text-xs text-gray-600 mt-1">
+                                      {template.description}
+                                    </div>
+                                  )}
+                                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-gray-600">
+                                    <div>Components: <span className="font-semibold text-gray-900">{stats.total}</span></div>
+                                    <div>Connections: <span className="font-semibold text-gray-900">{stats.connections}</span></div>
+                                    <div>Equipment: <span className="font-semibold text-gray-900">{stats.equipment}</span></div>
+                                    <div>Carriers: <span className="font-semibold text-gray-900">{stats.carrier}</span></div>
+                                    <div>Gates: <span className="font-semibold text-gray-900">{stats.gate}</span></div>
+                                  </div>
+                                </div>
+                                <div className="flex flex-col items-end gap-2">
+                                  <Button
+                                    variant="outline"
+                                    className="text-xs"
+                                    onClick={() => {
+                                    setPreviewTemplate(template);
+                                    setPreviewZoom(1);
+                                    }}
+                                  >
+                                    Preview
+                                  </Button>
+                                  <Button
+                                    className="bg-[#4F8FF7] hover:bg-[#3b73c4] text-white text-xs"
+                                    onClick={() => handleInstantiateTemplate(template)}
+                                    disabled={isApplyingTemplate}
+                                  >
+                                    {isApplyingTemplate ? "Applying..." : "Use Template"}
+                                  </Button>
+                                </div>
+                              </div>
+                              <section className="mt-4 rounded-md border border-slate-200 bg-slate-50 p-4">
+                                <div className="text-sm font-semibold text-gray-800">
+                                  Process Flow Diagram
+                                </div>
+                                <div className="mt-3 border border-gray-200 rounded-lg p-3 bg-white">
+                                  {templatePreviewImages[template.id] ? (
+                                    <img
+                                      src={templatePreviewImages[template.id]}
+                                      alt={`${template.name} preview`}
+                                      className="w-full h-auto rounded-md border border-gray-200 bg-white"
+                                    />
+                                  ) : (
+                                    <div className="text-sm text-gray-500">
+                                      Generating preview…
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                                  <span>Preview only. You can export it as image for better visualization.</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const url = templatePreviewImages[template.id];
+                                      if (!url) return;
+                                      const link = document.createElement("a");
+                                      link.href = url;
+                                      link.download = `${template.name || "template"}-preview.png`;
+                                      link.click();
+                                    }}
+                                    className="text-blue-600 hover:text-blue-700 hover:underline"
+                                  >
+                                    Export image
+                                  </button>
+                                </div>
+                              </section>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="absolute inset-0 min-h-0">
+                <Canvas
+                  components={components}
+                  setComponents={setComponents}
+                  connections={connections}
+                  setConnections={setConnections}
+                  onConnect={onConnect}  // PASSED
+                  onModelChange={handleCanvasModelChange}
+                  exportId="main"
+                  validationErrorsByComponent={validationErrorsByComponent}
+                  invalidConnectionIds={invalidConnectionIds}
+                  focusRequest={focusRequest}
+                  highlightedComponentId={highlightedComponentId}
+                  topRightAddon={
+                    validationResult && !showValidationPanel ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowValidationPanel(true)}
+                        className="bg-white text-slate-900 border-slate-200 hover:bg-slate-50"
+                      >
+                        Validation
+                        <span className="ml-2 bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-[10px] font-semibold">
+                          {validationResult.errors.length}
+                        </span>
+                      </Button>
+                    ) : null
+                  }
+                />
+              </div>
+            )}
             {/* Sidebar Container (overlay; does not shift canvas) */}
-            {!showDataModel && (
+            {!showTemplatesModal && !showDataModel && (
               <div
                 className={`absolute top-0 left-0 h-full flex transition-all duration-300 ease-in-out ${
                   showComponentLibrary ? "w-full sm:w-96" : "w-10"
@@ -1536,7 +2179,7 @@ export const PlantBuilder = () => {
               </div>
             )}
 
-            {validationResult && showValidationPanel && (
+            {!showTemplatesModal && validationResult && showValidationPanel && (
               <aside className="absolute top-0 right-0 h-full w-full max-w-[360px] z-30 bg-white/95 backdrop-blur border-l border-gray-200 shadow-xl flex flex-col">
                 <div className="p-4 border-b border-gray-200 flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
@@ -1670,7 +2313,7 @@ export const PlantBuilder = () => {
         )}
       </div>
 
-      {step === "builder" && (
+      {step === "builder" && !showTemplatesModal && (
         <div className="fixed bottom-4 right-4 flex flex-col sm:flex-row gap-2">
           <Button
             variant="outline"
@@ -1882,83 +2525,119 @@ export const PlantBuilder = () => {
       <Dialog open={showShareModal} onOpenChange={setShowShareModal}>
         <DialogContent className="max-w-md bg-white rounded-lg">
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-gray-900">Share Digital Twin</DialogTitle>
+            <DialogTitle className="text-lg font-bold text-gray-900">
+              Export Plant Model Diagram as Template
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label className="text-sm">Share Mode</Label>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant={shareMode === "private" ? "default" : "outline"}
-                  className={shareMode === "private" ? "bg-[#4F8FF7] text-white" : ""}
-                  onClick={() => setShareMode("private")}
-                >
-                  Specific People
-                </Button>
-                <Button
-                  type="button"
-                  variant={shareMode === "template" ? "default" : "outline"}
-                  className={shareMode === "template" ? "bg-[#4F8FF7] text-white" : ""}
-                  onClick={() => setShareMode("template")}
-                >
-                  Public Template
-                </Button>
-              </div>
+              <Label className="text-sm">Template Name</Label>
+              <Input
+                value={templateNameInput}
+                onChange={(e) => setTemplateNameInput(e.target.value)}
+                placeholder="Template name"
+              />
             </div>
-
-            {shareMode === "private" ? (
-              <div className="space-y-3">
-                <Label className="text-sm">Invite by Email</Label>
-                <div className="flex gap-2">
-                  <Input
-                    value={shareEmailInput}
-                    onChange={(e) => setShareEmailInput(e.target.value)}
-                    placeholder="email@example.com"
-                  />
-                  <Button type="button" onClick={handleAddShareEmail}>
-                    Add
-                  </Button>
-                </div>
-                {shareEmails.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {shareEmails.map((email) => (
-                      <span
-                        key={email}
-                        className="flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-700"
-                      >
-                        {email}
-                        <button
-                          type="button"
-                          className="text-slate-500 hover:text-slate-700"
-                          onClick={() => handleRemoveShareEmail(email)}
-                        >
-                          ×
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <p className="text-sm text-gray-600">
-                This will publish the digital twin as a template. You can manage templates later.
-              </p>
-            )}
+            <div className="space-y-2">
+              <Label className="text-sm">Description (optional)</Label>
+              <Textarea
+                value={templateDescriptionInput}
+                onChange={(e) => setTemplateDescriptionInput(e.target.value)}
+                placeholder="Describe this template"
+                className="min-h-[90px]"
+              />
+            </div>
+            <p className="text-xs text-gray-500">
+              This will publish the digital twin as a template.
+            </p>
           </div>
           <div className="mt-5 flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setShowShareModal(false)}>
+            <Button variant="outline" onClick={() => setShowShareModal(false)} disabled={isSharingPlant}>
               Cancel
             </Button>
             <Button
               className="bg-[#4F8FF7] hover:bg-[#3b73c4] text-white"
               onClick={handleSendShare}
+              disabled={isSharingPlant}
             >
-              Send
+              {isSharingPlant ? "Sharing..." : "Share"}
             </Button>
           </div>
         </DialogContent>
       </Dialog>
+
+      <Dialog
+        open={!!previewTemplate}
+        onOpenChange={(open) => {
+          if (!open) setPreviewTemplate(null);
+        }}
+      >
+        <DialogContent className="max-w-none w-screen h-screen bg-white rounded-none overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-gray-900">
+              {previewTemplate?.name || "Template Preview"}
+            </DialogTitle>
+          </DialogHeader>
+          {previewTemplate?.template_json?.components?.length ? (
+            <div className="flex flex-col gap-4 min-h-0">
+              <div className="flex items-center gap-4">
+                <div className="text-xs text-gray-600">
+                  Zoom: {(previewZoom * 100).toFixed(0)}%
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={2}
+                  step={0.1}
+                  value={previewZoom}
+                  onChange={(e) => setPreviewZoom(Number(e.target.value))}
+                  className="w-full"
+                />
+              </div>
+              <div className="flex-1 min-h-0 overflow-auto rounded-md border border-slate-200 bg-slate-50 p-4">
+                <div className="inline-block" style={{ padding: 32 }}>
+                  <div
+                    className="inline-block"
+                    style={{
+                      transform: `scale(${previewZoom})`,
+                      transformOrigin: "top left",
+                    }}
+                  >
+                    {templatePreviewImages[previewTemplate.id] ? (
+                      <img
+                        src={templatePreviewImages[previewTemplate.id]}
+                        alt={`${previewTemplate.name} preview`}
+                        className="w-auto h-auto max-w-none rounded-md border border-gray-200 bg-white"
+                      />
+                    ) : (
+                      <div className="text-sm text-gray-500">Generating preview…</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-sm text-gray-500">No preview data available.</div>
+          )}
+          <div className="mt-5 flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setPreviewTemplate(null)}>
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <div
+        ref={templatePreviewRef}
+        className="fixed -left-[10000px] top-0 bg-white p-6"
+        aria-hidden
+      >
+        {templatePreviewTarget && (
+          <div className="w-full h-full">
+            {renderTemplatePreviewCanvas(templatePreviewTarget)}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
