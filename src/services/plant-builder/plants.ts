@@ -13,6 +13,13 @@ export type Plant = {
   metadata?: Record<string, any> | null;
 };
 
+export type PlantUser = {
+  id: number;
+  email: string;
+  name?: string | null;
+  company?: string | null;
+};
+
 const PLANTS_PATH = "/plants";
 
 export async function fetchPlantsForCurrentUser(): Promise<Plant[]> {
@@ -25,6 +32,10 @@ export async function fetchArchivedPlantsForCurrentUser(): Promise<Plant[]> {
 
 export async function fetchPlantById(plantId: number): Promise<Plant> {
   return apiFetch<Plant>(`${PLANTS_PATH}/${plantId}`);
+}
+
+export async function fetchPlantUsers(plantId: number): Promise<PlantUser[]> {
+  return apiFetch<PlantUser[]>(`${PLANTS_PATH}/${plantId}/users`);
 }
 
 export async function createPlant(payload: {
@@ -69,5 +80,12 @@ export async function unarchivePlant(plantId: number): Promise<void> {
 export async function deactivatePlant(plantId: number): Promise<void> {
   await apiFetch<void>(`${PLANTS_PATH}/${plantId}/deactivate`, {
     method: "PATCH",
+  });
+}
+
+export async function addUserToPlant(plantId: number, userId: number): Promise<void> {
+  await apiFetch<void>(`${PLANTS_PATH}/${plantId}/users`, {
+    method: "POST",
+    body: JSON.stringify({ userId }),
   });
 }
