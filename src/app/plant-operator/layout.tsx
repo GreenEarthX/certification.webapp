@@ -1,10 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { UserProvider } from '@auth0/nextjs-auth0/client';
-
 import "../styles/globals.css";
-
-import Sidebar from "@/components/plant-operator/layout/sidebar/Sidebar";
 import Navbar from "@/components/plant-operator/layout/navbar/Navbar";
 
 // Font setup (optional here since it's already global, but fine if needed)
@@ -19,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Dashboard",
-  description: "Dashboard layout",
+  title: "Plant Builder",
+  description: "Plant Builder layout",
 };
 
 export default function DashboardLayout({
@@ -29,15 +25,9 @@ export default function DashboardLayout({
   return (
     <div
       className={`${geistSans.variable} ${geistMono.variable} antialiased w-full min-h-screen bg-blue-50 flex flex-col`}
-      style={{ ["--navbar-height" as any]: "80px" }}
     >
       <Navbar />
-      <div className="flex flex-1 w-full min-h-0">
-        <Sidebar />
-        <div className="flex-1 min-h-0 p-6">
-          <UserProvider>{children}</UserProvider>
-        </div>
-      </div>
+      <div className="flex-1 min-h-0">{children}</div>
     </div>
   );
 }

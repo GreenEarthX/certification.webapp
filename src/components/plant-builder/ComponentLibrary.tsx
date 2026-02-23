@@ -79,6 +79,10 @@ type ComponentLibraryJSON = {
   gate: ComponentData[];
 };
 
+let cachedLibrary: ComponentLibraryJSON | null = null;
+let cachedError: string | null = null;
+let inflight: Promise<ComponentLibraryJSON> | null = null;
+
 // === TAILWIND COLORS ===
 const layerStyles = {
   equipment: {
@@ -120,18 +124,30 @@ const ComponentLibrary = () => {
 
     async function loadLibrary() {
       try {
+        if (cachedLibrary) {
+          setLibrary(cachedLibrary);
+          setError(cachedError);
+          setLoading(false);
+          return;
+        }
         setLoading(true);
-        const data = await fetchComponentLibraryFromApi();
+        if (!inflight) {
+          inflight = fetchComponentLibraryFromApi();
+        }
+        const data = await inflight;
         if (!isMounted) return;
+        cachedLibrary = data;
+        cachedError = null;
         setLibrary(data);
         setError(null);
       } catch (err: any) {
         console.error("Failed to load component library:", err);
         if (!isMounted) return;
-        setError(
-          err?.message || "Failed to load component library from server."
-        );
+        const msg = err?.message || "Failed to load component library from server.";
+        cachedError = msg;
+        setError(msg);
       } finally {
+        inflight = null;
         if (isMounted) setLoading(false);
       }
     }
@@ -262,6 +278,24 @@ const ComponentLibrary = () => {
           <p className="text-xs text-muted-foreground mt-0.5">
             Loading components…
           </p>
+        </div>
+        <div className="flex-1 overflow-hidden">
+          <div className="p-3 space-y-4 animate-pulse">
+            {["Equipment", "Carriers", "Gates"].map((label, idx) => (
+              <div key={`${label}-${idx}`} className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="h-2.5 w-2.5 rounded-full bg-slate-200" />
+                  <div className="h-3 w-24 bg-slate-200 rounded" />
+                </div>
+                <div className="h-8 bg-slate-100 rounded" />
+                <div className="space-y-2">
+                  <div className="h-10 bg-slate-100 rounded" />
+                  <div className="h-10 bg-slate-100 rounded" />
+                  <div className="h-10 bg-slate-100 rounded" />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );

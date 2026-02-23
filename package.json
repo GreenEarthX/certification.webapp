@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@auth0/nextjs-auth0": "^3.7.0",
+    "@azure/msal-node": "^3.6.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@hashgraph/sdk": "^2.75.0",
@@ -68,6 +69,7 @@
     "jsonwebtoken": "^9.0.2",
     "jspdf": "^3.0.3",
     "lucide-react": "^0.482.0",
+    "@microsoft/microsoft-graph-client": "^3.0.7",
     "next": "^15.2.3",
     "next-themes": "^0.4.6",
     "openai": "^4.103.0",
