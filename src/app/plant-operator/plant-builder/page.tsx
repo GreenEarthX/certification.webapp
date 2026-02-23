@@ -252,7 +252,7 @@ export default function ChoosePlantPage() {
           if (!user) missing.push(email);
           return user || null;
         })
-        .filter(Boolean) as { id: number; email: string }[];
+        .filter(Boolean) as BackendUserSummary[];
 
       if (missing.length > 0) {
         toast.error(

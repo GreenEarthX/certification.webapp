@@ -76,7 +76,7 @@ const getTypeIcon = (type: string, colorClass: string) => {
     case "carrier":
       return <Zap className={`h-6 w-6 mb-1 ${colorClass}`} />;
     case "gate":
-      return <ArrowRightLeft className={`h-6 w-6 mb-1 rotate-90 ${colorClass}`} />;
+      return <ArrowRightLeft className={`h-6 w-6 mb-1 ${colorClass}`} />;
     default:
       return <div className={`h-6 w-6 mb-1 ${colorClass}`} />;
   }
@@ -86,11 +86,11 @@ const getTypeIcon = (type: string, colorClass: string) => {
 const getBaseShapeClasses = (type: string) => {
   switch (type) {
     case "equipment":
-      return "w-48 h-32 rounded-lg";
+      return "w-56 h-36 rounded-lg";
     case "carrier":
-      return "w-32 h-32 rounded-full";
+      return "w-36 h-36 rounded-full";
     case "gate":
-      return "w-40 min-h-24";
+      return "w-48 h-72 rounded-md";
     default:
       return "w-48 h-32 rounded-lg";
   }
@@ -133,10 +133,8 @@ const PlantComponent = ({
 
   const isGate = component.type === "gate";
   const baseShape = getBaseShapeClasses(component.type);
-  const shapeClasses = isGate
-    ? `${baseShape} rounded-md rotate-90 origin-center`
-    : baseShape;
-  const contentClasses = isGate ? "rotate-[-90deg] w-full" : "";
+  const shapeClasses = baseShape;
+  const contentClasses = "";
   const hasErrors = validationErrors.length > 0;
   const isPersisting = Boolean(component.isPersisting);
 
@@ -202,7 +200,7 @@ const PlantComponent = ({
   const nodeCls = (side: "left" | "right") =>
     [
       "absolute",
-      isGate ? (side === "left" ? "-left-[4px]" : "-right-[4px]") : side === "left" ? "-left-3" : "-right-3",
+      side === "left" ? "-left-3" : "-right-3",
       "top-1/2",
       "-translate-y-1/2",
       "opacity-0",
@@ -263,7 +261,7 @@ const PlantComponent = ({
                 }}
                 className="absolute -top-2 -left-2 bg-amber-100 text-amber-700 border border-amber-300 rounded-full w-6 h-6 flex items-center justify-center text-[10px] font-bold shadow-md"
               >
-                <AlertTriangle className={`w-3.5 h-3.5 ${isGate ? "-rotate-90" : ""}`} />
+                <AlertTriangle className="w-3.5 h-3.5" />
               </button>
             </TooltipTrigger>
             <TooltipContent
@@ -319,42 +317,40 @@ const PlantComponent = ({
           <div className="opacity-80">{typeIcon}</div>
 
           <div
-            className={`font-semibold text-sm truncate max-w-full mt-1 ${
-              isGate ? "whitespace-normal" : ""
+            className={`font-semibold text-sm max-w-full mt-1 leading-snug ${
+              isGate ? "truncate" : "truncate"
             }`}
           >
             {component.name}
           </div>
           <div
-            className={`text-xs text-muted-foreground truncate max-w-full ${
-              isGate ? "whitespace-normal" : ""
+            className={`text-xs text-muted-foreground max-w-full leading-snug ${
+              isGate ? "truncate" : "truncate"
             }`}
           >
             {isPersisting ? "ID loading..." : `ID ${component.id}`}
           </div>
 
-          {component.type !== "gate" && component.type !== "carrier" && (
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={isPersisting}
-              className={`mt-1 w-full text-xs ${isConnecting ? "bg-primary/10" : ""}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                onConnectStart(component.id);
-              }}
-            >
-              <svg className="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M13 10V3L4 14h7v7l9-11h-7z"
-                />
-              </svg>
-              Connect
-            </Button>
-          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={isPersisting}
+            className={`mt-1 w-full text-xs ${isConnecting ? "bg-primary/10" : ""}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onConnectStart(component.id);
+            }}
+          >
+            <svg className="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 10V3L4 14h7v7l9-11h-7z"
+              />
+            </svg>
+            Connect
+          </Button>
 
           {/* Input */}
           <Tooltip>

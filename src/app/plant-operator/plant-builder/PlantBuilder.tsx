@@ -127,8 +127,8 @@ const getPreviewShape = (type?: string) => {
   switch (type) {
     case "equipment":
       return {
-        width: Math.round(192 * PREVIEW_NODE_SIZE_SCALE),
-        height: Math.round(128 * PREVIEW_NODE_SIZE_SCALE),
+        width: Math.round(224 * PREVIEW_NODE_SIZE_SCALE),
+        height: Math.round(144 * PREVIEW_NODE_SIZE_SCALE),
         rounded: "rounded-lg",
         bg: "bg-blue-50",
         border: "border-blue-500",
@@ -139,8 +139,8 @@ const getPreviewShape = (type?: string) => {
       };
     case "carrier":
       return {
-        width: Math.round(128 * PREVIEW_NODE_SIZE_SCALE),
-        height: Math.round(128 * PREVIEW_NODE_SIZE_SCALE),
+        width: Math.round(144 * PREVIEW_NODE_SIZE_SCALE),
+        height: Math.round(144 * PREVIEW_NODE_SIZE_SCALE),
         rounded: "rounded-full",
         bg: "bg-green-50",
         border: "border-green-500",
@@ -151,15 +151,15 @@ const getPreviewShape = (type?: string) => {
       };
     case "gate":
       return {
-        width: Math.round(160 * PREVIEW_NODE_SIZE_SCALE),
-        height: Math.round(96 * PREVIEW_NODE_SIZE_SCALE),
+        width: Math.round(192 * PREVIEW_NODE_SIZE_SCALE),
+        height: Math.round(288 * PREVIEW_NODE_SIZE_SCALE),
         rounded: "rounded-md",
         bg: "bg-purple-50",
         border: "border-purple-500",
         text: "text-purple-700",
-        rotate: true,
+        rotate: false,
         icon: ArrowRightLeft,
-        rotateIcon: true,
+        rotateIcon: false,
       };
     default:
       return {
@@ -462,7 +462,9 @@ type PlantBuilderProps = {
 
 export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => {
   const router = useRouter();
-  const [step, setStep] = useState<"info" | "product" | "builder" | "compliance" | "loading">("info");
+  const [step, setStep] = useState<
+    "info" | "product" | "builder" | "compliance" | "loading"
+  >("loading");
   const [userDetails, setUserDetails] = useState<UserDetails | null>(null);
   const [plantInfo, setPlantInfo] = useState<PlantInfo | null>(null);
   const [productInfo, setProductInfo] = useState<ProductInfo[]>([]);
@@ -857,6 +859,19 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (initialView === "templates") {
+      setStep("builder");
+      return;
+    }
+    const params = new URLSearchParams(window.location.search);
+    const plantId = params.get("plantId");
+    const editMode = params.get("edit") === "info";
+    if (!plantId) {
+      setStep("info");
+    }
+  }, [initialView]);
 
   // Load existing plant from URL (edit mode)
     useEffect(() => {

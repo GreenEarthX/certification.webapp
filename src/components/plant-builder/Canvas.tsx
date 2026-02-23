@@ -83,11 +83,11 @@ type PortSide = "left" | "right" | "top" | "bottom";
 const getComponentBounds = (type: PlacedComponentType["type"]) => {
   switch (type) {
     case "equipment":
-      return { width: 192, height: 128, offsetX: 0, offsetY: 0 };
+      return { width: 224, height: 144, offsetX: 0, offsetY: 0 };
     case "carrier":
-      return { width: 128, height: 128, offsetX: 0, offsetY: 0 };
+      return { width: 144, height: 144, offsetX: 0, offsetY: 0 };
     case "gate":
-      return { width: 96, height: 160, offsetX: 32, offsetY: -32 };
+      return { width: 192, height: 288, offsetX: 0, offsetY: 0 };
     default:
       return { width: 192, height: 128, offsetX: 0, offsetY: 0 };
   }
