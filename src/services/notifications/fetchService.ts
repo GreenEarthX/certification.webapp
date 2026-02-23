@@ -3,12 +3,11 @@ import { Notification } from "@/models/notification";
 export async function getNotifications(): Promise<Notification[]> {
   try {
     const response = await fetch("/api/notifications");
-    if (!response.ok) throw new Error("Failed to fetch notifications");
+    if (!response.ok) return [];
 
     return await response.json();
   } catch (error) {
-    console.error("Error fetching notifications:", error);
-    throw new Error((error as Error).message);
+    return [];
   }
 }
 
@@ -19,9 +18,10 @@ export async function markNotificationAsReadService(id: number): Promise<void> {
       method: "PUT",
     });
 
-    if (!response.ok) throw new Error(`Failed to update: ${response.statusText}`);
+    if (!response.ok) {
+      return;
+    }
   } catch (error) {
-    console.error("Error marking notification as read:", error);
-    throw new Error((error as Error).message);
+    return;
   }
 }

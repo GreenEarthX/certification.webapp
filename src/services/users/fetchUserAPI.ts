@@ -4,18 +4,13 @@ import { getToken } from "@/lib/shared-auth";
 export async function fetchUser(): Promise<User | null> {
   try {
     const token = getToken();
-    if (!token) {
-      console.error("No auth token found.");
-      return null;
-    }
-    const res = await fetch("/api/users/me", {
-      headers: { "x-auth-token": token },
-    });
-    if (!res.ok) throw new Error("User not found");
+    const res = token
+      ? await fetch("/api/users/me", { headers: { "x-auth-token": token } })
+      : await fetch("/api/users/me", { credentials: "include" });
+    if (!res.ok) return null;
 
     return await res.json();
   } catch (error) {
-    console.error("Error fetching user:", error);
     return null;
   }
 }

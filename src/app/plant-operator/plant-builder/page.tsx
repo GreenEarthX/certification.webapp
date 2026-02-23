@@ -10,7 +10,6 @@ import {
   AlertTriangle,
   RefreshCw,
   ArrowLeft,
-  LayoutTemplate,
   Archive,
   Pencil,
   Users,
@@ -21,6 +20,14 @@ import {
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
   DropdownMenu,
@@ -35,8 +42,24 @@ import {
   archivePlant,
   unarchivePlant,
   deactivatePlant,
+  fetchPlantUsers,
+  PlantUser,
   Plant,
+  addUserToPlant,
 } from "@/services/plant-builder/plants";
+import {
+  fetchCurrentBackendUser,
+  type BackendUser,
+} from "@/services/current-user";
+import {
+  fetchAllBackendUsers,
+  type BackendUserSummary,
+} from "@/services/plant-builder/users";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 export default function ChoosePlantPage() {
   const router = useRouter();
@@ -47,7 +70,18 @@ export default function ChoosePlantPage() {
   const [activeTab, setActiveTab] = useState<"mine" | "shared" | "archived">("mine");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [showTemplates, setShowTemplates] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [sharePlant, setSharePlant] = useState<Plant | null>(null);
+  const [shareEmailInput, setShareEmailInput] = useState("");
+  const [shareEmails, setShareEmails] = useState<string[]>([]);
+  const [shareEmailError, setShareEmailError] = useState<string | null>(null);
+  const [isSharingPlant, setIsSharingPlant] = useState(false);
+  const [backendUsers, setBackendUsers] = useState<BackendUserSummary[]>([]);
+  const [backendUsersLoading, setBackendUsersLoading] = useState(false);
+  const [backendUsersLoaded, setBackendUsersLoaded] = useState(false);
+  const [plantUsersById, setPlantUsersById] = useState<Record<number, PlantUser[]>>({});
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const [currentUser, setCurrentUser] = useState<BackendUser | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -55,13 +89,32 @@ export default function ChoosePlantPage() {
     async function loadPlants() {
       try {
         setLoading(true);
-        const [result, archived] = await Promise.all([
+        const [result, archived, currentUser] = await Promise.all([
           fetchPlantsForCurrentUser(),
           fetchArchivedPlantsForCurrentUser(),
+          fetchCurrentBackendUser().catch(() => null),
         ]);
         if (!isMounted) return;
         setPlants(result);
         setArchivedPlants(archived);
+        setCurrentUserId(currentUser?.id ?? null);
+        setCurrentUser(currentUser ?? null);
+        const userEntries = await Promise.all(
+          result.map(async (plant) => {
+            try {
+              const users = await fetchPlantUsers(plant.id);
+              return [plant.id, users] as const;
+            } catch (err) {
+              console.error(`Failed to load users for plant ${plant.id}:`, err);
+              return [plant.id, [] as PlantUser[]] as const;
+            }
+          })
+        );
+        const usersMap: Record<number, PlantUser[]> = {};
+        userEntries.forEach(([plantId, users]) => {
+          usersMap[plantId] = users;
+        });
+        setPlantUsersById(usersMap);
         setError(null);
       } catch (err: any) {
         console.error("Failed to load plants:", err);
@@ -100,7 +153,203 @@ export default function ChoosePlantPage() {
     window.location.reload();
   };
 
-  const handleOpenTemplates = () => setShowTemplates(true);
+  const handleOpenShare = (plant: Plant) => {
+    setSharePlant(plant);
+    setShareEmailInput("");
+    setShareEmails([]);
+    setShareEmailError(null);
+    setShowShareModal(true);
+
+    if (!backendUsersLoaded && !backendUsersLoading) {
+      setBackendUsersLoading(true);
+      fetchAllBackendUsers()
+        .then((users) => {
+          setBackendUsers(users);
+          setBackendUsersLoaded(true);
+        })
+        .catch((err) => {
+          console.error("Failed to load users:", err);
+          toast.error("Failed to load users list.");
+        })
+        .finally(() => {
+          setBackendUsersLoading(false);
+        });
+    }
+  };
+
+  const isValidEmail = (value: string) =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+
+  const handleAddShareEmail = () => {
+    const value = shareEmailInput.trim().toLowerCase();
+    if (!value) return;
+    if (!isValidEmail(value)) {
+      setShareEmailError("Enter a valid email address.");
+      toast.error("Enter a valid email address.");
+      return;
+    }
+    if (sharePlant) {
+      const existingUsers = plantUsersById[sharePlant.id] || [];
+      const alreadyShared = existingUsers.some(
+        (user) => user.email?.toLowerCase() === value
+      );
+      if (alreadyShared) {
+        const existingName =
+          existingUsers.find((user) => user.email?.toLowerCase() === value)
+            ?.name || value;
+        const msg = `${existingName} already has access to this plant.`;
+        setShareEmailError(msg);
+        toast.info(msg);
+        return;
+      }
+    }
+    if (!backendUsersLoaded || backendUsersLoading) {
+      setShareEmailError("Loading users list. Please wait a moment.");
+      toast.info("Loading users list. Please wait a moment.");
+      return;
+    }
+    const exists = backendUsers.some(
+      (user) => user.email?.toLowerCase() === value
+    );
+    if (!exists) {
+      setShareEmailError("User not found. The one sharing to should be part of our system.");
+      toast.error("User not found. The one sharing to should be part of our system.");
+      return;
+    }
+    if (shareEmails.includes(value)) {
+      setShareEmailError("Email already added.");
+      toast.info("Email already added.");
+      setShareEmailInput("");
+      return;
+    }
+    setShareEmails((prev) => [...prev, value]);
+    setShareEmailInput("");
+    setShareEmailError(null);
+  };
+
+  const handleRemoveShareEmail = (email: string) => {
+    setShareEmails((prev) => prev.filter((item) => item !== email));
+  };
+
+  const handleSendShare = async () => {
+    if (!sharePlant) return;
+    if (shareEmails.length === 0) {
+      toast.error("Add at least one email.");
+      return;
+    }
+
+    setIsSharingPlant(true);
+    try {
+      const users = backendUsersLoaded ? backendUsers : await fetchAllBackendUsers();
+      const userByEmail = new Map(
+        users.map((user) => [user.email.toLowerCase(), user])
+      );
+      const targets = Array.from(new Set(shareEmails.map((e) => e.toLowerCase())));
+      const missing: string[] = [];
+      const foundUsers = targets
+        .map((email) => {
+          const user = userByEmail.get(email);
+          if (!user) missing.push(email);
+          return user || null;
+        })
+        .filter(Boolean) as BackendUserSummary[];
+
+      if (missing.length > 0) {
+        toast.error(
+          "Some emails are not in the system. The one sharing to should be part of our system."
+        );
+        return;
+      }
+
+      const existingUsers = plantUsersById[sharePlant.id] || [];
+      const existingEmails = new Set(
+        existingUsers.map((user) => user.email.toLowerCase())
+      );
+      const alreadyShared = foundUsers.filter((user) =>
+        existingEmails.has(user.email.toLowerCase())
+      );
+      const shareTargets = foundUsers.filter(
+        (user) => !existingEmails.has(user.email.toLowerCase())
+      );
+      if (alreadyShared.length > 0) {
+        const alreadyNames = alreadyShared
+          .map((user) => user.name?.trim() || user.email)
+          .filter(Boolean)
+          .join(", ");
+        toast.info(
+          alreadyShared.length === 1
+            ? `${alreadyNames} already has access to this plant.`
+            : `${alreadyNames} already have access to this plant.`
+        );
+      }
+      if (shareTargets.length === 0) {
+        return;
+      }
+
+      const results = await Promise.allSettled(
+        shareTargets.map((user) => addUserToPlant(sharePlant.id, user.id))
+      );
+      const failures = results.filter((r) => r.status === "rejected");
+
+      const totalShared = shareTargets.length - failures.length;
+      if (totalShared > 0) {
+        toast.success(
+          totalShared === 1
+            ? "Plant shared. The user will be notified by email."
+            : "Plant shared. Users will be notified by email."
+        );
+        const sharedNames = shareTargets
+          .map((user) => user.name?.trim() || user.email)
+          .filter(Boolean)
+          .join(", ");
+        if (sharedNames) {
+          toast.info(
+            totalShared === 1
+              ? `You shared ${sharePlant.name}. Email notification will be sent to ${sharedNames}.`
+              : `You shared ${sharePlant.name}. Email notifications will be sent to: ${sharedNames}.`
+          );
+        }
+      }
+      if (failures.length > 0) {
+        toast.error("Some shares failed. Please try again.");
+      }
+
+      const updatedUsers = await fetchPlantUsers(sharePlant.id);
+      setPlantUsersById((prev) => ({ ...prev, [sharePlant.id]: updatedUsers }));
+      const sharerName = currentUser?.name ?? undefined;
+      const sharerEmail = currentUser?.email ?? undefined;
+      const emailResults = await Promise.allSettled(
+        shareTargets.map((user) =>
+          fetch("/api/plant-share-email", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              toEmail: user.email,
+              toName: user.name ?? undefined,
+              sharedByName: sharerName,
+              sharedByEmail: sharerEmail,
+              plantName: sharePlant.name,
+              plantId: sharePlant.id,
+            }),
+          })
+        )
+      );
+      const emailFailures = emailResults.filter((result) => {
+        if (result.status !== "fulfilled") return true;
+        return !result.value.ok;
+      });
+      if (emailFailures.length > 0) {
+        console.warn("Some share emails failed to send.");
+        toast.info("Plant shared, but some email notifications failed.");
+      }
+      setShowShareModal(false);
+    } catch (err) {
+      console.error("Failed to share plant:", err);
+      toast.error(err instanceof Error ? err.message : "Failed to share plant.");
+    } finally {
+      setIsSharingPlant(false);
+    }
+  };
 
 
   const handleArchivePlant = async (plant: Plant) => {
@@ -143,6 +392,24 @@ export default function ChoosePlantPage() {
     }
   };
 
+  const getUserInitials = (user: PlantUser) => {
+    const rawName = user.name?.trim();
+    if (rawName) {
+      const parts = rawName.split(/\s+/);
+      return `${parts[0]?.[0] ?? ""}${parts[1]?.[0] ?? ""}`.toUpperCase();
+    }
+    const email = user.email?.trim() ?? "";
+    return email.slice(0, 2).toUpperCase();
+  };
+
+  const getSharedUsers = (plantId: number) => {
+    const users = plantUsersById[plantId] || [];
+    if (!currentUserId) return users;
+    return users.filter(
+      (user) => String(user.id) !== String(currentUserId)
+    );
+  };
+
   const isActive = (plant: Plant) => plant.active !== false;
   const activePlants = plants.filter(
     (plant) => isActive(plant) && !plant.archived_at
@@ -151,14 +418,32 @@ export default function ChoosePlantPage() {
     (plant) => isActive(plant) && !!plant.archived_at
   );
 
-  const tabPlants = activeTab === "archived" ? archivedOnly : activePlants;
+  const sharedPlantIds = new Set(
+    activePlants
+      .filter((plant) => getSharedUsers(plant.id).length > 0)
+      .map((plant) => plant.id)
+  );
+  const sharedPlants = activePlants.filter((plant) =>
+    sharedPlantIds.has(plant.id)
+  );
+  const myPlants = activePlants;
+
+  const tabPlants =
+    activeTab === "archived"
+      ? archivedOnly
+      : activeTab === "shared"
+        ? sharedPlants
+        : myPlants;
 
   const filteredPlants = tabPlants.filter((plant) => {
-    const matchesSearch = searchQuery
-      ? `${plant.name ?? ""} ${plant.location ?? ""} ${plant.status ?? ""}`
-          .toLowerCase()
-          .includes(searchQuery.toLowerCase())
-      : true;
+    const matchesSearch =
+      activeTab === "shared"
+        ? true
+        : searchQuery
+          ? `${plant.name ?? ""} ${plant.location ?? ""} ${plant.status ?? ""}`
+              .toLowerCase()
+              .includes(searchQuery.toLowerCase())
+          : true;
     const matchesStatus =
       activeTab !== "mine"
         ? true
@@ -193,14 +478,6 @@ export default function ChoosePlantPage() {
             </div>
             <div className="flex items-center gap-2">
               <Button
-                variant="outline"
-                size="sm"
-                onClick={handleOpenTemplates}
-              >
-                <LayoutTemplate className="h-4 w-4 mr-2" />
-                Templates
-              </Button>
-              <Button
                 className="bg-[#4F8FF7] hover:bg-[#3b73c4] text-white text-sm"
                 onClick={handleAddNewPlant}
               >
@@ -217,7 +494,7 @@ export default function ChoosePlantPage() {
                 className={activeTab === "mine" ? "bg-[#4F8FF7] text-white" : ""}
                 onClick={() => setActiveTab("mine")}
               >
-                My Plants ({activePlants.length})
+                My Plants ({myPlants.length})
               </Button>
               <Button
                 variant={activeTab === "shared" ? "default" : "outline"}
@@ -225,7 +502,7 @@ export default function ChoosePlantPage() {
                 className={activeTab === "shared" ? "bg-[#4F8FF7] text-white" : ""}
                 onClick={() => setActiveTab("shared")}
               >
-                Shared Plants
+                Shared Plants ({sharedPlants.length})
               </Button>
               <Button
                 variant={activeTab === "archived" ? "default" : "outline"}
@@ -297,7 +574,7 @@ export default function ChoosePlantPage() {
               </div>
             </Card>
           </div>
-        ) : activeTab === "shared" ? (
+        ) : activeTab === "shared" && filteredPlants.length === 0 ? (
           <div className="max-w-xl mx-auto mt-8">
             <Card className="p-6 flex flex-col items-center text-center">
               <Users className="h-10 w-10 text-gray-400 mb-3" />
@@ -348,6 +625,9 @@ export default function ChoosePlantPage() {
                     : () => handleOpenPlant(plant)
                 }
               >
+                {(() => {
+                  const sharedUsers = getSharedUsers(plant.id);
+                  return (
                 <div className="flex items-start gap-3">
                   <div className="mt-0.5">
                     <Factory className="h-6 w-6 text-[#4F8FF7]" />
@@ -368,8 +648,49 @@ export default function ChoosePlantPage() {
                         <span className="font-medium">{plant.status}</span>
                       </p>
                     )}
+                    {activeTab === "shared" && (
+                      <div className="mt-3">
+                        <div className="text-xs text-gray-500">Shared with</div>
+                        {sharedUsers.length === 0 ? (
+                          <div className="text-xs text-gray-400 mt-1">
+                            No other users.
+                          </div>
+                        ) : (
+                          <div className="mt-2 flex items-center -space-x-2">
+                            {sharedUsers.map((user) => (
+                              <Popover key={user.id}>
+                                <PopoverTrigger asChild>
+                                  <button
+                                    type="button"
+                                    className="h-8 w-8 rounded-full border border-[#4F8FF7]/30 bg-[#4F8FF7]/10 text-[10px] font-semibold text-[#1d4ed8] shadow-sm"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    {getUserInitials(user)}
+                                  </button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-64">
+                                  <div className="text-sm font-semibold text-gray-900">
+                                    {user.name || user.email}
+                                  </div>
+                                  <div className="text-xs text-gray-600">
+                                    {user.email}
+                                  </div>
+                                  {user.company && (
+                                    <div className="text-xs text-gray-500 mt-1">
+                                      {user.company}
+                                    </div>
+                                  )}
+                                </PopoverContent>
+                              </Popover>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
+                  );
+                })()}
                 <div className="mt-4 flex justify-end">
                   <div className="flex items-center gap-2">
                     {activeTab === "archived" ? (
@@ -394,6 +715,20 @@ export default function ChoosePlantPage() {
                         }}
                       >
                         Open
+                      </Button>
+                    )}
+                    {activeTab === "mine" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-xs"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenShare(plant);
+                        }}
+                      >
+                        <Users className="mr-2 h-3.5 w-3.5" />
+                        Share
                       </Button>
                     )}
                     <DropdownMenu>
@@ -460,21 +795,95 @@ export default function ChoosePlantPage() {
         )}
       </main>
 
-      {showTemplates && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <Card className="w-full max-w-lg p-6 bg-white">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">Plant Templates</h2>
-              <Button variant="ghost" size="sm" onClick={() => setShowTemplates(false)}>
-                Close
-              </Button>
+      <Dialog open={showShareModal} onOpenChange={setShowShareModal}>
+        <DialogContent className="max-w-md bg-white rounded-lg">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-gray-900">
+              Share Plant
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {sharePlant && (
+              <div className="text-sm font-semibold text-gray-900">
+                {sharePlant.name}
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label className="text-sm">Invite by Email</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={shareEmailInput}
+                  onChange={(e) => {
+                    setShareEmailInput(e.target.value);
+                    if (shareEmailError) setShareEmailError(null);
+                  }}
+                  placeholder="email@example.com"
+                  disabled={isSharingPlant}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleAddShareEmail();
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  onClick={handleAddShareEmail}
+                  disabled={isSharingPlant}
+                >
+                  Add
+                </Button>
+              </div>
+              {backendUsersLoading && (
+                <div className="text-xs text-gray-500">
+                  Loading users list…
+                </div>
+              )}
+              {shareEmailError && (
+                <div className="text-xs text-red-600">{shareEmailError}</div>
+              )}
             </div>
-            <div className="mt-4 text-sm text-gray-600">
-              No templates available yet. They will appear here once added.
-            </div>
-          </Card>
-        </div>
-      )}
+            {shareEmails.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {shareEmails.map((email) => (
+                  <span
+                    key={email}
+                    className="flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-700"
+                  >
+                    {email}
+                    <button
+                      type="button"
+                      className="text-slate-500 hover:text-slate-700"
+                      onClick={() => handleRemoveShareEmail(email)}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <p className="text-xs text-gray-500">
+              Added users will see this plant in their Shared Plants tab.
+            </p>
+          </div>
+          <div className="mt-5 flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowShareModal(false)}
+              disabled={isSharingPlant}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="bg-[#4F8FF7] hover:bg-[#3b73c4] text-white"
+              onClick={handleSendShare}
+              disabled={isSharingPlant}
+            >
+              {isSharingPlant ? "Sharing..." : "Share"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );
