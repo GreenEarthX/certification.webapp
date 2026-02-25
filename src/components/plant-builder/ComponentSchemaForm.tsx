@@ -26,6 +26,7 @@ export type ComponentFieldDefinition = {
     | "multiselect"
     | "multiselect_file"
     | "textarea"
+    | "date"
     | string;
   description?: string;
   validation_rules?: string;
@@ -153,6 +154,17 @@ const ComponentSchemaForm = ({
                   min={field.min_value ?? undefined}
                   max={field.max_value ?? undefined}
                   step="any"
+                />
+              );
+
+            case "date":
+              return (
+                <Input
+                  {...baseProps}
+                  type="date"
+                  value={value ?? ""}
+                  onChange={(e) => onChange(name, e.target.value)}
+                  className={inputClass}
                 />
               );
 
