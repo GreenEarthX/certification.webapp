@@ -1972,13 +1972,14 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
         <div className="flex items-center gap-2">
           {(step === "builder" || step === "compliance") && (
             <>
+            {/*
               <Button
                 variant="outline"
                 className="text-sm border-[#4F8FF7] text-[#1d4ed8] hover:bg-[#4F8FF7]/10"
                 onClick={handleBrowseTemplates}
               >
                 Browse Templates
-              </Button>
+              </Button> 
               <Button
                 className="text-sm bg-green-600 hover:bg-green-700 text-white"
                 onClick={() => setShowShareModal(true)}
@@ -1986,7 +1987,8 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
                 <Share2 className="h-4 w-4 mr-2" />
                 Share
               </Button>
-            </>
+              */}
+            </> 
           )}
         </div>
       </header>
