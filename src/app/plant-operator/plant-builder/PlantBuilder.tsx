@@ -1314,7 +1314,77 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
     }
   };
 
+  const deriveGateEquipmentConnections = useCallback(
+    (connectionList: Connection[], componentList: { id: string; type?: string }[]) => {
+      const componentMap = new Map(componentList.map((c) => [String(c.id), c]));
+      const normalizeType = (type?: string) => (type || "").toLowerCase();
+      const isEndpoint = (type?: string) => {
+        const normalized = normalizeType(type);
+        return normalized === "equipment" || normalized === "gate";
+      };
+      const isCarrier = (type?: string) => normalizeType(type) === "carrier";
+      const isGateEquipmentPair = (fromType?: string, toType?: string) => {
+        const from = normalizeType(fromType);
+        const to = normalizeType(toType);
+        return (from === "gate" && to === "equipment") || (from === "equipment" && to === "gate");
+      };
+
+      const outgoingByFrom = new Map<string, Connection[]>();
+      connectionList.forEach((conn) => {
+        const key = String(conn.from);
+        if (!outgoingByFrom.has(key)) outgoingByFrom.set(key, []);
+        outgoingByFrom.get(key)!.push(conn);
+      });
+
+      const directPairs = new Set<string>();
+      connectionList.forEach((conn) => {
+        const fromType = componentMap.get(String(conn.from))?.type;
+        const toType = componentMap.get(String(conn.to))?.type;
+        if (isEndpoint(fromType) && isEndpoint(toType)) {
+          directPairs.add(`${conn.from}->${conn.to}`);
+        }
+      });
+
+      const derived = new Map<
+        string,
+        { from: string; to: string; via: string; sourceIds: string[] }
+      >();
+
+      connectionList.forEach((conn) => {
+        const fromType = componentMap.get(String(conn.from))?.type;
+        const toType = componentMap.get(String(conn.to))?.type;
+        if (!isEndpoint(fromType) || !isCarrier(toType)) return;
+
+        const carrierId = String(conn.to);
+        const carrierOutgoing = outgoingByFrom.get(carrierId) || [];
+        carrierOutgoing.forEach((next) => {
+          const nextType = componentMap.get(String(next.to))?.type;
+          if (!isEndpoint(nextType)) return;
+          if (!isGateEquipmentPair(fromType, nextType)) return;
+
+          const key = `${conn.from}->${next.to}`;
+          if (directPairs.has(key) || derived.has(key)) return;
+
+          derived.set(key, {
+            from: String(conn.from),
+            to: String(next.to),
+            via: carrierId,
+            sourceIds: [conn.id, next.id],
+          });
+        });
+      });
+
+      return Array.from(derived.values());
+    },
+    []
+  );
+
   const buildDataModel = useCallback(() => {
+    const derivedConnections = deriveGateEquipmentConnections(
+      uniqueConnections,
+      normalizedComponents
+    );
+
     return {
       userDetails: userDetails || {},
       plantInfo: plantInfo || {},
@@ -1328,14 +1398,24 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
         data: c.data || {},
         certifications: c.certifications || [],
       })),
-      connections: uniqueConnections.map((c) => ({
-        id: c.id,
-        from: c.from,
-        to: c.to,
-        type: c.type,
-        reason: c.reason || "N/A",
-        data: c.data || {},
-      })),
+      connections: [
+        ...uniqueConnections.map((c) => ({
+          id: c.id,
+          from: c.from,
+          to: c.to,
+          type: c.type,
+          reason: c.reason || "N/A",
+          data: c.data || {},
+        })),
+        ...derivedConnections.map((c) => ({
+          id: `derived-${c.from}-${c.to}-${c.via}`,
+          from: c.from,
+          to: c.to,
+          type: "derived",
+          reason: `Derived via carrier ${c.via}`,
+          data: { derived: true, via: c.via, sources: c.sourceIds },
+        })),
+      ],
       regulatoryMetadata: {
         projectType: plantInfo?.projectType || "N/A",
         primaryFuelType: plantInfo?.primaryFuelType || "N/A",
@@ -1344,7 +1424,14 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
         commercialOperationalDate: plantInfo?.commercialOperationalDate || "N/A",
       },
     };
-  }, [normalizedComponents, plantInfo, productInfo, uniqueConnections, userDetails]);
+  }, [
+    deriveGateEquipmentConnections,
+    normalizedComponents,
+    plantInfo,
+    productInfo,
+    uniqueConnections,
+    userDetails,
+  ]);
 
   const captureCanvasSnapshot = useCallback(async () => {
     const canvasNode = document.querySelector(
@@ -1665,28 +1752,40 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
 
   // Update plant model JSON for export
   const handleCanvasModelChange = (model: {
-  components: PlacedComponent[];
-  connections: Connection[];
-}) => {
-  const normalized = {
-    components: model.components.map((c) => ({
-      id: c.id,
-      type: c.type,
-      name: c.name,
-      category: c.category,
-      position: c.position,
-      data: c.data || {},
-    })),
-    connections: model.connections.map((conn) => ({
-      id: conn.id,
-      from: conn.from,
-      to: conn.to,
-      data: conn.data || {},
-    })),
-  };
+    components: PlacedComponent[];
+    connections: Connection[];
+  }) => {
+    const derivedConnections = deriveGateEquipmentConnections(
+      model.connections,
+      model.components
+    );
+    const normalized = {
+      components: model.components.map((c) => ({
+        id: c.id,
+        type: c.type,
+        name: c.name,
+        category: c.category,
+        position: c.position,
+        data: c.data || {},
+      })),
+      connections: [
+        ...model.connections.map((conn) => ({
+          id: conn.id,
+          from: conn.from,
+          to: conn.to,
+          data: conn.data || {},
+        })),
+        ...derivedConnections.map((c) => ({
+          id: `derived-${c.from}-${c.to}-${c.via}`,
+          from: c.from,
+          to: c.to,
+          data: { derived: true, via: c.via, sources: c.sourceIds },
+        })),
+      ],
+    };
 
-  setPlantModelJson(JSON.stringify(normalized, null, 2));
-};
+    setPlantModelJson(JSON.stringify(normalized, null, 2));
+  };
 
   const toggleComponentLibrary = () => {
     setShowComponentLibrary((prev) => !prev);
@@ -1798,8 +1897,12 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
   };
 
   const renderConnectionsTable = () => {
-    const isEndpoint = (type?: string) => type === "equipment" || type === "gate";
-    const isCarrier = (type?: string) => type === "carrier";
+    const normalizeType = (type?: string) => (type || "").toLowerCase();
+    const isEndpoint = (type?: string) => {
+      const normalized = normalizeType(type);
+      return normalized === "equipment" || normalized === "gate";
+    };
+    const isCarrier = (type?: string) => normalizeType(type) === "carrier";
 
     const outgoingByFrom = new Map<string, Connection[]>();
     uniqueConnections.forEach((conn) => {

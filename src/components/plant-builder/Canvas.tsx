@@ -78,6 +78,10 @@ const ZOOM_MIN = 0.25;
 const ZOOM_MAX = 2;
 const ZOOM_STEP = 0.1;
 const GATE_EDGE_GUTTER = 120;
+const SYSTEM_FRAME_PADDING = 48;
+const SYSTEM_FRAME_LABEL = "Plant System Boundary";
+const INPUT_GATES_LABEL = "Output Gates";
+const OUTPUT_GATES_LABEL = "Input Gates";
 type PortSide = "left" | "right" | "top" | "bottom";
 
 const getComponentBounds = (type: PlacedComponentType["type"]) => {
@@ -148,6 +152,34 @@ const calculateGateZones = (components: PlacedComponentType[]) => {
     inputLeft: minX - GATE_EDGE_GUTTER - gateBounds.width,
     outputLeft: maxX + GATE_EDGE_GUTTER,
   };
+};
+
+const calculateSystemBounds = (components: PlacedComponentType[]) => {
+  if (!components.length) return null;
+  const referenceComponents = components.filter((comp) => comp.type !== "gate");
+  const source = referenceComponents.length ? referenceComponents : components;
+
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+
+  source.forEach((comp) => {
+    const x = toNumber(comp.position?.x);
+    const y = toNumber(comp.position?.y);
+    const bounds = getComponentBounds(comp.type);
+    const left = x + bounds.offsetX;
+    const top = y + bounds.offsetY;
+    const right = left + bounds.width;
+    const bottom = top + bounds.height;
+    minX = Math.min(minX, left);
+    minY = Math.min(minY, top);
+    maxX = Math.max(maxX, right);
+    maxY = Math.max(maxY, bottom);
+  });
+
+  if (!Number.isFinite(minX) || !Number.isFinite(minY)) return null;
+  return { minX, minY, maxX, maxY };
 };
 
 const mapDroppedComponentData = (componentData: any) => {
@@ -354,11 +386,22 @@ const Canvas = ({
   const gateZones = useMemo(() => {
     const zones = calculateGateZones(components);
     if (!zones) return null;
+    const gateBounds = getComponentBounds("gate");
     return {
-      inputX: zones.inputLeft + canvasOffset.x,
+      inputX: zones.inputLeft + gateBounds.width + canvasOffset.x,
       outputX: zones.outputLeft + canvasOffset.x,
     };
   }, [canvasOffset.x, components]);
+
+  const systemFrame = useMemo(() => {
+    const bounds = calculateSystemBounds(components);
+    if (!bounds) return null;
+    const left = bounds.minX + canvasOffset.x - SYSTEM_FRAME_PADDING;
+    const top = bounds.minY + canvasOffset.y - SYSTEM_FRAME_PADDING;
+    const width = bounds.maxX - bounds.minX + SYSTEM_FRAME_PADDING * 2;
+    const height = bounds.maxY - bounds.minY + SYSTEM_FRAME_PADDING * 2;
+    return { left, top, width, height };
+  }, [canvasOffset.x, canvasOffset.y, components]);
 
   const canvasSize = useMemo(() => {
     if (!components.length) {
@@ -1147,6 +1190,107 @@ const Canvas = ({
             className="absolute inset-0 w-full h-full pointer-events-none"
             style={{ zIndex: 1 }}
           >
+            {systemFrame &&
+              (() => {
+                const left = systemFrame.left;
+                const top = systemFrame.top;
+                const right = left + systemFrame.width;
+                const bottom = top + systemFrame.height;
+                const corner = 18;
+                const tick = 10;
+                const headerHeight = 24;
+                const headerY = Math.max(8, top - headerHeight - 8);
+                const headerRadius = 12;
+                const headerPadding = 10;
+                return (
+                  <g>
+                    <rect
+                      x={left}
+                      y={top}
+                      width={systemFrame.width}
+                      height={systemFrame.height}
+                      rx={18}
+                      ry={18}
+                      fill="rgba(148, 163, 184, 0.06)"
+                    />
+                    <rect
+                      x={left}
+                      y={top}
+                      width={systemFrame.width}
+                      height={systemFrame.height}
+                      rx={18}
+                      ry={18}
+                      fill="transparent"
+                      stroke="rgba(100, 116, 139, 0.9)"
+                      strokeWidth={2}
+                      strokeDasharray="10 6"
+                      vectorEffect="non-scaling-stroke"
+                    />
+                    <g
+                      stroke="rgba(100, 116, 139, 0.95)"
+                      strokeWidth={3}
+                      vectorEffect="non-scaling-stroke"
+                    >
+                      <path d={`M ${left} ${top + corner} L ${left} ${top} L ${left + corner} ${top}`} />
+                      <path d={`M ${right - corner} ${top} L ${right} ${top} L ${right} ${top + corner}`} />
+                      <path d={`M ${left} ${bottom - corner} L ${left} ${bottom} L ${left + corner} ${bottom}`} />
+                      <path d={`M ${right - corner} ${bottom} L ${right} ${bottom} L ${right} ${bottom - corner}`} />
+                    </g>
+                    <g
+                      stroke="rgba(100, 116, 139, 0.7)"
+                      strokeWidth={2}
+                      vectorEffect="non-scaling-stroke"
+                    >
+                      <line x1={left + systemFrame.width / 2 - tick} y1={top} x2={left + systemFrame.width / 2 + tick} y2={top} />
+                      <line x1={left + systemFrame.width / 2 - tick} y1={bottom} x2={left + systemFrame.width / 2 + tick} y2={bottom} />
+                      <line x1={left} y1={top + systemFrame.height / 2 - tick} x2={left} y2={top + systemFrame.height / 2 + tick} />
+                      <line x1={right} y1={top + systemFrame.height / 2 - tick} x2={right} y2={top + systemFrame.height / 2 + tick} />
+                    </g>
+                    <g>
+                      <rect
+                        x={left}
+                        y={headerY}
+                        width={systemFrame.width}
+                        height={headerHeight}
+                        rx={headerRadius}
+                        ry={headerRadius}
+                        fill="rgba(248, 250, 252, 0.97)"
+                        stroke="rgba(100, 116, 139, 0.35)"
+                        strokeWidth={1}
+                      />
+                      <text
+                        x={left + headerPadding}
+                        y={headerY + 16}
+                        fontSize={12}
+                        fontWeight={600}
+                        fill="hsl(var(--layer-gate) / 0.95)"
+                      >
+                        {INPUT_GATES_LABEL}
+                      </text>
+                      <text
+                        x={left + systemFrame.width / 2}
+                        y={headerY + 16}
+                        textAnchor="middle"
+                        fontSize={12}
+                        fontWeight={600}
+                        fill="rgb(51, 65, 85)"
+                      >
+                        {SYSTEM_FRAME_LABEL}
+                      </text>
+                      <text
+                        x={left + systemFrame.width - headerPadding}
+                        y={headerY + 16}
+                        textAnchor="end"
+                        fontSize={12}
+                        fontWeight={600}
+                        fill="hsl(var(--layer-gate) / 0.95)"
+                      >
+                        {OUTPUT_GATES_LABEL}
+                      </text>
+                    </g>
+                  </g>
+                );
+              })()}
             {connections.map((conn) => {
               const fromComp = components.find((c) => c.id === conn.from);
               const toComp = components.find((c) => c.id === conn.to);
