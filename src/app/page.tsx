@@ -1,25 +1,15 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import PlantBuilderWelcomeLoader from "@/components/plant-builder/PlantBuilderWelcomeLoader";
 
 export default function HomePage() {
   const router = useRouter();
 
   useEffect(() => {
-    async function checkProfile() {
-      const res = await fetch('/api/users/check-profile');
-      const data = await res.json();
+    router.replace("/plant-operator/plant-builder");
+  }, [router]);
 
-      if (data.needsCompletion) {
-        router.push('/user-registration');
-      } else {
-        router.push('/plant-operator/dashboard');
-      }
-    }
-
-    checkProfile();
-  }, []);
-
-  return <p>Loading...</p>;
+  return <PlantBuilderWelcomeLoader />;
 }

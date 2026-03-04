@@ -1,29 +1,29 @@
-// middleware.ts  
-
-import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
+
+const PUBLIC_FILE = /\.[^/]+$/;
 
 export function middleware(request: NextRequest) {
-  // On ne touche que les routes API (sauf /api/auth)
-  if (request.nextUrl.pathname.startsWith("/api/") && 
-      !request.nextUrl.pathname.startsWith("/api/auth")) {
+  const { pathname } = request.nextUrl;
 
-    const clientToken = request.headers.get("x-auth-token");
-
-    // Converts x-auth-token → Authorization: Bearer <jwt> so our API routes can read it normally
-    if (clientToken) {
-      const newHeaders = new Headers(request.headers);
-      newHeaders.set("Authorization", `Bearer ${clientToken}`);
-
-      return NextResponse.next({
-        request: { headers: newHeaders },
-      });
-    }
+  if (
+    pathname === "/" ||
+    pathname === "/profile" ||
+    pathname.startsWith("/plant-operator/plant-builder") ||
+    pathname.startsWith("/api") ||
+    pathname.startsWith("/_next") ||
+    pathname === "/favicon.ico" ||
+    PUBLIC_FILE.test(pathname)
+  ) {
+    return NextResponse.next();
   }
 
-  return NextResponse.next();
+  const url = request.nextUrl.clone();
+  url.pathname = "/plant-operator/plant-builder";
+  url.search = "";
+  return NextResponse.redirect(url);
 }
 
 export const config = {
-  matcher: "/api/((?!auth).*)",
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };

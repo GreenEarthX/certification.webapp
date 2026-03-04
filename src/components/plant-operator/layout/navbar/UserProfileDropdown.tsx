@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import Link from 'next/link';
-import { FaUser, FaCog, FaSignOutAlt } from "react-icons/fa"; 
+import { FaSignOutAlt } from "react-icons/fa";
 
 interface UserProfileDropdownProps {
   userName: string;
@@ -18,25 +17,6 @@ const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({ userName }) =
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase())
     .join("") || "U";
-
-  const handleGlobalLogout = async () => {
-    try {
-      // 1. Appelle le vrai logout d’Onboarding (logs + invalide Next-Auth)
-      await fetch(`${ONBOARDING_URL}/api/auth/logout`, {
-        method: "POST",
-        credentials: "include", // Required for NextAuth cookies
-      });
-    } catch (err) {
-      console.warn("Onboarding logout API failed – continuing anyway", err);
-    } finally {
-      // 2. SUPPRESSION GLOBALE du token partagé → déconnecte Certification, Geomap, etc.
-      localStorage.removeItem("geomap-auth-token");
-      localStorage.removeItem("geomap-refresh-token");
-
-      // 3. Redirection finale vers la page de login d’Onboarding
-      window.location.href = `${ONBOARDING_URL}/auth/authenticate`;
-    }
-  };
 
   return (
     <div className="relative">
@@ -59,28 +39,6 @@ const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({ userName }) =
 
           {/* Dropdown Items */}
           <ul>
-            {/* Profile */}
-            <li>
-              <Link
-                href="/profile"
-                className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50"
-              >
-                <FaUser className="mr-2" />
-                Profile
-              </Link>
-            </li>
-
-            {/* Settings */}
-            <li>
-              <a
-                href="#"
-                className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50"
-              >
-                <FaCog className="mr-2" />
-                Settings
-              </a>
-            </li>
-
             <button
               onClick={() => {
               localStorage.clear(); // tue tout
