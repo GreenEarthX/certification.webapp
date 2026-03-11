@@ -15,7 +15,9 @@ import {
   type CertificationSelection,
 } from "@/components/ui/CertificationMultiSelectWithUpload";
 import { MultiSelectEnum } from "@/components/ui/MultiSelectEnum";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import clsx from "clsx";
+import { Info } from "lucide-react";
 
 export type ComponentFieldDefinition = {
   field_name: string;
@@ -65,10 +67,24 @@ const unsupportedClass =
 const formatUnit = (unit?: string, notes?: string) => {
   if (!unit && !notes) return null;
   return (
-    <span className="text-xs text-gray-500">
+    <span className="inline-flex items-center gap-1 text-xs text-gray-500">
       {unit ? `(${unit})` : null}
-      {unit && notes ? " · " : ""}
-      {notes ?? null}
+      {notes ? (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-gray-300 text-gray-500 hover:text-gray-700 hover:border-gray-400"
+              aria-label="Field notes"
+            >
+              <Info className="h-3 w-3" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top" align="start" className="max-w-xs bg-white text-gray-900 border border-gray-200 shadow-lg">
+            <div className="text-xs leading-relaxed">{notes}</div>
+          </TooltipContent>
+        </Tooltip>
+      ) : null}
     </span>
   );
 };
@@ -92,7 +108,8 @@ const ComponentSchemaForm = ({
   }
 
   return (
-    <div className="grid gap-4">
+    <TooltipProvider delayDuration={200}>
+      <div className="grid gap-4">
       {fields.map((field) => {
         const name = normalizeKey(field.field_name);
         const value = values?.[name];
@@ -252,7 +269,8 @@ const ComponentSchemaForm = ({
           </div>
         );
       })}
-    </div>
+      </div>
+    </TooltipProvider>
   );
 };
 
