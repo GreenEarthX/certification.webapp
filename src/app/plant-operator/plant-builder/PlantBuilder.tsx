@@ -2097,16 +2097,16 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
       </header>
 
       <div
-        className={`flex-1 min-h-0 p-4 relative ${
-          step === "info" || step === "product" ? "overflow-y-auto" : "overflow-hidden"
-        }`}
+        className={`flex-1 min-h-0 relative ${
+          step === "info" || step === "product" ? "p-0" : "p-4"
+        } overflow-hidden`}
       >
         {error && (
           <div className="bg-red-100 text-red-700 p-3 mx-4 mt-4 rounded-md text-sm">{error}</div>
         )}
 
         {step === "info" ? (
-          <div className="min-h-[calc(100vh-80px)] max-h-[calc(100vh-80px)] flex items-start justify-center p-4 overflow-y-auto">
+          <div className="min-h-[calc(100vh-80px)] max-h-[calc(100vh-80px)] w-full flex items-start p-0 overflow-hidden">
             <PlantInfoForm
               onSubmit={isEditingPlantInfo ? handleInfoUpdate : handleInfoSubmit}
               initialData={plantInfo || undefined}
@@ -2114,7 +2114,7 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
             />
           </div>
         ) : step === "product" ? (
-          <div className="min-h-[calc(100vh-80px)] max-h-[calc(100vh-80px)] flex items-start justify-center p-4 overflow-y-auto">
+          <div className="min-h-[calc(100vh-80px)] max-h-[calc(100vh-80px)] w-full flex items-start p-0 overflow-hidden">
             <ProductForm onSubmit={handleProductSubmit} />
           </div>
         ) : step === "builder" ? (
