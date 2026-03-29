@@ -34,6 +34,7 @@ interface PlantComponentProps {
   isPanMode: boolean;
   onClick: () => void;
   onMove: (id: string, position: Position) => void;
+  onMoveEnd: (id: string, position: Position) => void;
   onConnectStart: (id: string) => void;
   onConnectEnd: (id: string) => void;
   isConnectingActive: boolean;
@@ -41,6 +42,8 @@ interface PlantComponentProps {
   onDelete: (id: string) => void;   // ⬅️ NEW
   validationErrors?: DigitalTwinValidationError[];
   isHighlighted?: boolean;
+  gateDirection?: "input" | "output" | null;
+  accentColor?: string;
 }
 
 /* ─────────────────────── REAL TAILWIND COLORS ─────────────────────── */
@@ -67,6 +70,55 @@ const layerColors: Record<
     fill: "fill-purple-600",
   },
 };
+
+const getGateDirection = (component: PlacedComponent) => {
+  const raw =
+    (component as any)?.data?.gateType ??
+    (component as any)?.data?.inputOrOutput ??
+    (component as any)?.data?.input_or_output ??
+    (component as any)?.data?.gate_type ??
+    (component as any)?.data?.gateData?.inputOrOutput;
+  if (typeof raw === "string") {
+    const value = raw.toLowerCase();
+    if (value === "input" || value === "output") return value;
+  }
+  return null;
+};
+
+const carrierAccentMap: Record<string, string> = {
+  air: "#94A3B8",
+  "damaged crops": "#B45309",
+};
+
+const getCarrierAccent = (component: PlacedComponent) => {
+  const explicit = (component as any)?.data?.color ?? (component as any)?.data?.carrierColor;
+  if (typeof explicit === "string" && explicit.trim().length > 0) {
+    return explicit.trim();
+  }
+  const raw =
+    (component as any)?.data?.product ??
+    (component as any)?.data?.carrier ??
+    component.name ??
+    "";
+  const key = String(raw).trim().toLowerCase();
+  return carrierAccentMap[key];
+};
+
+const hexToRgb = (hex: string) => {
+  const normalized = hex.replace("#", "");
+  const full = normalized.length === 3
+    ? normalized.split("").map((ch) => ch + ch).join("")
+    : normalized;
+  if (full.length !== 6) return null;
+  const value = Number.parseInt(full, 16);
+  if (Number.isNaN(value)) return null;
+  return {
+    r: (value >> 16) & 255,
+    g: (value >> 8) & 255,
+    b: value & 255,
+  };
+};
+
 
 /* ─────────────────────── ICON (always returns element) ─────────────────────── */
 const getTypeIcon = (type: string, colorClass: string) => {
@@ -110,8 +162,11 @@ const PlantComponent = ({
   isConnectingActive,
   isConnecting,
   onDelete,
+  onMoveEnd,
   validationErrors = [],
   isHighlighted = false,
+  gateDirection: gateDirectionProp = null,
+  accentColor,
 }: PlantComponentProps) => {
   const [position, setPosition] = useState(component.position);
   const [showValidationModal, setShowValidationModal] = useState(false);
@@ -124,12 +179,34 @@ const PlantComponent = ({
     setPosition(component.position);
   }, [component.position]);
 
-  const colors = layerColors[component.type] ?? {
+  const baseColors = (component.type === "gate" ? layerColors.gate : layerColors[component.type]) ?? {
     bg: "bg-gray-100",
     border: "border-gray-300",
     text: "text-gray-700",
     fill: "fill-gray-700",
   };
+
+  const gateDirection = component.type === "gate" ? (gateDirectionProp ?? getGateDirection(component)) : null;
+  const gateAccent = gateDirection === "input"
+    ? { border: "#38BDF8", text: "#0284C7", bg: "#E0F2FE" }
+    : gateDirection === "output"
+      ? { border: "#FBBF24", text: "#B45309", bg: "#FEF3C7" }
+      : null;
+
+  const carrierAccent = component.type === "carrier"
+    ? accentColor || getCarrierAccent(component)
+    : null;
+  const carrierGlow = carrierAccent ? hexToRgb(carrierAccent) : null;
+
+  const colors = baseColors;
+
+  const glowColor = component.type === "equipment"
+    ? "79, 143, 247"
+    : component.type === "carrier"
+      ? carrierGlow
+        ? `${carrierGlow.r}, ${carrierGlow.g}, ${carrierGlow.b}`
+        : "16, 185, 129"
+      : null;
 
   const isGate = component.type === "gate";
   const baseShape = getBaseShapeClasses(component.type);
@@ -138,7 +215,10 @@ const PlantComponent = ({
   const hasErrors = validationErrors.length > 0;
   const isPersisting = Boolean(component.isPersisting);
 
-  const typeIcon = getTypeIcon(component.type, colors.text);
+  const showLeftPort = !(isGate && gateDirection === "input");
+  const showRightPort = !(isGate && gateDirection === "output");
+
+  const typeIcon = getTypeIcon(component.type, gateAccent || carrierAccent ? "" : colors.text);
 
   /* ───── drag ───── */
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -176,6 +256,10 @@ const PlantComponent = ({
       document.removeEventListener("mousemove", move);
       document.removeEventListener("mouseup", up);
       ignoreClickRef.current = didDragRef.current;
+      onMoveEnd(component.id, {
+        x: position.x - canvasOffset.x,
+        y: position.y - canvasOffset.y,
+      });
     };
 
     document.addEventListener("mousemove", move);
@@ -203,11 +287,9 @@ const PlantComponent = ({
       side === "left" ? "-left-3" : "-right-3",
       "top-1/2",
       "-translate-y-1/2",
-      "opacity-0",
-      "group-hover:opacity-100",
+      "opacity-100",
       "transition-opacity",
-      "pointer-events-none",
-      "group-hover:pointer-events-auto",
+      "pointer-events-auto",
     ].join(" ");
 
   return (
@@ -226,9 +308,24 @@ const PlantComponent = ({
       }}
     >
       <Card
-        className={`${shapeClasses} border-2 ${colors.border} ${colors.bg} shadow-md hover:shadow-lg transition-shadow relative group flex flex-col items-center justify-center p-2 overflow-visible ${
+        className={`${shapeClasses} border-2 shadow-md hover:shadow-lg transition-shadow relative group flex flex-col items-center justify-center p-2 overflow-visible ${colors.border} ${colors.bg} ${
           isHighlighted ? "ring-2 ring-amber-300 ring-offset-2 ring-offset-white" : ""
         } ${isPersisting ? "opacity-80" : ""}`}
+        style={
+          (() => {
+            const style: React.CSSProperties = {};
+            if (gateAccent) {
+              style.borderColor = gateAccent.border;
+            }
+            if (carrierAccent && !gateAccent) {
+              style.borderColor = carrierAccent;
+            }
+            if (glowColor) {
+              style.boxShadow = `0 6px 16px rgba(15, 23, 42, 0.08), 0 0 18px rgba(${glowColor}, 0.45)`;
+            }
+            return Object.keys(style).length > 0 ? style : undefined;
+          })()
+        }
         onClick={(e) => {
           if (ignoreClickRef.current) {
             ignoreClickRef.current = false;
@@ -249,6 +346,18 @@ const PlantComponent = ({
         >
           <X className="w-3 h-3" />
         </button>
+        <button
+          type="button"
+          onClick={(e) => e.stopPropagation()}
+          className="absolute -top-3 -left-3 flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-600 shadow-sm cursor-default"
+        >
+          <svg className="h-3 w-3 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 20h9" />
+            <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+          </svg>
+          Draft
+        </button>
+
 
         {hasErrors && (
           <Tooltip>
@@ -259,7 +368,7 @@ const PlantComponent = ({
                   e.stopPropagation();
                   setShowValidationModal(true);
                 }}
-                className="absolute -top-2 -left-2 bg-amber-100 text-amber-700 border border-amber-300 rounded-full w-6 h-6 flex items-center justify-center text-[10px] font-bold shadow-md"
+                className="absolute -top-2 right-6 bg-amber-100 text-amber-700 border border-amber-300 rounded-full w-6 h-6 flex items-center justify-center text-[10px] font-bold shadow-md"
               >
                 <AlertTriangle className="w-3.5 h-3.5" />
               </button>
@@ -311,15 +420,43 @@ const PlantComponent = ({
           </Dialog>
         )}
         
+
+        {isGate && gateDirection && gateAccent && (
+          <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+            <div
+              className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wide rounded-full border shadow-sm"
+              style={{
+                backgroundColor: gateAccent.bg,
+                borderColor: gateAccent.border,
+                color: gateAccent.text,
+              }}
+            >
+              {gateDirection.toUpperCase()} -&gt;
+            </div>
+          </div>
+        )}
+
         <CardContent
           className={`p-2 flex flex-col items-center justify-center text-center ${contentClasses} max-w-full`}
         >
-          <div className="opacity-80">{typeIcon}</div>
+          <div
+            className="opacity-80"
+            style={
+              gateAccent
+                ? { color: gateAccent.text }
+                : carrierAccent
+                  ? { color: carrierAccent }
+                  : undefined
+            }
+          >
+            {typeIcon}
+          </div>
 
           <div
             className={`font-semibold text-sm max-w-full mt-1 leading-snug ${
               isGate ? "truncate" : "truncate"
             }`}
+            style={gateAccent ? { color: gateAccent.text } : undefined}
           >
             {component.name}
           </div>
@@ -327,6 +464,7 @@ const PlantComponent = ({
             className={`text-xs text-muted-foreground max-w-full leading-snug ${
               isGate ? "truncate" : "truncate"
             }`}
+            style={gateAccent ? { color: gateAccent.text } : undefined}
           >
             {isPersisting ? "ID loading..." : `ID ${component.id}`}
           </div>
@@ -353,6 +491,7 @@ const PlantComponent = ({
           </Button>
 
           {/* Input */}
+          {showLeftPort && (
           <Tooltip>
             <TooltipTrigger asChild>
               <svg
@@ -373,7 +512,14 @@ const PlantComponent = ({
                   cx="12"
                   cy="12"
                   r="6.5"
-                  className={`${colors.fill} fill-opacity-70 hover:fill-opacity-90`}
+                  className={gateAccent || carrierAccent ? "fill-opacity-70 hover:fill-opacity-90" : `${colors.fill} fill-opacity-70 hover:fill-opacity-90`}
+                  style={
+                    gateAccent
+                      ? { fill: gateAccent.border }
+                      : carrierAccent
+                        ? { fill: carrierAccent }
+                        : undefined
+                  }
                 />
               </svg>
             </TooltipTrigger>
@@ -381,8 +527,10 @@ const PlantComponent = ({
               Click to connect input
             </TooltipContent>
           </Tooltip>
+          )}
 
           {/* Output */}
+          {showRightPort && (
           <Tooltip>
             <TooltipTrigger asChild>
               <svg
@@ -403,7 +551,14 @@ const PlantComponent = ({
                   cx="12"
                   cy="12"
                   r="6.5"
-                  className={`${colors.fill} fill-opacity-70 hover:fill-opacity-90`}
+                  className={gateAccent || carrierAccent ? "fill-opacity-70 hover:fill-opacity-90" : `${colors.fill} fill-opacity-70 hover:fill-opacity-90`}
+                  style={
+                    gateAccent
+                      ? { fill: gateAccent.border }
+                      : carrierAccent
+                        ? { fill: carrierAccent }
+                        : undefined
+                  }
                 />
               </svg>
             </TooltipTrigger>
@@ -411,6 +566,7 @@ const PlantComponent = ({
               Click to connect output
             </TooltipContent>
           </Tooltip>
+          )}
         </CardContent>
       </Card>
     </div>

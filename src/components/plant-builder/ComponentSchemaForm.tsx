@@ -64,6 +64,18 @@ const inputClass =
 const unsupportedClass =
   "rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900";
 
+const clampNumberInput = (value: string, min?: string, max?: string) => {
+  if (value === "") return value;
+  const numeric = Number.parseFloat(value);
+  if (!Number.isFinite(numeric)) return value;
+  const minVal = min != null ? Number.parseFloat(min) : Number.NaN;
+  const maxVal = max != null ? Number.parseFloat(max) : Number.NaN;
+  let next = numeric;
+  if (Number.isFinite(minVal)) next = Math.max(next, minVal);
+  if (Number.isFinite(maxVal)) next = Math.min(next, maxVal);
+  return String(next);
+};
+
 const formatUnit = (unit?: string, notes?: string) => {
   if (!unit && !notes) return null;
   return (
@@ -166,6 +178,16 @@ const ComponentSchemaForm = ({
                       : value
                   }
                   onChange={(e) => onChange(name, e.target.value)}
+                  onBlur={(e) => {
+                    const nextValue = clampNumberInput(
+                      e.target.value,
+                      field.min_value,
+                      field.max_value
+                    );
+                    if (nextValue !== e.target.value) {
+                      onChange(name, nextValue);
+                    }
+                  }}
                   placeholder={placeholder}
                   className={inputClass}
                   min={field.min_value ?? undefined}
