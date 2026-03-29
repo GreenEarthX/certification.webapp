@@ -35,7 +35,14 @@ type ComponentDetailDialogProps = {
   open: boolean;
   onClose: () => void;
   onSave: (id: string, data: any, certifications: string[], componentDefinitionId?: number | null) => void;
-  onAddConnection: (from: string, to: string, type: string, reason: string) => void;
+  onAddConnection: (
+    from: string,
+    to: string,
+    type: string,
+    reason: string,
+    quantity?: string,
+    unit?: string
+  ) => void;
 };
 
 type Stream = {
@@ -159,12 +166,26 @@ const ComponentDetailDialog = ({
   const handleSave = () => {
     inputStreams.forEach((stream) => {
       if (stream.from && stream.carrier) {
-        onAddConnection(stream.from, stream.to, stream.carrier, stream.additionalDetails);
+        onAddConnection(
+          stream.from,
+          stream.to,
+          stream.carrier,
+          stream.additionalDetails,
+          stream.energyAmount,
+          stream.unit
+        );
       }
     });
     outputStreams.forEach((stream) => {
       if (stream.to && stream.carrier) {
-        onAddConnection(stream.from, stream.to, stream.carrier, stream.additionalDetails);
+        onAddConnection(
+          stream.from,
+          stream.to,
+          stream.carrier,
+          stream.additionalDetails,
+          stream.energyAmount,
+          stream.unit
+        );
       }
     });
     onSave(component.id, fieldValues, certifications, activeDefinitionId);

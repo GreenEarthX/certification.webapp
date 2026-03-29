@@ -2,22 +2,10 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import {
-  Building2,
-  Zap,
-  ArrowRightLeft,
-  ChevronDown,
-  ChevronRight,
-} from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // ⬇️ import API helper
 import {
@@ -103,16 +91,12 @@ const layerStyles = {
 };
 
 const ComponentLibrary = () => {
-  const [openSections, setOpenSections] = useState({
-    equipment: true,
-    carrier: false,
-    gate: false,
-  });
   const [searchTerms, setSearchTerms] = useState({
     equipment: "",
     carrier: "",
     gate: "",
   });
+  const [activeTab, setActiveTab] = useState<ComponentType>("equipment");
 
   const [library, setLibrary] = useState<ComponentLibraryJSON | null>(null);
   const [loading, setLoading] = useState(true);
@@ -166,10 +150,6 @@ const ComponentLibrary = () => {
     e.dataTransfer.setData("component", JSON.stringify(component));
   };
 
-  const toggleSection = (section: keyof typeof openSections) => {
-    setOpenSections((prev) => ({ ...prev, [section]: !prev[section] }));
-  };
-
   const groupByCategory = (components: ComponentData[]) => {
     return components.reduce((acc, comp) => {
       (acc[comp.category] = acc[comp.category] || []).push(comp);
@@ -181,11 +161,9 @@ const ComponentLibrary = () => {
     a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
 
   const renderLayer = (
-    title: string,
-    icon: React.ReactNode,
     type: ComponentType,
     components: ComponentData[],
-    sectionKey: keyof typeof openSections
+    title: string
   ) => {
     const style = layerStyles[type];
     const searchValue = searchTerms[type];
@@ -203,42 +181,23 @@ const ComponentLibrary = () => {
     );
 
     return (
-      <Collapsible
-        open={openSections[sectionKey]}
-        onOpenChange={() => toggleSection(sectionKey)}
-      >
-        <CollapsibleTrigger className="flex items-center gap-2 w-full text-left hover:bg-muted/40 p-2 rounded transition-colors text-sm font-medium">
-          <div className={`w-2.5 h-2.5 rounded-full ${style.dot}`} />
-          <span className="flex items-center gap-1.5 flex-1">
-            {icon}
-            {title}
-          </span>
-          {openSections[sectionKey] ? (
-            <ChevronDown className="h-4 w-4" />
-          ) : (
-            <ChevronRight className="h-4 w-4" />
-          )}
-        </CollapsibleTrigger>
-
-        <CollapsibleContent className="space-y-3 pl-5 border-l border-muted/50 ml-2">
-          <div className="pr-3">
-            <Input
-              value={searchValue}
-              onChange={(e) =>
-                setSearchTerms((prev) => ({ ...prev, [type]: e.target.value }))
-              }
-              placeholder={`Search ${title.toLowerCase()}`}
-              className="h-8 text-xs"
-            />
-          </div>
-          {sortedCategories.map(([category, items]) => {
-            const normalized = category.trim().toLowerCase();
-            const hideCategory =
-              (type === "equipment" && (normalized === "equipment" || normalized === "equipments")) ||
-              (type === "carrier" && (normalized === "carrier" || normalized === "carriers")) ||
-              (type === "gate" && (normalized === "gate" || normalized === "gates"));
-            const sortedItems = [...items].sort(sortByName);
-            return (
+      <div className="space-y-3">
+        <Input
+          value={searchValue}
+          onChange={(e) =>
+            setSearchTerms((prev) => ({ ...prev, [type]: e.target.value }))
+          }
+          placeholder={`Search ${title.toLowerCase()}`}
+          className="h-8 text-xs"
+        />
+        {sortedCategories.map(([category, items]) => {
+          const normalized = category.trim().toLowerCase();
+          const hideCategory =
+            (type === "equipment" && (normalized === "equipment" || normalized === "equipments")) ||
+            (type === "carrier" && (normalized === "carrier" || normalized === "carriers")) ||
+            (type === "gate" && (normalized === "gate" || normalized === "gates"));
+          const sortedItems = [...items].sort(sortByName);
+          return (
             <div key={category} className="space-y-2">
               {!hideCategory && (
                 <div className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
@@ -263,9 +222,9 @@ const ComponentLibrary = () => {
                 ))}
               </div>
             </div>
-          )})}
-        </CollapsibleContent>
-      </Collapsible>
+          );
+        })}
+      </div>
     );
   };
 
@@ -325,33 +284,50 @@ const ComponentLibrary = () => {
         </p>
       </div>
 
-      <ScrollArea className="flex-1">
-        <div className="p-3 space-y-4">
-          {renderLayer(
-            "Equipment",
-            <Building2 className="h-4 w-4" />,
-            "equipment",
-            equipment,
-            "equipment"
-          )}
-          <Separator className="my-1" />
-          {renderLayer(
-            "Carriers",
-            <Zap className="h-4 w-4" />,
-            "carrier",
-            carrier,
-            "carrier"
-          )}
-          <Separator className="my-1" />
-          {renderLayer(
-            "Gates",
-            <ArrowRightLeft className="h-4 w-4" />,
-            "gate",
-            gate,
-            "gate"
-          )}
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => setActiveTab(value as ComponentType)}
+        className="flex-1 flex flex-col"
+      >
+        <div className="px-3 pt-3">
+          <TabsList className="grid w-full grid-cols-3 bg-slate-100">
+            <TabsTrigger
+              value="equipment"
+              className="gap-1.5 data-[state=active]:bg-blue-100 data-[state=active]:text-blue-800 data-[state=active]:shadow-sm"
+            >
+              <span className="h-2.5 w-2.5 rounded-full bg-blue-600 border border-blue-700 shrink-0" />
+              Equipment
+            </TabsTrigger>
+            <TabsTrigger
+              value="carrier"
+              className="gap-1.5 data-[state=active]:bg-green-100 data-[state=active]:text-green-800 data-[state=active]:shadow-sm"
+            >
+              <span className="h-2.5 w-2.5 rounded-full bg-green-600 border border-green-700 shrink-0" />
+              Carrier
+            </TabsTrigger>
+            <TabsTrigger
+              value="gate"
+              className="gap-1.5 data-[state=active]:bg-purple-100 data-[state=active]:text-purple-800 data-[state=active]:shadow-sm"
+            >
+              <span className="h-2.5 w-2.5 rounded-full bg-purple-600 border border-purple-700 shrink-0" />
+              Gate
+            </TabsTrigger>
+          </TabsList>
         </div>
-      </ScrollArea>
+        <ScrollArea className="flex-1">
+          <div className="p-3">
+            <TabsContent value="equipment" className="m-0">
+              {renderLayer("equipment", equipment, "Equipment")}
+            </TabsContent>
+            <TabsContent value="carrier" className="m-0">
+              {renderLayer("carrier", carrier, "Carriers")}
+            </TabsContent>
+            <TabsContent value="gate" className="m-0">
+              {renderLayer("gate", gate, "Gates")}
+            </TabsContent>
+          </div>
+        </ScrollArea>
+      </Tabs>
     </div>
   );
 };

@@ -1,122 +1,159 @@
 "use client";
 
-import { useState, useEffect, ChangeEvent } from "react";
-import { useRouter, useParams } from "next/navigation";
-import Link from "next/link"; 
+import React, { useMemo } from "react";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { usePlants } from "@/hooks/usePlants";
 
-// Components
-import FacilityDropdown from "@/components/plant-operator/plant-dashboard/FacilityDropdown";
-import RiskScore from "@/components/plant-operator/plant-dashboard/RiskScore";
-import DashboardStats from "@/components/plant-operator/dashboard/stats/DashboardStats";
-import CertificationRequests from "@/components/plant-operator/plant-dashboard/CertificationRequests";
-import CertificationsTable from "@/components/plant-operator/plant-dashboard/CertificationsTable";
-import Recommendations from "@/components/plant-operator/plant-dashboard/Recommendations";
+const moduleCards = [
+  {
+    title: "Project Economics",
+    rows: [
+      { label: "LCOH", value: "EUR 4.20/kg" },
+      { label: "CAPEX", value: "EUR 620M" },
+      { label: "IRR", value: "11.3%" },
+    ],
+  },
+  {
+    title: "Green Fuel Compliance",
+    rows: [
+      { label: "Readiness", value: "82%" },
+      { label: "RED II", value: "Compliant" },
+      { label: "GHG", value: "1.2 kgCO2e/kg" },
+    ],
+  },
+  {
+    title: "Project Procurement",
+    rows: [
+      { label: "Equipment", value: "12/14" },
+      { label: "Suppliers", value: "8" },
+      { label: "Budget", value: "EUR 38.2M" },
+    ],
+  },
+  {
+    title: "Green Asset Management",
+    rows: [
+      { label: "Offtakers", value: "3" },
+      { label: "Match", value: "87%" },
+      { label: "Volume", value: "4,200 t/yr" },
+    ],
+  },
+  {
+    title: "Plausibility Check",
+    rows: [
+      { label: "Check History", value: "4 checks" },
+      { label: "Passed", value: "2" },
+      { label: "Failed", value: "1" },
+    ],
+  },
+  {
+    title: "Ecosystem Navigator",
+    rows: [
+      { label: "Public Visibility", value: "Published" },
+      { label: "Data Tier", value: "Verified" },
+      { label: "Region", value: "-" },
+    ],
+  },
+];
 
-// Hooks
-import { useRiskScore } from "@/hooks/plant-dashboard/useRiskScore";
-import { useRecommendations } from "@/hooks/plant-dashboard/useRecommendations";
-import { useCertifications } from "@/hooks/plant-dashboard/useCertificationsList";
-import { useStats } from "@/hooks/useStats";
+const documents = [
+  { name: "Plant Process Flow Diagram (PFD)", type: "Engineering", date: "2026-03-15" },
+  { name: "Electrolyzer Datasheet - PEM 10MW Stack", type: "Procurement", date: "2026-03-10" },
+  { name: "RED III GHG Calculation Report", type: "Compliance", date: "2026-02-28" },
+  { name: "Power Purchase Agreement (PPA) - Wind", type: "Legal", date: "2026-01-22" },
+  { name: "Environmental Impact Assessment (EIA)", type: "Permitting", date: "2025-11-30" },
+  { name: "Geotechnical Survey Report", type: "Site", date: "2025-10-14" },
+];
 
 export default function PlantDashboard() {
-  const router = useRouter();
   const params = useParams();
-  const [selectedPlant, setSelectedPlant] = useState<string | undefined>(undefined);
+  const { plants, loading, error } = usePlants();
 
-  useEffect(() => {
-    if (params.id && typeof params.id === "string") {
-      setSelectedPlant(params.id);
-    }
-  }, [params.id]);
+  const plant = useMemo(() => {
+    const id = params.id ? Number(params.id) : null;
+    if (!id) return null;
+    return plants.find((item) => item.id === id) ?? null;
+  }, [params.id, plants]);
 
-  const { riskScore, loading: loadingRisk } = useRiskScore(selectedPlant);
-  const { recommendations, loading: loadingRecommendations } = useRecommendations(selectedPlant);
-  const { certifications, loading: loadingCertifications } = useCertifications(selectedPlant);
-  const { stats, loading: statsLoading, error: statsError } = useStats(selectedPlant);
-  
+  if (loading) {
+    return <div className="p-6 text-sm text-muted-foreground">Loading plant...</div>;
+  }
 
-  const handlePlantChange = (event: ChangeEvent<HTMLSelectElement>) => {
-    const newPlantId = event.target.value;
-    setSelectedPlant(newPlantId);
-    router.push(`/plant-operator/dashboard/${newPlantId}/plant-dashboard`);
-  };
+  if (error) {
+    return <div className="p-6 text-sm text-red-600">{error}</div>;
+  }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header Section: Only Facility Dropdown & Risk Score */}
-      <div className="flex justify-between items-center p-4 rounded-lg">
-        {selectedPlant && (
-          <FacilityDropdown selectedPlant={selectedPlant} onChange={handlePlantChange} />
-        )}
-        {loadingRisk ? (
-          <p className="text-gray-500 text-sm">Loading Maturity score...</p>
-        ) : (
-          <RiskScore score={riskScore ?? 0} />
-        )}
-      </div>
-
-      {/* Certifications Summary */}
-      <DashboardStats stats={stats} loading={statsLoading} error={statsError} />
-
-      {/* Certification Requests & Recommendations in Two Columns */}
-      <div className="grid grid-cols-12 gap-6">
-        {/* Certification Requests - Takes 8/12 Columns */}
-        <section className="col-span-12 lg:col-span-8 bg-white rounded-lg p-6 shadow-sm h-full">
-          <div className="flex justify-between items-center mb-4">
-            <h2 style={{ color: "#17598d" }} className="text-xl font-semibold">
-              Certification Submissions
-            </h2>
-            <Link href="/plant-operator/certifications/add">
-              <button className="bg-blue-600 text-white px-5 py-1 rounded-lg hover:bg-blue-700">
-                Track New Certificate
-              </button>
-            </Link>
+    <div className="space-y-6 p-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="space-y-2">
+          <Link href="/plant-operator/dashboard" className="text-xs font-semibold text-emerald-700">
+            &larr; Back to Portfolio
+          </Link>
+          <div>
+            <h1 className="text-2xl font-semibold text-slate-900">
+              {plant?.name || "Plant Dashboard"}
+            </h1>
+            <div className="mt-1 flex flex-wrap gap-2 text-xs text-slate-500">
+              <span>{plant?.address || "Location -"}</span>
+              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-600">
+                {plant?.type || "Fuel type"}
+              </span>
+              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-emerald-700">
+                Maturity {plant?.riskScore ?? 0}%
+              </span>
+            </div>
           </div>
-          <br/>
-          <CertificationRequests
-            requests={[
-              { name: "REDcert-EU", entity: "DNV", progress: 50 },
-              { name: "GHCI-Concept Certificate", entity: "N/A", progress: 75 },
-              { name: "SÜD CMS 70", entity: "TÜV SÜD", progress: 25 },
-            ]}
-          />
-        </section>
-
-        {/* Recommendations - Takes 4/12 Columns & Matches Height */}
-        <section className="col-span-12 lg:col-span-4 bg-white rounded-lg p-6 shadow-sm h-full flex flex-col">
-          <h2 style={{ color: "#17598d" }} className="text-xl font-semibold mb-4">
-            Recommendations
-          </h2>
-          <div className="flex-1">
-            {loadingRecommendations ? (
-              <p className="text-gray-500 text-sm">Loading recommendations...</p>
-            ) : (
-              <Recommendations recommendations={recommendations} />
-            )}
-          </div>
-        </section>
-      </div>
-
-      {/* Full Width Certifications Table */}
-      <section className="bg-white rounded-lg p-6 shadow-sm">
-      <div className="flex justify-between items-center mb-4">
-        <h2 style={{ color: "#17598d" }} className="text-xl font-semibold mb-4">
-          Certifications
-        </h2>
-        <Link href={`/plant-operator/plants/add?step=2&plant_id=${selectedPlant}`}>
-          <button className="bg-blue-600 text-white px-5 py-1 rounded-lg hover:bg-blue-700">
-            Add Certification
-          </button>
-        </Link>
-
         </div>
-        <br/>
-        {loadingCertifications ? (
-          <p className="text-gray-500 text-sm">Loading certifications...</p>
-        ) : (
-          <CertificationsTable certifications={certifications} />
-        )}
-      </section>
+        <Link
+          href="/plant-operator/plant-builder/builder"
+          className="inline-flex items-center rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+        >
+          Open Canvas
+        </Link>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        {moduleCards.map((card) => (
+          <div key={card.title} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-semibold text-slate-900">{card.title}</div>
+              <span className="text-xs font-semibold text-emerald-700">Open module &rarr;</span>
+            </div>
+            <div className="mt-3 grid grid-cols-3 gap-4 text-xs text-slate-600">
+              {card.rows.map((row) => (
+                <div key={row.label}>
+                  <div className="text-[11px] uppercase tracking-wide text-slate-400">{row.label}</div>
+                  <div className="mt-1 text-sm font-semibold text-slate-900">{row.value}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">Document Inventory</h2>
+            <p className="text-xs text-slate-500">Available files & deliverables by lifecycle event</p>
+          </div>
+          <button className="rounded-md border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600">
+            Upload
+          </button>
+        </div>
+        <div className="mt-4 divide-y divide-slate-100">
+          {documents.map((doc) => (
+            <div key={doc.name} className="flex items-center justify-between py-3 text-sm">
+              <div>
+                <div className="font-medium text-slate-900">{doc.name}</div>
+                <div className="text-xs text-slate-500">{doc.type}</div>
+              </div>
+              <div className="text-xs text-slate-500">{doc.date}</div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
