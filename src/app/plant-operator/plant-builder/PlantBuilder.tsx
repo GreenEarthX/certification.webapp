@@ -79,12 +79,14 @@ import {
   createDigitalTwin,
   fetchDigitalTwinJsonForPlant,
   validateDigitalTwinHighLevel,
+  validateDigitalTwinPortConnections,
 } from "@/services/plant-builder/digitalTwins";
+import { fetchComponentDefinitions } from "@/services/plant-builder/componentDefinitions";
 import type {
   DigitalTwinValidationError,
   DigitalTwinValidationResult,
 } from "@/services/plant-builder/digitalTwins";
-import { updateComponentInstance, deleteComponentInstance } from "@/services/plant-builder/componentInstances";
+import { updateComponentInstance, deleteComponentInstance, fetchComponentInstances } from "@/services/plant-builder/componentInstances";
 import { buildConnectionPayloadForComponent, StoredConnectionPayload } from "@/lib/plant-builder/connection-utils";
 import {
   createTemplateFromDigitalTwin,
@@ -105,6 +107,52 @@ const formatValidationContext = (err: DigitalTwinValidationError) => {
     return `From component ID: ${err.componentId} · To component ID: ${err.relatedComponentId}`;
   }
   return `Component ID: ${err.componentId}`;
+};
+
+const truncateMessage = (message: string, maxLength = 90) => {
+  if (message.length <= maxLength) return message;
+  return `${message.slice(0, Math.max(0, maxLength - 1))}…`;
+};
+
+const buildFallbackValidationError = (step: "structure" | "ports"): DigitalTwinValidationError => ({
+  componentId: "unknown",
+  componentName: "System",
+  componentType: "validation",
+  errorCode: step === "ports" ? "PORT_VALIDATION_FAILED" : "STRUCTURE_VALIDATION_FAILED",
+  errorMessage:
+    step === "ports"
+      ? "Port validation failed, but the server did not return details. Please try again or contact support."
+      : "Structure validation failed, but the server did not return details. Please try again or contact support.",
+});
+
+const formatPortErrorMessage = (
+  err: DigitalTwinValidationError,
+  resolveCarrierName?: (id: number) => string | undefined
+) => {
+  const code = (err.errorCode || "").toUpperCase();
+  const raw = err.errorMessage || "";
+  const portMatch = raw.match(/Port\s+([^\s]+)\s*\(([^)]+)\)/i);
+  const portLabel = portMatch?.[2] || "";
+  const carrierIdMatch = raw.match(/definition ID\s+(\d+)/i);
+  const carrierId = carrierIdMatch ? Number.parseInt(carrierIdMatch[1], 10) : null;
+  const carrierName = carrierId && resolveCarrierName ? resolveCarrierName(carrierId) : undefined;
+  const carrierLabel = carrierName ? `Carrier "${carrierName}"` : carrierId ? `Carrier ID ${carrierId}` : "Carrier";
+  if (code === "PORT_CARRIER_NOT_ALLOWED") {
+    if (/IN port/i.test(raw)) return `${carrierLabel} not allowed on input port.`;
+    if (/OUT port/i.test(raw)) return `${carrierLabel} not allowed on output port.`;
+    return `${carrierLabel} not allowed on this port.`;
+  }
+  if (code === "PORT_REQUIRED_MISSING") {
+    return portLabel
+      ? `Required port missing carrier: ${portLabel}.`
+      : "Required port missing carrier.";
+  }
+  if (code === "PORT_EXCLUSIVE_OVERFLOW") {
+    return portLabel
+      ? `Port allows only one carrier: ${portLabel}.`
+      : "Port allows only one carrier.";
+  }
+  return raw.replace(/^\[Port\]\s*/i, "").trim() || "Port connection issue.";
 };
 
 const TEMPLATE_NODE_COLORS: Record<string, string> = {
@@ -493,7 +541,9 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
   const [error, setError] = useState<string | null>(null);
   const [plantModelJson, setPlantModelJson] = useState<string>("");
   const [validationResult, setValidationResult] = useState<DigitalTwinValidationResult | null>(null);
+  const [validationStep, setValidationStep] = useState<"structure" | "ports" | null>(null);
   const [isValidating, setIsValidating] = useState(false);
+  const [carrierDefNames, setCarrierDefNames] = useState<Record<number, string>>({});
   const [showValidationPanel, setShowValidationPanel] = useState(true);
   const [focusRequest, setFocusRequest] = useState<{ id: string; ts: number } | null>(null);
   const [highlightedComponentId, setHighlightedComponentId] = useState<string | null>(null);
@@ -717,10 +767,31 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
     }, {});
   }, [validationResult]);
 
-  const invalidConnectionIds = useMemo(() => {
-    if (!validationResult?.errors?.length) return new Set<string>();
+  const isConnectionError = useCallback((err: DigitalTwinValidationError) => {
+    const haystack = `${err.errorCode ?? ""} ${err.errorMessage ?? ""}`.toLowerCase();
+    const normalized = haystack.replace(/[_-]+/g, " ");
+    const disallow = [
+      "missing",
+      "required",
+      "empty",
+      "not provided",
+      "undefined",
+      "null",
+      "not set",
+    ];
+    if (normalized.includes("[port]") || normalized.includes("port")) {
+      return true;
+    }
+    if (disallow.some((term) => normalized.includes(term))) {
+      return false;
+    }
+    const allowRegex = /\b(connection|from|to|input|output|source|target|port)\b/;
+    return allowRegex.test(normalized);
+  }, []);
 
-    const connectionIds = new Set(connections.map((conn) => String(conn.id)));
+  const connectionErrorMessages = useMemo(() => {
+    if (!validationResult?.errors?.length) return new Map<string, string>();
+
     const connectionPairs = new Map<string, string[]>();
     connections.forEach((conn) => {
       const key = `${conn.from}|${conn.to}`;
@@ -732,33 +803,22 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
       }
     });
 
-    const isConnectionError = (err: DigitalTwinValidationError) => {
-      const haystack = `${err.errorCode} ${err.errorMessage}`.toLowerCase();
-      const normalized = haystack.replace(/[_-]+/g, " ");
-      const disallow = [
-        "missing",
-        "required",
-        "empty",
-        "not provided",
-        "undefined",
-        "null",
-        "not set",
-      ];
-      if (disallow.some((term) => normalized.includes(term))) {
-        return false;
+    const errorMap = new Map<string, string[]>();
+    const addMessage = (id: string, message: string) => {
+      if (!id || !message) return;
+      const list = errorMap.get(id);
+      if (list) {
+        list.push(message);
+      } else {
+        errorMap.set(id, [message]);
       }
-      const allowRegex = /\b(connection|from|to|input|output|source|target|port)\b/;
-      return allowRegex.test(normalized);
     };
 
-    const next = new Set<string>();
     validationResult.errors.forEach((err) => {
       if (!isConnectionError(err)) return;
+      const message = err.errorMessage || "Invalid port connection.";
       if (err.relatedConnectionId) {
-        const id = String(err.relatedConnectionId);
-        if (connectionIds.has(id)) {
-          next.add(id);
-        }
+        addMessage(String(err.relatedConnectionId), message);
         return;
       }
       if (err.relatedComponentId) {
@@ -766,13 +826,34 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
         const reverseKey = `${err.relatedComponentId}|${err.componentId}`;
         const forwardIds = connectionPairs.get(forwardKey);
         const reverseIds = connectionPairs.get(reverseKey);
-        forwardIds?.forEach((id) => next.add(id));
-        reverseIds?.forEach((id) => next.add(id));
+        forwardIds?.forEach((id) => addMessage(id, message));
+        reverseIds?.forEach((id) => addMessage(id, message));
+        return;
+      }
+      const componentId = String(err.componentId ?? "");
+      if (componentId) {
+        connections.forEach((conn) => {
+          if (String(conn.from) === componentId || String(conn.to) === componentId) {
+            addMessage(String(conn.id), message);
+          }
+        });
       }
     });
 
-    return next;
-  }, [connections, validationResult]);
+    const normalized = new Map<string, string>();
+    errorMap.forEach((messages, id) => {
+      const unique = Array.from(new Set(messages.map((msg) => msg.trim()).filter(Boolean)));
+      if (unique.length > 0) {
+        normalized.set(id, unique.join(" · "));
+      }
+    });
+    return normalized;
+  }, [connections, isConnectionError, validationResult]);
+
+  const invalidConnectionIds = useMemo(
+    () => new Set<string>(connectionErrorMessages.keys()),
+    [connectionErrorMessages]
+  );
 
   const groupedValidationErrors = useMemo(() => {
     if (!validationResult?.errors?.length) return [];
@@ -798,6 +879,30 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
     return Array.from(byComponent.values());
   }, [validationResult]);
 
+  const hasFocusableValidationErrors = useMemo(
+    () => groupedValidationErrors.some((group) => group.componentId !== "unknown"),
+    [groupedValidationErrors]
+  );
+
+  useEffect(() => {
+    if (!validationResult?.errors?.length) return;
+    console.groupCollapsed(
+      `[Validation] ${validationStep ?? "unknown"} - ${validationResult.errors.length} error(s)`
+    );
+    validationResult.errors.forEach((err) => {
+      console.log({
+        componentId: err.componentId,
+        componentName: err.componentName,
+        componentType: err.componentType,
+        errorCode: err.errorCode,
+        errorMessage: err.errorMessage,
+        relatedComponentId: err.relatedComponentId,
+        relatedConnectionId: err.relatedConnectionId,
+      });
+    });
+    console.groupEnd();
+  }, [validationResult, validationStep]);
+
   const hasDuplicateConnections = uniqueConnections.length !== connections.length;
 
   useEffect(() => {
@@ -815,7 +920,8 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
       const componentList = overrideComponents ?? components;
       const component = componentList.find((c) => c.id === componentId);
 
-      if (!component?.instanceId) {
+      const instanceId = Number(component?.instanceId);
+      if (!Number.isFinite(instanceId)) {
         logJson(`[PlantBuilder] Cannot persist connections for ${componentId}; missing instanceId`);
         return;
       }
@@ -824,13 +930,13 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
 
       try {
         logJson(
-          `[PlantBuilder] Persisting ${payload.length} connections for ${componentId} (instanceId=${component.instanceId})`,
+          `[PlantBuilder] Persisting ${payload.length} connections for ${componentId} (instanceId=${instanceId})`,
           payload
         );
-        await updateComponentInstance(component.instanceId, { connections: payload });
+        await updateComponentInstance(instanceId, { connections: payload });
       } catch (err) {
         logJson(`[PlantBuilder] ✗ Failed to persist connections for ${componentId}:`, err);
-        toast.error(`Failed to update connections for ${component.name}`);
+        toast.error(`Failed to update connections for ${component?.name ?? "component"}`);
       }
     },
     [components, connections]
@@ -857,6 +963,30 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
       if (highlightTimerRef.current) {
         window.clearTimeout(highlightTimerRef.current);
       }
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const defs = await fetchComponentDefinitions();
+        if (!active) return;
+        const next: Record<number, string> = {};
+        defs.forEach((def: any) => {
+          const type = String(def.component_type || def.componentType || "").toLowerCase();
+          if (type !== "carrier") return;
+          if (typeof def.id === "number") {
+            next[def.id] = def.component_name || def.componentName || `Carrier ${def.id}`;
+          }
+        });
+        setCarrierDefNames(next);
+      } catch (err) {
+        console.warn("[PlantBuilder] Failed to load carrier definitions for validation:", err);
+      }
+    })();
+    return () => {
+      active = false;
     };
   }, []);
 
@@ -907,13 +1037,15 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
 
         const records = await fetchDigitalTwinJsonForPlant(plantId);
 
-        if (!records.length || !records[0].digital_twin_json) {
-          toast.error("No digital twin JSON found for this plant.");
+        if (!records.length) {
+          toast.error("No digital twin record found for this plant.");
           return;
         }
 
-        const { components: rawComponents = [], connections: rawConnections = [] } =
-          records[0].digital_twin_json;
+        const twinId = Number(records[0].id);
+        if (!Number.isNaN(twinId)) {
+          (window as any).currentTwinId = twinId;
+        }
 
         const normalizePosition = (pos: any) => {
           const rawX = typeof pos?.x === "string" ? Number.parseFloat(pos.x) : Number(pos?.x ?? 0);
@@ -923,6 +1055,116 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
             y: Number.isFinite(rawY) ? rawY : 0,
           };
         };
+
+        const categoryFromDefinition = (def: any) => {
+          const schema = def?.field_schema;
+          const fields = Array.isArray(schema?.fields) ? schema.fields : [];
+          const fallback = def?.component_type
+            ? def.component_type.charAt(0).toUpperCase() + def.component_type.slice(1)
+            : "Component";
+          return (
+            schema?.category ||
+            schema?.group ||
+            schema?.meta?.category ||
+            fields[0]?.category ||
+            fields[0]?.group ||
+            fallback
+          );
+        };
+
+        // Prefer component instances (source of truth) to avoid stale/duplicated digital_twin_json
+        try {
+          if (!Number.isNaN(twinId)) {
+            const [instances, defs] = await Promise.all([
+              fetchComponentInstances(twinId),
+              fetchComponentDefinitions(),
+            ]);
+            if (instances.length) {
+              const defsById = new Map(defs.map((d) => [d.id, d]));
+
+              const mappedComponents: PlacedComponent[] = instances.map((inst: any) => {
+                const def = defsById.get(inst.component_definition_id);
+                const type = (def?.component_type || "equipment") as PlacedComponent["type"];
+                const data =
+                  inst.field_values && Object.keys(inst.field_values).length
+                    ? inst.field_values
+                    : { technicalData: {} };
+
+                return {
+                  id: String(inst.id),
+                  name: inst.instance_name || def?.component_name || "Component",
+                  type,
+                  category: def ? categoryFromDefinition(def) : "Component",
+                  position: normalizePosition(inst.position),
+                  data,
+                  certifications: [],
+                  componentDefinitionId: def?.id ?? inst.component_definition_id,
+                  instanceId: inst.id,
+                };
+              });
+
+              const mappedConnections: Connection[] = [];
+              const seen = new Set<string>();
+              instances.forEach((inst: any) => {
+                const outgoing = Array.isArray(inst.connections) ? inst.connections : [];
+                outgoing.forEach((conn: any, index: number) => {
+                  const fromId = String(conn.from ?? inst.id);
+                  const toId = conn.to != null ? String(conn.to) : "";
+                  if (!toId) return;
+                  const type = conn.type || "";
+                  const key = `${fromId}->${toId}::${type}::${conn.id ?? index}`;
+                  if (seen.has(key)) return;
+                  seen.add(key);
+                  mappedConnections.push({
+                    id: String(conn.id ?? `conn-${fromId}-${toId}-${index}`),
+                    from: fromId,
+                    to: toId,
+                    type,
+                    reason: conn.reason,
+                    data: conn.data || {},
+                  });
+                });
+              });
+
+              setComponents(mappedComponents);
+              setConnections(mappedConnections);
+              setOriginalComponents(mappedComponents);
+
+              try {
+                const plant = await fetchPlantById(plantId);
+                setPlantInfo(mapPlantToInfo(plant));
+              } catch (err) {
+                console.warn("Failed to load plant details:", err);
+              }
+
+              // Set global IDs for Canvas persistence
+              try {
+                (window as any).currentPlantId = plantId;
+                (window as any).currentTwinId = twinId;
+                console.log(
+                  "[plant-builder] restored currentPlantId/currentTwinId:",
+                  (window as any).currentPlantId,
+                  (window as any).currentTwinId
+                );
+              } catch (e) {
+                // ignore
+              }
+
+              toast.success("Digital twin loaded from database.");
+              return;
+            }
+          }
+        } catch (err) {
+          console.warn("Failed to load component instances; falling back to digital_twin_json:", err);
+        }
+
+        if (!records[0].digital_twin_json) {
+          toast.error("No digital twin JSON found for this plant.");
+          return;
+        }
+
+        const { components: rawComponents = [], connections: rawConnections = [] } =
+          records[0].digital_twin_json;
 
         const mappedComponents: PlacedComponent[] = rawComponents.map((c: any) => {
           const inferredInstanceId =
@@ -1125,26 +1367,32 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
     }
 
     setIsValidating(true);
+    setValidationResult(null);
+    setShowValidationPanel(false);
+    setValidationStep("structure");
     try {
-      const result = await validateDigitalTwinHighLevel(twinId);
-      setValidationResult(result);
-      setShowValidationPanel(true);
-
-      if (result.valid) {
-        toast.success("Process flow validated successfully.");
-        if (productInfo.length === 0) {
-          toast.info("Add products to continue with compliance checks.");
-          return;
-        }
-        setStep("compliance");
-        toast.info("Starting compliance check process.");
-      } else {
+      const highLevelResult = await validateDigitalTwinHighLevel(twinId);
+      if (!highLevelResult.valid) {
+        const fallbackErrors =
+          highLevelResult.errors?.length ? highLevelResult.errors : [buildFallbackValidationError("structure")];
+        setValidationResult({
+          ...highLevelResult,
+          errors: fallbackErrors,
+        });
+        setShowValidationPanel(true);
+        setValidationStep("structure");
         toast.error(
-          `Validation failed with ${result.errors.length} issue${
-            result.errors.length === 1 ? "" : "s"
+          `Structure validation failed with ${highLevelResult.errors.length} issue${
+            highLevelResult.errors.length === 1 ? "" : "s"
           }.`
         );
+        return;
       }
+
+      setValidationResult(highLevelResult);
+      setShowValidationPanel(true);
+      setValidationStep("structure");
+      toast.success("Structure check passed. Run port check to continue.");
     } catch (err) {
       console.error(err);
       toast.error(err instanceof Error ? err.message : "Failed to validate process flow.");
@@ -1153,9 +1401,87 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
     }
   };
 
+  const handleRunPortCheck = async () => {
+    const twinId = Number((window as any).currentTwinId);
+    if (!twinId || Number.isNaN(twinId)) {
+      toast.error("No digital twin found. Please save or reload the plant model first.");
+      return;
+    }
+    if (!validationResult?.valid || validationStep !== "structure") {
+      toast.info("Run the structure check first.");
+      return;
+    }
+
+    setIsValidating(true);
+    setValidationResult(null);
+    setShowValidationPanel(false);
+    setValidationStep("ports");
+    try {
+      const portResult = await validateDigitalTwinPortConnections(twinId);
+      const resolveCarrierName = (id: number) => carrierDefNames[id];
+      const taggedPortErrors = (portResult.errors ?? []).map((err) => ({
+        ...err,
+        errorCode: err.errorCode || "PORT_CONNECTION",
+        errorMessage: formatPortErrorMessage(
+          {
+            ...err,
+            errorCode: err.errorCode || "PORT_CONNECTION",
+            errorMessage: err.errorMessage
+              ? `[Port] ${err.errorMessage}`
+              : "[Port] Invalid port connection.",
+          },
+          resolveCarrierName
+        ),
+      }));
+
+      const finalResult: DigitalTwinValidationResult = {
+        valid: Boolean(portResult.valid),
+        digitalTwinId: portResult.digitalTwinId ?? twinId,
+        checkedAt: portResult.checkedAt ?? new Date().toISOString(),
+        errors: taggedPortErrors.length ? taggedPortErrors : [buildFallbackValidationError("ports")],
+      };
+
+      setValidationResult(finalResult);
+      setShowValidationPanel(true);
+
+      if (finalResult.valid) {
+        toast.success("Port connections validated successfully.");
+        if (productInfo.length === 0) {
+          toast.info("Add products to continue with compliance checks.");
+          return;
+        }
+        setStep("compliance");
+        toast.info("Starting compliance check process.");
+      } else {
+        toast.error(
+          `Port validation failed with ${finalResult.errors.length} issue${
+            finalResult.errors.length === 1 ? "" : "s"
+          }.`
+        );
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err instanceof Error ? err.message : "Failed to validate port connections.");
+    } finally {
+      setIsValidating(false);
+    }
+  };
+
   // Save plant model: update positions and delete removed components
   const handleSave = async () => {
     try {
+      const pending = components.filter((c) => c.isPersisting);
+      if (pending.length) {
+        toast.error("Please wait until all components finish saving before saving the model.");
+        return;
+      }
+
+      const missingInstances = components.filter((c) => !Number.isFinite(Number(c.instanceId)));
+      if (missingInstances.length) {
+        toast.error("Some components are not persisted yet. Please wait and try again.");
+        return;
+      }
+
       toast.loading("Saving plant model...");
 
       // LOG: Current state before Save
@@ -1172,7 +1498,7 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
       );
 
       // 1. Update positions for all current components with instanceId
-      const componentsToUpdate = components.filter((c) => c.instanceId && typeof c.instanceId === 'number');
+      const componentsToUpdate = components.filter((c) => Number.isFinite(Number(c.instanceId)));
       logJson(`[PlantBuilder] Components to Update (positions):`, componentsToUpdate);
 
       const updatePromises = componentsToUpdate.map((c) => {
@@ -1182,7 +1508,8 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
         };
         logJson(`[PlantBuilder] Updating instanceId ${c.instanceId} with:`, updatePayload);
         
-        return updateComponentInstance(c.instanceId as number, updatePayload)
+        const instanceId = Number(c.instanceId);
+        return updateComponentInstance(instanceId, updatePayload)
           .then((result: any) => {
             logJson(`[PlantBuilder] ✓ Position update SUCCESS for ${c.id}:`, result);
           })
@@ -1198,13 +1525,14 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
       
       logJson(`[PlantBuilder] Deleted Components (in original but not in current):`, deletedComponents);
 
-      const componentsToDelete = deletedComponents.filter((c) => c.instanceId && typeof c.instanceId === 'number');
+      const componentsToDelete = deletedComponents.filter((c) => Number.isFinite(Number(c.instanceId)));
       logJson(`[PlantBuilder] Components to Delete (with instanceId):`, componentsToDelete);
 
       const deletePromises = componentsToDelete.map((c) => {
         logJson(`[PlantBuilder] Deleting instanceId ${c.instanceId}...`);
         
-        return deleteComponentInstance(c.instanceId as number)
+        const instanceId = Number(c.instanceId);
+        return deleteComponentInstance(instanceId)
           .then((result: any) => {
             logJson(`[PlantBuilder] ✓ Delete SUCCESS for ${c.id} (instanceId: ${c.instanceId}):`, result);
             // Update original tracking
@@ -1722,6 +2050,106 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
   const onConnect = useCallback(
     (params: any) => {
       try {
+        const source = components.find((c) => c.id === params.source);
+        const target = components.find((c) => c.id === params.target);
+        const isEndpoint = (c?: PlacedComponent) =>
+          c?.type === "equipment" || c?.type === "gate";
+        const isCarrier = (c?: PlacedComponent) => c?.type === "carrier";
+        const getCarrierKey = (c?: PlacedComponent | null) => {
+          if (!c) return "";
+          const raw =
+            typeof c.data?.product === "string"
+              ? c.data.product
+              : c.name;
+          return typeof raw === "string" ? raw.trim().toLowerCase() : "";
+        };
+
+        if (source && target && isEndpoint(source) && isCarrier(target)) {
+          const carrierKey = getCarrierKey(target);
+          if (carrierKey) {
+            const existingCarrier = components.find(
+              (c) =>
+                c.type === "carrier" &&
+                c.id !== target.id &&
+                getCarrierKey(c) === carrierKey &&
+                connections.some(
+                  (conn) => conn.from === source.id && conn.to === c.id
+                )
+            );
+
+            if (existingCarrier) {
+              const incomingToTarget = connections.filter(
+                (conn) => conn.to === target.id
+              );
+              const hasOtherIncoming = incomingToTarget.some(
+                (conn) => conn.from !== source.id
+              );
+              if (hasOtherIncoming) {
+                toast.error(
+                  "This carrier already has a different source. Use the existing carrier output instead."
+                );
+                return;
+              }
+
+              const outgoingFromTarget = connections.filter(
+                (conn) => conn.from === target.id
+              );
+
+              setComponents((prev) => prev.filter((c) => c.id !== target.id));
+              setConnections((prev) => {
+                let next = prev.filter(
+                  (conn) => conn.from !== target.id && conn.to !== target.id
+                );
+
+                const hasInputConn = next.some(
+                  (conn) => conn.from === source.id && conn.to === existingCarrier.id
+                );
+                if (!hasInputConn) {
+                  next = [
+                    ...next,
+                    {
+                      id: `conn-${Date.now()}-merge`,
+                      from: source.id,
+                      to: existingCarrier.id,
+                      type: carrierKey,
+                    },
+                  ];
+                }
+
+                outgoingFromTarget.forEach((conn) => {
+                  const exists = next.some(
+                    (existing) =>
+                      existing.from === existingCarrier.id && existing.to === conn.to
+                  );
+                  if (!exists) {
+                    next.push({
+                      ...conn,
+                      id: `conn-${Date.now()}-${Math.random()
+                        .toString(36)
+                        .slice(2, 6)}`,
+                      from: existingCarrier.id,
+                    });
+                  }
+                });
+
+                void persistConnectionsForComponent(source.id, next);
+                void persistConnectionsForComponent(existingCarrier.id, next);
+                return next;
+              });
+
+              const instanceId = Number(target.instanceId);
+              if (Number.isFinite(instanceId)) {
+                void deleteComponentInstance(instanceId);
+              }
+
+              toast.info(
+                `Carrier "${target.name}" already exists for this output. Merged into existing carrier.`
+              );
+              return;
+            }
+          }
+        }
+
         const exists = uniqueConnections.some(
           (conn) => conn.from === params.source && conn.to === params.target
         );
@@ -1747,7 +2175,7 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
         toast.error("Error adding connection.");
       }
     },
-    [persistConnectionsForComponent, setConnections, uniqueConnections]
+    [components, connections, persistConnectionsForComponent, setConnections, uniqueConnections]
   );
 
   // Update plant model JSON for export
@@ -2073,6 +2501,32 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {step === "builder" && !showTemplatesModal && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={handleSave}
+                className="text-sm border-[#4F8FF7] hover:bg-[#4F8FF7]/10"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                Save
+              </Button>
+              <Button
+                onClick={handleRunComplianceCheck}
+                disabled={isValidating || components.length === 0}
+                className="text-sm bg-green-600 hover:bg-green-700 text-white"
+              >
+                <Play className="h-4 w-4 mr-2" />
+                {isValidating ? "Checking..." : "Check Process Flow"}
+              </Button>
+              <Button
+                className="bg-green-600 hover:bg-green-700 text-white text-sm"
+                onClick={handleSaveDataModel}
+              >
+                Save Plant Model
+              </Button>
+            </div>
+          )}
           {(step === "builder" || step === "compliance") && (
             <>
             {/*
@@ -2253,6 +2707,7 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
                   exportId="main"
                   validationErrorsByComponent={validationErrorsByComponent}
                   invalidConnectionIds={invalidConnectionIds}
+                  invalidConnectionMessages={connectionErrorMessages}
                   focusRequest={focusRequest}
                   highlightedComponentId={highlightedComponentId}
                   topRightAddon={
@@ -2318,7 +2773,13 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
                     </div>
                     <div>
                       <div className="text-sm font-semibold text-gray-900">
-                        {validationResult.valid ? "Validation Passed" : "Validation Failed"}
+                        {validationStep === "ports"
+                          ? validationResult.valid
+                            ? "Port Check Passed"
+                            : "Port Check Failed"
+                          : validationResult.valid
+                            ? "Structure Check Passed"
+                            : "Structure Check Failed"}
                       </div>
                       <div className="text-xs text-gray-500">
                         Digital Twin #{validationResult.digitalTwinId}
@@ -2337,26 +2798,108 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
                   </button>
                 </div>
 
-                <div className="px-4 pt-3 pb-2 flex items-center justify-between text-xs text-gray-500">
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${
-                      validationResult.valid
-                        ? "bg-green-100 text-green-700"
-                        : "bg-amber-100 text-amber-700"
-                    }`}
-                  >
-                    {validationResult.errors.length} error
-                    {validationResult.errors.length === 1 ? "" : "s"}
-                  </span>
-                  {!validationResult.valid && (
-                    <span className="text-[11px] text-gray-400">Click any item to focus</span>
-                  )}
+                <div className="px-4 pt-3 pb-2 text-xs text-gray-500 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${
+                          validationResult.valid
+                            ? "bg-green-100 text-green-700"
+                            : "bg-amber-100 text-amber-700"
+                        }`}
+                      >
+                        {validationResult.errors.length} error
+                        {validationResult.errors.length === 1 ? "" : "s"}
+                      </span>
+                      <span className="text-[11px] text-gray-400">
+                        {validationStep === "ports" ? "Step 2/2 · Port Check" : "Step 1/2 · Structure Check"}
+                      </span>
+                    </div>
+                    {!validationResult.valid && (
+                      <span className="text-[11px] text-gray-400">
+                        {hasFocusableValidationErrors ? "Click any item to focus" : "No focusable items"}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="text-[11px] uppercase tracking-wide text-gray-400">
+                      Validation Steps
+                    </div>
+                    <div className="rounded-md border border-slate-200 bg-white px-3 py-2 flex items-center justify-between">
+                      <div>
+                        <div className="text-xs font-semibold text-slate-700">1. Structure Check</div>
+                        <div className="text-[11px] text-slate-500">Connection type & layout rules</div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${
+                            validationStep === "structure"
+                              ? validationResult.valid
+                                ? "bg-green-100 text-green-700"
+                                : "bg-amber-100 text-amber-700"
+                              : "bg-slate-100 text-slate-500"
+                          }`}
+                        >
+                          {validationStep === "structure"
+                            ? validationResult.valid
+                              ? "Passed"
+                              : "Failed"
+                            : "Not Run"}
+                        </span>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleRunComplianceCheck}
+                          disabled={isValidating}
+                          className="text-[11px] px-2 py-1 h-7"
+                        >
+                          {validationStep === "structure" ? "Re-run" : "Run"}
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="rounded-md border border-slate-200 bg-white px-3 py-2 flex items-center justify-between">
+                      <div>
+                        <div className="text-xs font-semibold text-slate-700">2. Port Check</div>
+                        <div className="text-[11px] text-slate-500">Port carrier compatibility</div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${
+                            validationStep === "ports"
+                              ? validationResult.valid
+                                ? "bg-green-100 text-green-700"
+                                : "bg-amber-100 text-amber-700"
+                              : "bg-slate-100 text-slate-500"
+                          }`}
+                        >
+                          {validationStep === "ports"
+                            ? validationResult.valid
+                              ? "Passed"
+                              : "Failed"
+                            : "Not Run"}
+                        </span>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleRunPortCheck}
+                          disabled={isValidating || validationStep !== "structure" || !validationResult?.valid}
+                          className="text-[11px] px-2 py-1 h-7"
+                        >
+                          Run
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 space-y-3">
                   {validationResult.valid ? (
                     <div className="text-xs text-green-700 bg-green-50 border border-green-200 rounded-md p-2">
-                      No structural issues detected. You can proceed to compliance checks.
+                      {validationStep === "ports"
+                        ? "Port checks passed. You can proceed to compliance."
+                        : "Structure checks passed. Run the port check to continue."}
                     </div>
                   ) : (
                     groupedValidationErrors.map((group) => (
@@ -2366,7 +2909,11 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
                       >
                         <button
                           type="button"
-                          onClick={() => handleFocusComponent(group.componentId)}
+                          onClick={() => {
+                            if (group.componentId === "unknown") return;
+                            handleFocusComponent(group.componentId);
+                          }}
+                          disabled={group.componentId === "unknown"}
                           className="w-full flex items-center justify-between gap-2 text-left"
                         >
                           <div>
@@ -2386,11 +2933,17 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
                             <button
                               key={`${group.componentId}-${err.errorCode}-${idx}`}
                               type="button"
-                              onClick={() => handleFocusComponent(group.componentId)}
+                              onClick={() => {
+                                if (group.componentId === "unknown") return;
+                                handleFocusComponent(group.componentId);
+                              }}
+                              disabled={group.componentId === "unknown"}
                               className="w-full text-left text-xs text-amber-900 bg-white border border-amber-100 rounded-md px-2 py-1 hover:bg-gray-50"
                             >
                               <div className="font-semibold">{err.errorCode}</div>
-                              <div className="text-amber-800">{err.errorMessage}</div>
+                              <div className="text-amber-800" title={err.errorMessage}>
+                                {truncateMessage(err.errorMessage)}
+                              </div>
                               <div className="text-[10px] text-amber-700">
                                 {formatValidationContext(err)}
                               </div>
@@ -2432,33 +2985,6 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
           <LoadingPage />
         )}
       </div>
-
-      {step === "builder" && !showTemplatesModal && (
-        <div className="fixed bottom-4 right-4 flex flex-col sm:flex-row gap-2">
-          <Button
-            variant="outline"
-            onClick={handleSave}
-            className="text-sm border-[#4F8FF7] hover:bg-[#4F8FF7]/10"
-          >
-            <Save className="h-4 w-4 mr-2" />
-            Save
-          </Button>
-          <Button
-            onClick={handleRunComplianceCheck}
-            disabled={isValidating || components.length === 0}
-            className="text-sm bg-green-600 hover:bg-green-700 text-white"
-          >
-            <Play className="h-4 w-4 mr-2" />
-            {isValidating ? "Checking..." : "Check Process Flow"}
-          </Button>
-          <Button
-            className="bg-green-600 hover:bg-green-700 text-white text-sm"
-            onClick={handleSaveDataModel}
-          >
-            Save Plant Model
-          </Button>
-        </div>
-      )}
 
       <Dialog open={showDataModel} onOpenChange={setShowDataModel}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto bg-white rounded-lg">

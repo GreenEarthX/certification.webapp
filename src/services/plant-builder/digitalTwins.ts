@@ -97,3 +97,12 @@ export async function validateDigitalTwinHighLevel(
     { method: "POST" }
   );
 }
+
+export async function validateDigitalTwinPortConnections(
+  digitalTwinId: number
+): Promise<DigitalTwinValidationResult> {
+  return apiFetch<DigitalTwinValidationResult>(
+    `${DIGITAL_TWINS_PATH}/${digitalTwinId}/validate-ports`,
+    { method: "POST" }
+  );
+}
