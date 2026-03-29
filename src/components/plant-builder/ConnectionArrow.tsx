@@ -12,6 +12,10 @@ type ConnectionArrowProps = {
   onClick: () => void;
   style?: "smooth" | "orthogonal" | "straight";
   isInvalid?: boolean;
+  label?: string;
+  errorMessage?: string;
+  showFlow?: boolean;
+  color?: string;
 };
 
 const ConnectionArrow = ({
@@ -23,6 +27,10 @@ const ConnectionArrow = ({
   onClick,
   style = "smooth",
   isInvalid = false,
+  label,
+  errorMessage,
+  showFlow = false,
+  color,
 }: ConnectionArrowProps) => {
   const startX = from.x;
   const startY = from.y;
@@ -79,7 +87,26 @@ const ConnectionArrow = ({
   const pathData = buildPath();
   const safeId = id ? id.replace(/[^a-zA-Z0-9_-]/g, "") : "default";
   const markerId = `arrowhead-${safeId}`;
-  const strokeColor = isInvalid ? "#F59E0B" : "#4F8FF7";
+  const strokeColor = isInvalid ? "#EF4444" : color || "#4F8FF7";
+  const labelText = label?.trim();
+  const errorText = errorMessage?.trim();
+  const labelLength = labelText ? labelText.length : 0;
+  const labelWidth = Math.max(40, labelLength * 6.5 + 16);
+  const labelHeight = 18;
+  const length = Math.max(distance, 1);
+  const normalX = -dy / length;
+  const normalY = dx / length;
+  const labelOffset = 12;
+  const labelT = 0.78;
+  const labelX = startX + dx * labelT + normalX * labelOffset;
+  const labelY = startY + dy * labelT + normalY * labelOffset;
+  const errorOffset = 18;
+  const errorX = endX - targetVector.x * errorOffset;
+  const errorY = endY - targetVector.y * errorOffset;
+  const errorLabel = errorText || "";
+  const tooltipPadding = 10;
+  const tooltipWidth = Math.min(280, Math.max(120, errorLabel.length * 6.2 + tooltipPadding * 2));
+  const tooltipHeight = 28;
 
   return (
     <g
@@ -93,14 +120,14 @@ const ConnectionArrow = ({
         d={pathData}
         stroke={strokeColor}
         strokeWidth="2.5"
-        strokeDasharray={isInvalid ? "6 4" : undefined}
+        strokeDasharray={isInvalid ? "6 4" : "8 10"}
         fill="none"
         markerEnd={`url(#${markerId})`}
         strokeLinecap="round"
         strokeLinejoin="round"
+        className={showFlow ? "connection-flow" : undefined}
         style={{ transition: "opacity 0.2s, d 0.2s ease" }}
       />
-
       <circle cx={startX} cy={startY} r="3" fill={strokeColor} opacity={0.9} />
 
       {/* Clickable Hitbox */}
@@ -111,6 +138,72 @@ const ConnectionArrow = ({
         fill="none"
         style={{ pointerEvents: "auto" }}
       />
+
+      {labelText && (
+        <g transform={`translate(${labelX}, ${labelY})`} pointerEvents="none">
+          <rect
+            x={-labelWidth / 2}
+            y={-labelHeight / 2}
+            width={labelWidth}
+            height={labelHeight}
+            rx={9}
+            fill="#FFFFFF"
+            stroke="#CBD5E1"
+            strokeWidth="0.8"
+          />
+          <text
+            fontSize="11"
+            fontWeight={600}
+            fill="#0F172A"
+            textAnchor="middle"
+            dominantBaseline="central"
+          >
+            {labelText}
+          </text>
+        </g>
+      )}
+
+      {isInvalid && errorText && (
+        <g
+          className="conn-error"
+          transform={`translate(${errorX}, ${errorY})`}
+          style={{ cursor: "help" }}
+          pointerEvents="auto"
+        >
+          <circle r="8" fill="#EF4444" stroke="#991B1B" strokeWidth="1" />
+          <text
+            fontSize="11"
+            fontWeight={700}
+            fill="#FFFFFF"
+            textAnchor="middle"
+            dominantBaseline="central"
+          >
+            !
+          </text>
+          <g className="conn-error-tooltip" transform={`translate(0, -18)`} pointerEvents="none">
+            <rect
+              x={-tooltipWidth / 2}
+              y={-tooltipHeight}
+              width={tooltipWidth}
+              height={tooltipHeight}
+              rx={8}
+              fill="#FFFFFF"
+              stroke="#E2E8F0"
+              strokeWidth="1"
+            />
+            <text
+              fontSize="11"
+              fontWeight={600}
+              fill="#0F172A"
+              textAnchor="middle"
+              dominantBaseline="central"
+              y={-tooltipHeight / 2}
+            >
+              {errorLabel}
+            </text>
+          </g>
+        </g>
+      )}
 
       {/* Arrowhead */}
       <defs>
