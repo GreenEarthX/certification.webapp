@@ -2,14 +2,17 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { Plug } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // ⬇️ import API helper
+import type { EquipmentPortsDto } from "@/services/plant-builder/componentDefinitions";
 import {
   fetchComponentLibraryFromApi,
+  fetchComponentPorts,
 } from "@/services/plant-builder/componentDefinitions";
 
 // === TYPES (same as before) ===
@@ -51,6 +54,7 @@ export type GateData = {
 
 export type ComponentData = {
   id: string;
+  definitionId?: number;
   type: ComponentType;
   name: string;
   category: string;
@@ -97,10 +101,41 @@ const ComponentLibrary = () => {
     gate: "",
   });
   const [activeTab, setActiveTab] = useState<ComponentType>("equipment");
+  const [portSummaryByDefinitionId, setPortSummaryByDefinitionId] = useState<
+    Record<number, { inRequired: number; inOptional: number; outRequired: number; outOptional: number }>
+  >({});
+  const [portDetailsByDefinitionId, setPortDetailsByDefinitionId] = useState<
+    Record<number, EquipmentPortsDto>
+  >({});
+  const [activePortDetail, setActivePortDetail] = useState<number | null>(null);
 
   const [library, setLibrary] = useState<ComponentLibraryJSON | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const ensurePortDetail = async (definitionId: number) => {
+    if (portDetailsByDefinitionId[definitionId]) return;
+    try {
+      const payload = await fetchComponentPorts(definitionId);
+      const summary = payload.ports.reduce(
+        (acc, port) => {
+          if (port.direction === "IN") {
+            if (port.requirement === "REQUIRED") acc.inRequired += 1;
+            else acc.inOptional += 1;
+          } else {
+            if (port.requirement === "REQUIRED") acc.outRequired += 1;
+            else acc.outOptional += 1;
+          }
+          return acc;
+        },
+        { inRequired: 0, inOptional: 0, outRequired: 0, outOptional: 0 }
+      );
+      setPortSummaryByDefinitionId((prev) => ({ ...prev, [definitionId]: summary }));
+      setPortDetailsByDefinitionId((prev) => ({ ...prev, [definitionId]: payload }));
+    } catch (err) {
+      console.error("Failed to load ports:", err);
+    }
+  };
 
   // 🔐 Load components from backend (needs Bearer token)
   useEffect(() => {
@@ -109,10 +144,17 @@ const ComponentLibrary = () => {
     async function loadLibrary() {
       try {
         if (cachedLibrary) {
-          setLibrary(cachedLibrary);
-          setError(cachedError);
-          setLoading(false);
-          return;
+          const hasMissingDefinition = cachedLibrary.equipment?.some(
+            (comp) => typeof comp.definitionId !== "number"
+          );
+          if (!hasMissingDefinition) {
+            setLibrary(cachedLibrary);
+            setError(cachedError);
+            setLoading(false);
+            return;
+          }
+          cachedLibrary = null;
+          cachedError = null;
         }
         setLoading(true);
         if (!inflight) {
@@ -142,6 +184,66 @@ const ComponentLibrary = () => {
       isMounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!library?.equipment?.length) return;
+    let isMounted = true;
+
+    const loadSummaries = async () => {
+      const pending = library.equipment
+        .map((comp) => comp.definitionId)
+        .filter((id): id is number => typeof id === "number")
+        .filter((id) => !(id in portSummaryByDefinitionId));
+
+      if (!pending.length) return;
+
+      try {
+        const results = await Promise.all(
+          pending.map(async (id) => {
+            const payload = await fetchComponentPorts(id);
+            const summary = payload.ports.reduce(
+              (acc, port) => {
+                if (port.direction === "IN") {
+                  if (port.requirement === "REQUIRED") acc.inRequired += 1;
+                  else acc.inOptional += 1;
+                } else {
+                  if (port.requirement === "REQUIRED") acc.outRequired += 1;
+                  else acc.outOptional += 1;
+                }
+                return acc;
+              },
+              { inRequired: 0, inOptional: 0, outRequired: 0, outOptional: 0 }
+            );
+            return { id, summary, payload };
+          })
+        );
+
+        if (!isMounted) return;
+        setPortSummaryByDefinitionId((prev) => {
+          const next = { ...prev };
+          results.forEach((result) => {
+            next[result.id] = result.summary;
+          });
+          return next;
+        });
+        setPortDetailsByDefinitionId((prev) => {
+          const next = { ...prev };
+          results.forEach((result) => {
+            next[result.id] = result.payload;
+          });
+          return next;
+        });
+      } catch (err) {
+        console.error("Failed to load equipment port summary:", err);
+      }
+    };
+
+    loadSummaries();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [library, portSummaryByDefinitionId]);
 
   const handleDragStart = (
     e: React.DragEvent<HTMLDivElement>,
@@ -205,21 +307,108 @@ const ComponentLibrary = () => {
                 </div>
               )}
               <div className="space-y-1.5">
-                {sortedItems.map((component) => (
+                {sortedItems.map((component) => {
+                  const summary =
+                    typeof component.definitionId === "number"
+                      ? portSummaryByDefinitionId[component.definitionId]
+                      : undefined;
+                  const detail =
+                    typeof component.definitionId === "number"
+                      ? portDetailsByDefinitionId[component.definitionId]
+                      : undefined;
+                  const isActive = activePortDetail === component.definitionId;
+                  const renderPortList = (direction: "IN" | "OUT") => {
+                    if (!detail) {
+                      return (
+                        <div className="rounded-md border border-slate-200 bg-white p-2 text-[11px] text-slate-500">
+                          Ports are still loading.
+                        </div>
+                      );
+                    }
+                    const ports = detail.ports.filter((p) => p.direction === direction);
+                    if (!ports.length) {
+                      return (
+                        <div className="rounded-md border border-slate-200 bg-white p-2 text-[11px] text-slate-500">
+                          No {direction === "IN" ? "inputs" : "outputs"} defined.
+                        </div>
+                      );
+                    }
+                    return (
+                      <div className="rounded-md border border-slate-200 bg-white p-2 text-[11px] text-slate-700 space-y-2">
+                        {ports.map((port) => {
+                          const carriers = port.carriers || [];
+                          return (
+                            <div key={`${component.id}-${direction}-${port.id}`} className="space-y-1">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="truncate" title={port.port_label}>
+                                  {port.port_label || `Port ${port.port_id || port.id}`}
+                                </span>
+                                <span className={`text-[10px] font-semibold ${port.requirement === "REQUIRED" ? "text-rose-600" : "text-slate-500"}`}>
+                                  {port.requirement === "REQUIRED" ? "Required" : "Optional"}
+                                </span>
+                              </div>
+                              <select
+                                className="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-[10px] text-slate-700"
+                                defaultValue=""
+                              >
+                                <option value="" disabled>
+                                  {carriers.length ? "Allowed carriers" : "All carriers allowed"}
+                                </option>
+                                {carriers.map((carrier) => (
+                                  <option key={`${port.id}-${carrier.id}`} value={carrier.name}>
+                                    {carrier.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  };
+                  return (
                   <Card
                     key={component.id}
                     draggable
                     onDragStart={(e) => handleDragStart(e, component)}
                     className={`p-2 cursor-move border ${style.border} ${style.hover} transition-all text-sm rounded-md shadow-sm`}
                   >
-                    <div
-                      className="font-medium whitespace-normal break-words leading-snug"
-                      title={component.name}
-                    >
-                      {component.name}
+                      <div className="flex items-start justify-between gap-2">
+                        <div
+                          className="font-medium whitespace-normal break-words leading-snug"
+                          title={component.name}
+                        >
+                          {component.name}
+                        </div>
+                      {type === "equipment" && typeof component.definitionId === "number" && (
+                        <button
+                          type="button"
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-slate-100"
+                          title="View ports"
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (typeof component.definitionId !== "number") return;
+                            const definitionId = component.definitionId;
+                            await ensurePortDetail(definitionId);
+                            setActivePortDetail((prev): number | null =>
+                              prev === definitionId ? null : definitionId
+                            );
+                          }}
+                        >
+                          <Plug className="h-4 w-4" />
+                        </button>
+                      )}
                     </div>
+                    {type === "equipment" && typeof component.definitionId === "number" && (
+                      <div className="mt-2 space-y-2">
+                        {isActive && renderPortList("IN")}
+                        {isActive && renderPortList("OUT")}
+                      </div>
+                    )}
                   </Card>
-                ))}
+                  );
+                })}
               </div>
             </div>
           );
