@@ -11,10 +11,9 @@ import "./App.css";
 import { useState, useCallback, useEffect, useMemo, useRef, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  AlertTriangle,
   ArrowLeft,
-  CheckCircle2,
   Building2,
   Zap,
   ArrowRightLeft,
@@ -35,6 +34,7 @@ import ProductForm from "@/components/plant-builder/ProductForm";
 import LoadingPage from "@/components/plant-builder/LoadingPage";
 import Canvas from "@/components/plant-builder/Canvas";
 import ComponentLibrary from "@/components/plant-builder/ComponentLibrary";
+import ValidationPanel from "@/components/plant-builder/ValidationPanel";
 import { ComplianceCheck } from "./ComplianceCheck";
 import { toast } from "sonner";
 import {
@@ -81,11 +81,20 @@ import {
   validateDigitalTwinHighLevel,
   validateDigitalTwinPortConnections,
 } from "@/services/plant-builder/digitalTwins";
-import { fetchComponentDefinitions } from "@/services/plant-builder/componentDefinitions";
+import {
+  fetchComponentDefinitions,
+  fetchComponentPorts,
+  type EquipmentPortsDto,
+} from "@/services/plant-builder/componentDefinitions";
 import type {
   DigitalTwinValidationError,
   DigitalTwinValidationResult,
 } from "@/services/plant-builder/digitalTwins";
+import {
+  buildFallbackValidationError,
+  formatPortErrorMessage,
+} from "@/lib/plant-builder/validation";
+import { toInstanceId, toOptionalNumber } from "@/lib/plant-builder/ids";
 import { updateComponentInstance, deleteComponentInstance, fetchComponentInstances } from "@/services/plant-builder/componentInstances";
 import { buildConnectionPayloadForComponent, StoredConnectionPayload } from "@/lib/plant-builder/connection-utils";
 import {
@@ -95,65 +104,7 @@ import {
   TemplateDto,
 } from "@/services/plant-builder/templates";
 
-// Coerce optional id fields from persisted JSON (string/number) into usable numbers.
-const parseOptionalNumber = (value: unknown): number | undefined => {
-  if (value === undefined || value === null) return undefined;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : undefined;
-};
 
-const formatValidationContext = (err: DigitalTwinValidationError) => {
-  if (err.relatedComponentId) {
-    return `From component ID: ${err.componentId} · To component ID: ${err.relatedComponentId}`;
-  }
-  return `Component ID: ${err.componentId}`;
-};
-
-const truncateMessage = (message: string, maxLength = 90) => {
-  if (message.length <= maxLength) return message;
-  return `${message.slice(0, Math.max(0, maxLength - 1))}…`;
-};
-
-const buildFallbackValidationError = (step: "structure" | "ports"): DigitalTwinValidationError => ({
-  componentId: "unknown",
-  componentName: "System",
-  componentType: "validation",
-  errorCode: step === "ports" ? "PORT_VALIDATION_FAILED" : "STRUCTURE_VALIDATION_FAILED",
-  errorMessage:
-    step === "ports"
-      ? "Port validation failed, but the server did not return details. Please try again or contact support."
-      : "Structure validation failed, but the server did not return details. Please try again or contact support.",
-});
-
-const formatPortErrorMessage = (
-  err: DigitalTwinValidationError,
-  resolveCarrierName?: (id: number) => string | undefined
-) => {
-  const code = (err.errorCode || "").toUpperCase();
-  const raw = err.errorMessage || "";
-  const portMatch = raw.match(/Port\s+([^\s]+)\s*\(([^)]+)\)/i);
-  const portLabel = portMatch?.[2] || "";
-  const carrierIdMatch = raw.match(/definition ID\s+(\d+)/i);
-  const carrierId = carrierIdMatch ? Number.parseInt(carrierIdMatch[1], 10) : null;
-  const carrierName = carrierId && resolveCarrierName ? resolveCarrierName(carrierId) : undefined;
-  const carrierLabel = carrierName ? `Carrier "${carrierName}"` : carrierId ? `Carrier ID ${carrierId}` : "Carrier";
-  if (code === "PORT_CARRIER_NOT_ALLOWED") {
-    if (/IN port/i.test(raw)) return `${carrierLabel} not allowed on input port.`;
-    if (/OUT port/i.test(raw)) return `${carrierLabel} not allowed on output port.`;
-    return `${carrierLabel} not allowed on this port.`;
-  }
-  if (code === "PORT_REQUIRED_MISSING") {
-    return portLabel
-      ? `Required port missing carrier: ${portLabel}.`
-      : "Required port missing carrier.";
-  }
-  if (code === "PORT_EXCLUSIVE_OVERFLOW") {
-    return portLabel
-      ? `Port allows only one carrier: ${portLabel}.`
-      : "Port allows only one carrier.";
-  }
-  return raw.replace(/^\[Port\]\s*/i, "").trim() || "Port connection issue.";
-};
 
 const TEMPLATE_NODE_COLORS: Record<string, string> = {
   equipment: "#4F8FF7",
@@ -570,6 +521,117 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
   const [templatePreviewTarget, setTemplatePreviewTarget] = useState<TemplateDto | null>(null);
   const [isRenderingTemplatePreview, setIsRenderingTemplatePreview] = useState(false);
   const templatePreviewRef = useRef<HTMLDivElement | null>(null);
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [portsByDefinitionId, setPortsByDefinitionId] = useState<Record<number, EquipmentPortsDto>>({});
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportTimestamp, setExportTimestamp] = useState<string | null>(null);
+
+  useEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+    const prevHtmlOverflow = html.style.overflow;
+    const prevBodyOverflow = body.style.overflow;
+    const prevHtmlHeight = html.style.height;
+    const prevBodyHeight = body.style.height;
+
+    html.style.overflow = "hidden";
+    body.style.overflow = "hidden";
+    html.style.height = "100%";
+    body.style.height = "100%";
+
+    return () => {
+      html.style.overflow = prevHtmlOverflow;
+      body.style.overflow = prevBodyOverflow;
+      html.style.height = prevHtmlHeight;
+      body.style.height = prevBodyHeight;
+    };
+  }, []);
+
+  const exportSummaryLines = useMemo(() => {
+    const lines: string[] = [];
+    const productLabels = productInfo
+      .map((product) => product.productName || product.fuelType)
+      .filter(Boolean);
+    if (productLabels.length) {
+      lines.push(`Products: ${Array.from(new Set(productLabels)).join(", ")}`);
+    }
+
+    const capacityEntries = productInfo
+      .map((product) => {
+        const rawCapacity = Number.parseFloat(String(product.productionCapacity ?? ""));
+        const capacity = Number.isFinite(rawCapacity) ? rawCapacity : null;
+        const unit = product.unit?.trim();
+        if (!capacity || !unit) return null;
+        return {
+          label: product.productName || product.fuelType || "Product",
+          capacity,
+          unit,
+        };
+      })
+      .filter(Boolean) as { label: string; capacity: number; unit: string }[];
+
+    if (capacityEntries.length) {
+      const sameUnit = capacityEntries.every((entry) => entry.unit === capacityEntries[0].unit);
+      if (sameUnit) {
+        const total = capacityEntries.reduce((sum, entry) => sum + entry.capacity, 0);
+        lines.push(`Capacity: ${total.toFixed(2).replace(/\\.00$/, "")} ${capacityEntries[0].unit}`);
+      } else {
+        const details = capacityEntries
+          .map((entry) => `${entry.label} ${entry.capacity} ${entry.unit}`)
+          .join(" · ");
+        lines.push(`Capacity: ${details}`);
+      }
+    }
+
+    if (!lines.length) {
+      lines.push("Products: N/A");
+    }
+
+    return lines;
+  }, [productInfo]);
+
+  const exportMetaLines = useMemo(() => {
+    const lines = [...exportSummaryLines];
+    if (exportTimestamp) {
+      const formatted = new Intl.DateTimeFormat(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(new Date(exportTimestamp));
+      lines.unshift(`Exported: ${formatted}`);
+    }
+    return lines;
+  }, [exportSummaryLines, exportTimestamp]);
+
+  const waitForNextFrame = useCallback(
+    () =>
+      new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      }),
+    []
+  );
+
+  const prepareExport = useCallback(async () => {
+    setExportTimestamp(new Date().toISOString());
+    await waitForNextFrame();
+  }, [waitForNextFrame]);
+
+  const lastSavedLabel = useMemo(() => {
+    if (!lastSavedAt) return "Not saved yet";
+    return new Intl.DateTimeFormat(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date(lastSavedAt));
+  }, [lastSavedAt]);
+
+  const markSavedNow = useCallback((timestamp?: string) => {
+    setLastSavedAt(timestamp ?? new Date().toISOString());
+  }, []);
 
   useEffect(() => {
     if (showDataModel) {
@@ -577,6 +639,52 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
       window.dispatchEvent(new CustomEvent("plant-builder:close-sidebar"));
     }
   }, [showDataModel]);
+
+  useEffect(() => {
+    const body = document.body;
+    const html = document.documentElement;
+    const prevBody = body.style.overflow;
+    const prevHtml = html.style.overflow;
+    body.style.overflow = "hidden";
+    html.style.overflow = "hidden";
+    return () => {
+      body.style.overflow = prevBody;
+      html.style.overflow = prevHtml;
+    };
+  }, []);
+
+  useEffect(() => {
+    const equipmentDefIds = Array.from(
+      new Set(
+        components
+          .filter((c) => c.type === "equipment")
+          .map((c) => c.componentDefinitionId)
+          .filter((id): id is number => typeof id === "number")
+      )
+    );
+
+    const missing = equipmentDefIds.filter((id) => !portsByDefinitionId[id]);
+    if (!missing.length) return;
+
+    let cancelled = false;
+    (async () => {
+      const results = await Promise.allSettled(missing.map((id) => fetchComponentPorts(id)));
+      if (cancelled) return;
+      setPortsByDefinitionId((prev) => {
+        const next = { ...prev };
+        results.forEach((result, index) => {
+          if (result.status === "fulfilled") {
+            next[missing[index]] = result.value;
+          }
+        });
+        return next;
+      });
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [components, portsByDefinitionId]);
 
   useEffect(() => {
     const pending = templates.filter(
@@ -920,8 +1028,8 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
       const componentList = overrideComponents ?? components;
       const component = componentList.find((c) => c.id === componentId);
 
-      const instanceId = Number(component?.instanceId);
-      if (!Number.isFinite(instanceId)) {
+      const instanceId = toInstanceId(component?.instanceId);
+      if (!instanceId) {
         logJson(`[PlantBuilder] Cannot persist connections for ${componentId}; missing instanceId`);
         return;
       }
@@ -934,12 +1042,13 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
           payload
         );
         await updateComponentInstance(instanceId, { connections: payload });
+        markSavedNow();
       } catch (err) {
         logJson(`[PlantBuilder] ✗ Failed to persist connections for ${componentId}:`, err);
         toast.error(`Failed to update connections for ${component?.name ?? "component"}`);
       }
     },
-    [components, connections]
+    [components, connections, markSavedNow]
   );
 
   // When components are removed via Canvas they're already deleted on the backend,
@@ -1167,14 +1276,13 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
           records[0].digital_twin_json;
 
         const mappedComponents: PlacedComponent[] = rawComponents.map((c: any) => {
+          // Only trust explicit instance identifiers; do not fall back to component id.
+          // This prevents accidental deletes/updates against non-existent backend rows.
           const inferredInstanceId =
             c.instanceId ??
             c.instance_id ??
             c.componentInstanceId ??
-            c.component_instance_id ??
-            c.componentId ??
-            c.component_id ??
-            c.id;
+            c.component_instance_id;
           const inferredDefinitionId =
             c.componentDefinitionId ??
             c.component_definition_id ??
@@ -1199,8 +1307,8 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
             // keep whatever data comes, but ensure at least empty object
             data,
             certifications: [],
-            componentDefinitionId: parseOptionalNumber(inferredDefinitionId),
-            instanceId: parseOptionalNumber(inferredInstanceId),
+            componentDefinitionId: toOptionalNumber(inferredDefinitionId),
+            instanceId: toOptionalNumber(inferredInstanceId),
           };
         });
 
@@ -1476,7 +1584,7 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
         return;
       }
 
-      const missingInstances = components.filter((c) => !Number.isFinite(Number(c.instanceId)));
+      const missingInstances = components.filter((c) => !toInstanceId(c.instanceId));
       if (missingInstances.length) {
         toast.error("Some components are not persisted yet. Please wait and try again.");
         return;
@@ -1498,7 +1606,7 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
       );
 
       // 1. Update positions for all current components with instanceId
-      const componentsToUpdate = components.filter((c) => Number.isFinite(Number(c.instanceId)));
+      const componentsToUpdate = components.filter((c) => toInstanceId(c.instanceId));
       logJson(`[PlantBuilder] Components to Update (positions):`, componentsToUpdate);
 
       const updatePromises = componentsToUpdate.map((c) => {
@@ -1508,7 +1616,7 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
         };
         logJson(`[PlantBuilder] Updating instanceId ${c.instanceId} with:`, updatePayload);
         
-        const instanceId = Number(c.instanceId);
+        const instanceId = toInstanceId(c.instanceId) as number;
         return updateComponentInstance(instanceId, updatePayload)
           .then((result: any) => {
             logJson(`[PlantBuilder] ✓ Position update SUCCESS for ${c.id}:`, result);
@@ -1525,13 +1633,13 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
       
       logJson(`[PlantBuilder] Deleted Components (in original but not in current):`, deletedComponents);
 
-      const componentsToDelete = deletedComponents.filter((c) => Number.isFinite(Number(c.instanceId)));
+      const componentsToDelete = deletedComponents.filter((c) => toInstanceId(c.instanceId));
       logJson(`[PlantBuilder] Components to Delete (with instanceId):`, componentsToDelete);
 
       const deletePromises = componentsToDelete.map((c) => {
         logJson(`[PlantBuilder] Deleting instanceId ${c.instanceId}...`);
         
-        const instanceId = Number(c.instanceId);
+        const instanceId = toInstanceId(c.instanceId) as number;
         return deleteComponentInstance(instanceId)
           .then((result: any) => {
             logJson(`[PlantBuilder] ✓ Delete SUCCESS for ${c.id} (instanceId: ${c.instanceId}):`, result);
@@ -1548,6 +1656,7 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
       logJson(`[PlantBuilder] All promises resolved:`, allResults);
 
       toast.success("Plant model saved successfully!");
+      markSavedNow();
       logJson(`[PlantBuilder] ========== SAVE END (SUCCESS) ==========`);
     } catch (err) {
       logJson(`[PlantBuilder] ========== SAVE END (ERROR) ==========`);
@@ -1793,7 +1902,7 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
 
       const canvas = await html2canvas(canvasNode, {
         backgroundColor: "#ffffff",
-        scale: 2,
+        scale: 4,
         useCORS: true,
         width: exportWidth,
         height: exportHeight,
@@ -1816,11 +1925,12 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
 
   const handleExportCanvasImage = async () => {
     try {
+      await prepareExport();
       const url = await captureCanvasSnapshot();
       if (!url) return;
       const link = document.createElement("a");
       link.href = url;
-      link.download = "plant-canvas.png";
+      link.download = `${plantInfo?.plantName || "plant-design"}.png`;
       link.click();
       toast.success("Canvas image exported successfully!");
     } catch (err) {
@@ -1831,10 +1941,7 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
 
   const handleExportPDF = async () => {
     try {
-      const waitForNextFrame = () =>
-        new Promise<void>((resolve) => {
-          requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
-        });
+      await prepareExport();
 
       if (!previewImageUrl && !isGeneratingPreview) {
         setIsGeneratingPreview(true);
@@ -1897,7 +2004,7 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
 
           const canvas = await html2canvas(page, {
             backgroundColor: "#ffffff",
-            scale: 2,
+            scale: 4,
             useCORS: true,
             width: page.scrollWidth || page.clientWidth,
             height: page.scrollHeight || page.clientHeight,
@@ -1908,7 +2015,7 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
           addCanvasToPdf(canvas, i > 0);
         }
 
-        pdf.save("plant-model.pdf");
+        pdf.save(`${plantInfo?.plantName || "plant-design"}.pdf`);
         toast.success("PDF export ready!");
       } finally {
         document.body.classList.remove("plant-exporting");
@@ -2137,8 +2244,8 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
                 return next;
               });
 
-              const instanceId = Number(target.instanceId);
-              if (Number.isFinite(instanceId)) {
+              const instanceId = toInstanceId(target.instanceId);
+              if (instanceId) {
                 void deleteComponentInstance(instanceId);
               }
 
@@ -2462,15 +2569,9 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
     </div>
   );
 
-  const formatCheckedAt = (value?: string) => {
-    if (!value) return "";
-    const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
-  };
-
   return (
-    <div className="h-screen flex flex-col bg-gray-50 min-h-0">
-      <header className="border-b border-gray-200 bg-white text-gray-900 flex items-center justify-between px-4 py-3 shadow-sm">
+    <div className="h-[calc(100dvh-80px)] max-h-[calc(100dvh-80px)] flex flex-col bg-gray-50 min-h-0 overflow-hidden">
+      <header className="sticky top-0 z-40 border-b border-gray-200 bg-white text-gray-900 flex items-center justify-between px-4 py-2 shadow-sm h-12">
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
@@ -2500,29 +2601,50 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-4">
           {step === "builder" && !showTemplatesModal && (
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                onClick={handleSave}
-                className="text-sm border-[#4F8FF7] hover:bg-[#4F8FF7]/10"
-              >
-                <Save className="h-4 w-4 mr-2" />
-                Save
-              </Button>
+              <TooltipProvider delayDuration={120}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      onClick={handleSave}
+                      size="sm"
+                      className="h-8 text-xs border-[#4F8FF7] hover:bg-[#4F8FF7]/10"
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      Save
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" align="start" className="bg-white">
+                    Last saved · <span className="font-semibold">{lastSavedLabel}</span>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
               <Button
                 onClick={handleRunComplianceCheck}
                 disabled={isValidating || components.length === 0}
-                className="text-sm bg-green-600 hover:bg-green-700 text-white"
+                size="sm"
+                className="h-8 text-xs bg-green-600 hover:bg-green-700 text-white"
               >
                 <Play className="h-4 w-4 mr-2" />
                 {isValidating ? "Checking..." : "Check Process Flow"}
               </Button>
               <Button
-                className="bg-green-600 hover:bg-green-700 text-white text-sm"
+                size="sm"
+                className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                onClick={() => setShowExportModal(true)}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Export Design
+              </Button>
+              <Button
+                size="sm"
+                className="h-8 text-xs bg-green-600 hover:bg-green-700 text-white"
                 onClick={handleSaveDataModel}
               >
+                <Download className="h-4 w-4 mr-2" />
                 Save Plant Model
               </Button>
             </div>
@@ -2544,15 +2666,15 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
                 <Share2 className="h-4 w-4 mr-2" />
                 Share
               </Button>
-              */}
-            </> 
+            */}
+            </>
           )}
         </div>
       </header>
 
       <div
         className={`flex-1 min-h-0 relative ${
-          step === "info" || step === "product" ? "p-0" : "p-4"
+          step === "info" || step === "product" || step === "builder" ? "p-0" : "p-4"
         } overflow-hidden`}
       >
         {error && (
@@ -2704,7 +2826,11 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
                   setConnections={setConnections}
                   onConnect={onConnect}  // PASSED
                   onModelChange={handleCanvasModelChange}
+                  onAutoSave={markSavedNow}
                   exportId="main"
+                  exportTitle={plantInfo?.plantName || plantInfo?.projectName || "Plant Model"}
+                  exportMeta={exportMetaLines}
+                  portsByDefinitionId={portsByDefinitionId}
                   validationErrorsByComponent={validationErrorsByComponent}
                   invalidConnectionIds={invalidConnectionIds}
                   invalidConnectionMessages={connectionErrorMessages}
@@ -2755,206 +2881,17 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
             )}
 
             {!showTemplatesModal && validationResult && showValidationPanel && (
-              <aside className="absolute top-0 right-0 h-full w-full max-w-[360px] z-30 bg-white/95 backdrop-blur border-l border-gray-200 shadow-xl flex flex-col">
-                <div className="p-4 border-b border-gray-200 flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`h-9 w-9 rounded-lg flex items-center justify-center ${
-                        validationResult.valid
-                          ? "bg-green-100 text-green-700"
-                          : "bg-amber-100 text-amber-700"
-                      }`}
-                    >
-                      {validationResult.valid ? (
-                        <CheckCircle2 className="h-5 w-5" />
-                      ) : (
-                        <AlertTriangle className="h-5 w-5" />
-                      )}
-                    </div>
-                    <div>
-                      <div className="text-sm font-semibold text-gray-900">
-                        {validationStep === "ports"
-                          ? validationResult.valid
-                            ? "Port Check Passed"
-                            : "Port Check Failed"
-                          : validationResult.valid
-                            ? "Structure Check Passed"
-                            : "Structure Check Failed"}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        Digital Twin #{validationResult.digitalTwinId}
-                      </div>
-                      <div className="text-[11px] text-gray-400">
-                        {formatCheckedAt(validationResult.checkedAt)}
-                      </div>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowValidationPanel(false)}
-                    className="text-gray-500 hover:text-gray-700"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-
-                <div className="px-4 pt-3 pb-2 text-xs text-gray-500 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${
-                          validationResult.valid
-                            ? "bg-green-100 text-green-700"
-                            : "bg-amber-100 text-amber-700"
-                        }`}
-                      >
-                        {validationResult.errors.length} error
-                        {validationResult.errors.length === 1 ? "" : "s"}
-                      </span>
-                      <span className="text-[11px] text-gray-400">
-                        {validationStep === "ports" ? "Step 2/2 · Port Check" : "Step 1/2 · Structure Check"}
-                      </span>
-                    </div>
-                    {!validationResult.valid && (
-                      <span className="text-[11px] text-gray-400">
-                        {hasFocusableValidationErrors ? "Click any item to focus" : "No focusable items"}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="text-[11px] uppercase tracking-wide text-gray-400">
-                      Validation Steps
-                    </div>
-                    <div className="rounded-md border border-slate-200 bg-white px-3 py-2 flex items-center justify-between">
-                      <div>
-                        <div className="text-xs font-semibold text-slate-700">1. Structure Check</div>
-                        <div className="text-[11px] text-slate-500">Connection type & layout rules</div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${
-                            validationStep === "structure"
-                              ? validationResult.valid
-                                ? "bg-green-100 text-green-700"
-                                : "bg-amber-100 text-amber-700"
-                              : "bg-slate-100 text-slate-500"
-                          }`}
-                        >
-                          {validationStep === "structure"
-                            ? validationResult.valid
-                              ? "Passed"
-                              : "Failed"
-                            : "Not Run"}
-                        </span>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={handleRunComplianceCheck}
-                          disabled={isValidating}
-                          className="text-[11px] px-2 py-1 h-7"
-                        >
-                          {validationStep === "structure" ? "Re-run" : "Run"}
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div className="rounded-md border border-slate-200 bg-white px-3 py-2 flex items-center justify-between">
-                      <div>
-                        <div className="text-xs font-semibold text-slate-700">2. Port Check</div>
-                        <div className="text-[11px] text-slate-500">Port carrier compatibility</div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${
-                            validationStep === "ports"
-                              ? validationResult.valid
-                                ? "bg-green-100 text-green-700"
-                                : "bg-amber-100 text-amber-700"
-                              : "bg-slate-100 text-slate-500"
-                          }`}
-                        >
-                          {validationStep === "ports"
-                            ? validationResult.valid
-                              ? "Passed"
-                              : "Failed"
-                            : "Not Run"}
-                        </span>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={handleRunPortCheck}
-                          disabled={isValidating || validationStep !== "structure" || !validationResult?.valid}
-                          className="text-[11px] px-2 py-1 h-7"
-                        >
-                          Run
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                  {validationResult.valid ? (
-                    <div className="text-xs text-green-700 bg-green-50 border border-green-200 rounded-md p-2">
-                      {validationStep === "ports"
-                        ? "Port checks passed. You can proceed to compliance."
-                        : "Structure checks passed. Run the port check to continue."}
-                    </div>
-                  ) : (
-                    groupedValidationErrors.map((group) => (
-                      <div
-                        key={group.componentId}
-                        className="rounded-lg border border-amber-200 bg-white p-3"
-                      >
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (group.componentId === "unknown") return;
-                            handleFocusComponent(group.componentId);
-                          }}
-                          disabled={group.componentId === "unknown"}
-                          className="w-full flex items-center justify-between gap-2 text-left"
-                        >
-                          <div>
-                            <div className="text-sm font-semibold text-amber-900">
-                              {group.componentName}
-                            </div>
-                            <div className="text-xs text-amber-700 capitalize">
-                              {group.componentType} · ID {group.componentId}
-                            </div>
-                          </div>
-                          <span className="text-[11px] font-semibold bg-amber-200 text-amber-900 rounded-full px-2 py-0.5">
-                            {group.errors.length}
-                          </span>
-                        </button>
-                        <div className="mt-2 space-y-2">
-                          {group.errors.map((err, idx) => (
-                            <button
-                              key={`${group.componentId}-${err.errorCode}-${idx}`}
-                              type="button"
-                              onClick={() => {
-                                if (group.componentId === "unknown") return;
-                                handleFocusComponent(group.componentId);
-                              }}
-                              disabled={group.componentId === "unknown"}
-                              className="w-full text-left text-xs text-amber-900 bg-white border border-amber-100 rounded-md px-2 py-1 hover:bg-gray-50"
-                            >
-                              <div className="font-semibold">{err.errorCode}</div>
-                              <div className="text-amber-800" title={err.errorMessage}>
-                                {truncateMessage(err.errorMessage)}
-                              </div>
-                              <div className="text-[10px] text-amber-700">
-                                {formatValidationContext(err)}
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </aside>
+              <ValidationPanel
+                validationResult={validationResult}
+                validationStep={validationStep}
+                groupedValidationErrors={groupedValidationErrors}
+                hasFocusableValidationErrors={hasFocusableValidationErrors}
+                isValidating={isValidating}
+                onClose={() => setShowValidationPanel(false)}
+                onFocusComponent={handleFocusComponent}
+                onRunStructureCheck={handleRunComplianceCheck}
+                onRunPortCheck={handleRunPortCheck}
+              />
             )}
           </div>
         ) : step === "compliance" ? (
@@ -3208,6 +3145,67 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
             >
               {isSharingPlant ? "Sharing..." : "Share"}
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showExportModal} onOpenChange={setShowExportModal}>
+        <DialogContent className="max-w-3xl bg-white rounded-xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-slate-900">
+              Export Plant Design
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6 text-sm text-slate-600">
+            <p>
+              High-resolution export with title header, diagram, and stream color legend — each
+              in its own area, no overlap.
+            </p>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <button
+                type="button"
+                onClick={async () => {
+                  setShowExportModal(false);
+                  await handleExportCanvasImage();
+                }}
+                className="rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-emerald-400 hover:shadow-md"
+              >
+                <div className="text-base font-semibold text-slate-900">PNG</div>
+                <div className="mt-1 text-xs text-slate-500">4x hi-res</div>
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  setShowExportModal(false);
+                  await handleExportPDF();
+                }}
+                className="rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-emerald-400 hover:shadow-md"
+              >
+                <div className="text-base font-semibold text-slate-900">PDF</div>
+                <div className="mt-1 text-xs text-slate-500">A3 print-ready</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => toast("GIF export is coming soon.")}
+                className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-left text-slate-400 shadow-sm"
+              >
+                <div className="text-base font-semibold">GIF</div>
+                <div className="mt-1 text-xs">Animated flows</div>
+              </button>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Included in export
+              </div>
+              <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-slate-700">
+                <li>System boundary & all gates</li>
+                <li>Equipment with specifications</li>
+                <li>Carriers with stream types</li>
+                <li>Flow values on all connections</li>
+                <li>Stream color legend (separate panel)</li>
+                <li>Flow animations (GIF only)</li>
+              </ul>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

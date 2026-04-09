@@ -17,6 +17,29 @@ export type ComponentDefinitionDto = {
   updated_at?: string;
 };
 
+export type PortDirection = 'IN' | 'OUT';
+export type PortRequirement = 'REQUIRED' | 'OPTIONAL';
+
+export type PortCarrierDto = {
+  id: number;
+  name: string;
+  component_id?: string;
+};
+
+export type PortDto = {
+  id: number;
+  port_id?: string;
+  port_label: string;
+  direction: PortDirection;
+  requirement: PortRequirement;
+  carriers: PortCarrierDto[];
+};
+
+export type EquipmentPortsDto = {
+  equipmentDefinitionId: number;
+  ports: PortDto[];
+};
+
 export type ComponentLibraryJSON = {
   equipment: ComponentData[];
   carrier: ComponentData[];
@@ -53,6 +76,7 @@ const deriveCategoryFromSchema = (def: ComponentDefinitionDto) => {
 // Convert backend DTO into the component-library-friendly structure
 const mapToComponentData = (def: ComponentDefinitionDto): ComponentData => ({
   id: def.component_id,
+  definitionId: def.id,
   type: def.component_type,
   name: def.component_name,
   category: deriveCategoryFromSchema(def),
@@ -66,6 +90,10 @@ export async function fetchComponentDefinitions(): Promise<ComponentDefinitionDt
 // Retrieve a single component definition for editing/detail views
 export async function fetchComponentDefinitionById(id: number): Promise<ComponentDefinitionDto> {
   return apiFetch<ComponentDefinitionDto>(`${COMPONENT_DEFINITIONS_PATH}/${id}`);
+}
+
+export async function fetchComponentPorts(definitionId: number): Promise<EquipmentPortsDto> {
+  return apiFetch<EquipmentPortsDto>(`${COMPONENT_DEFINITIONS_PATH}/${definitionId}/ports`);
 }
 
 export async function fetchComponentLibraryFromApi(): Promise<ComponentLibraryJSON> {
