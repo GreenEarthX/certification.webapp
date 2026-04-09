@@ -8,7 +8,7 @@ const logJson = (label: string, data?: any) => {
 };
 
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import { Crosshair, Hand, Plus, ZoomIn, ZoomOut, RotateCw } from "lucide-react";
+import { Crosshair, Hand, Plus, ZoomIn, ZoomOut, RotateCw, Check, Trash2, X } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,6 +39,7 @@ import toast from "react-hot-toast";
 import ComponentDetailDialog from "./ComponentDetailDialog";
 import ConnectionArrow from "./ConnectionArrow";
 import ConnectionDetailDialog from "./ConnectionDetailDialog";
+import { getCarrierTypeKey, useCarrierVisuals } from "./hooks/useCarrierVisuals";
 
 import {
   PlacedComponent as PlacedComponentType,
@@ -46,12 +47,14 @@ import {
 } from "@/app/plant-operator/plant-builder/types";
 import type { DigitalTwinValidationError } from "@/services/plant-builder/digitalTwins";
 import { buildConnectionPayloadForComponent, StoredConnectionPayload } from "@/lib/plant-builder/connection-utils";
+import { toInstanceId } from "@/lib/plant-builder/ids";
 import { 
   createComponentInstance, 
   updateComponentInstance,
   deleteComponentInstance 
 } from "@/services/plant-builder/componentInstances";
 import { fetchComponentDefinitions } from "@/services/plant-builder/componentDefinitions";
+import type { EquipmentPortsDto, PortDto } from "@/services/plant-builder/componentDefinitions";
 
 type CanvasProps = {
   components: PlacedComponentType[];
@@ -63,6 +66,7 @@ type CanvasProps = {
     components: PlacedComponentType[];
     connections: ConnectionType[];
   }) => void;
+  onAutoSave?: (timestamp: string) => void;
   exportId?: string;
   validationErrorsByComponent?: Record<string, DigitalTwinValidationError[]>;
   invalidConnectionIds?: Set<string>;
@@ -70,6 +74,9 @@ type CanvasProps = {
   focusRequest?: { id: string; ts: number } | null;
   highlightedComponentId?: string | null;
   topRightAddon?: React.ReactNode;
+  exportTitle?: string;
+  exportMeta?: string[];
+  portsByDefinitionId?: Record<number, EquipmentPortsDto>;
 };
 
 const CANVAS_BASE_WIDTH = 2400;
@@ -81,19 +88,21 @@ const ZOOM_STEP = 0.1;
 const GATE_EDGE_GUTTER = 120;
 const SYSTEM_FRAME_PADDING = 48;
 const SYSTEM_FRAME_LABEL = "Plant System Boundary";
-const INPUT_GATES_LABEL = "Output Gates";
-const OUTPUT_GATES_LABEL = "Input Gates";
-const DEFAULT_FLOW_COLOR = "#4F8FF7";
-const DEFAULT_CARRIER_FLOW_COLOR = "#10B981";
-const CARRIER_FLOW_PALETTE = [
-  "#0EA5E9",
-  "#14B8A6",
-  "#F97316",
-  "#A855F7",
-  "#22C55E",
-  "#F43F5E",
-  "#F59E0B",
-  "#64748B",
+const INPUT_GATES_LABEL = "<- Inputs";
+const OUTPUT_GATES_LABEL = "Outputs ->";
+const STREAM_UNIT_OPTIONS = [
+  "kg/h",
+  "t/h",
+  "t/y",
+  "kg/d",
+  "m3/h",
+  "Nm3/h",
+  "kW",
+  "MW",
+  "kWh",
+  "MJ",
+  "GJ",
+  "unit",
 ];
 type PortSide = "left" | "right" | "top" | "bottom";
 
@@ -119,12 +128,32 @@ const toNumber = (value: unknown) => {
   return 0;
 };
 
-const toInstanceId = (value: unknown) => {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
+const normalizeKey = (value: string) =>
+  value.toLowerCase().replace(/[^a-z0-9]+/g, "");
+
+const lightenHex = (hex: string, amount = 0.35) => {
+  if (!hex || typeof hex !== "string") return hex;
+  const normalized = hex.replace("#", "");
+  const full =
+    normalized.length === 3
+      ? normalized
+          .split("")
+          .map((ch) => ch + ch)
+          .join("")
+      : normalized;
+  if (full.length !== 6) return hex;
+  const num = Number.parseInt(full, 16);
+  if (Number.isNaN(num)) return hex;
+  const r = (num >> 16) & 255;
+  const g = (num >> 8) & 255;
+  const b = num & 255;
+  const mix = (channel: number) =>
+    Math.round(channel + (255 - channel) * amount);
+  const toHex = (val: number) => val.toString(16).padStart(2, "0");
+  return `#${toHex(mix(r))}${toHex(mix(g))}${toHex(mix(b))}`;
 };
 
-const parseQuantity = (value: unknown) => {
+const parseNumeric = (value: unknown) => {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value === "string") {
     const parsed = Number.parseFloat(value);
@@ -133,22 +162,22 @@ const parseQuantity = (value: unknown) => {
   return null;
 };
 
-const normalizeUnit = (value: unknown) =>
-  typeof value === "string" ? value.trim() : "";
-
-const formatQuantity = (value: number) => {
-  if (!Number.isFinite(value)) return "0";
-  const rounded = Math.round(value * 100) / 100;
-  return rounded % 1 === 0 ? `${rounded.toFixed(0)}` : `${rounded}`;
-};
-
-const getCarrierTypeKey = (comp?: PlacedComponentType | null) => {
-  if (!comp) return "";
-  const raw =
-    typeof comp.data?.product === "string"
-      ? comp.data.product
-      : comp.name;
-  return typeof raw === "string" ? raw.trim().toLowerCase() : "";
+const getConnectionQuantityUnit = (conn: ConnectionType) => {
+  const data = conn.data || {};
+  const quantity =
+    parseNumeric((data as any).quantity) ??
+    parseNumeric((data as any).energyAmount) ??
+    parseNumeric((data as any).amount) ??
+    parseNumeric((data as any).value);
+  const unit =
+    typeof (data as any).unit === "string"
+      ? (data as any).unit
+      : typeof (data as any).units === "string"
+      ? (data as any).units
+      : typeof (data as any).energyUnit === "string"
+      ? (data as any).energyUnit
+      : "";
+  return { quantity, unit };
 };
 
 
@@ -374,6 +403,7 @@ const Canvas = ({
   setConnections,
   onConnect,
   onModelChange,
+  onAutoSave,
   exportId,
   validationErrorsByComponent,
   invalidConnectionIds,
@@ -381,9 +411,24 @@ const Canvas = ({
   focusRequest,
   highlightedComponentId,
   topRightAddon,
+  exportTitle,
+  exportMeta,
+  portsByDefinitionId,
 }: CanvasProps) => {
   const [selectedComponent, setSelectedComponent] = useState<PlacedComponentType | null>(null);
   const [selectedConnection, setSelectedConnection] = useState<ConnectionType | null>(null);
+  const [connectionEdits, setConnectionEdits] = useState<
+    Record<string, { quantity: string; unit: string }>
+  >({});
+  const [activeConnectionEditorId, setActiveConnectionEditorId] = useState<string | null>(null);
+  const [connectionDragPoint, setConnectionDragPoint] = useState<{ x: number; y: number } | null>(null);
+  const [reconnectState, setReconnectState] = useState<{
+    connectionId: string;
+    end: "from" | "to";
+    startId: string;
+    startSide: PortSide;
+    color?: string;
+  } | null>(null);
   const [connectingFrom, setConnectingFrom] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
   const [hasUserZoomed, setHasUserZoomed] = useState(false);
@@ -404,6 +449,8 @@ const Canvas = ({
     scrollTop: number;
   } | null>(null);
   const lastFocusTsRef = useRef<number>(0);
+  // Carrier dedupe: keep a single carrier node per (source -> carrier type).
+  // If duplicates exist, rewire outputs to the primary and delete the extra instances.
   useEffect(() => {
     if (!selectedComponent && !showAddComponent) return;
     window.dispatchEvent(new CustomEvent("plant-builder:close-sidebar"));
@@ -518,44 +565,7 @@ const Canvas = ({
   }, [components, connections, layoutOrientation, setComponents]);
 
 
-  useEffect(() => {
-    if (!components.length || !connections.length) return;
-    const componentById = new Map(components.map((comp) => [comp.id, comp]));
-    const carrierIds = components.filter((comp) => comp.type === "carrier").map((comp) => comp.id);
-    if (!carrierIds.length) return;
-
-    let changed = false;
-    const nextComponents = components.map((comp) => ({ ...comp }));
-    const nextById = new Map(nextComponents.map((comp) => [comp.id, comp]));
-
-    carrierIds.forEach((carrierId) => {
-      const outgoing = connections.filter((conn) => conn.from === carrierId);
-      const targetIds = Array.from(new Set(outgoing.map((conn) => conn.to)));
-      const targetComps = targetIds
-        .map((id) => componentById.get(id))
-        .filter((comp): comp is PlacedComponentType => Boolean(comp))
-        .filter((comp) => comp.type === "equipment");
-
-      if (targetComps.length < 2) return;
-
-      const avgX =
-        targetComps.reduce((sum, comp) => sum + toNumber(comp.position?.x), 0) /
-        targetComps.length;
-
-      targetComps.forEach((comp) => {
-        const nextComp = nextById.get(comp.id);
-        if (!nextComp) return;
-        const currentX = toNumber(nextComp.position?.x);
-        if (Math.abs(currentX - avgX) < 2) return;
-        nextComp.position = { ...nextComp.position, x: avgX };
-        changed = true;
-      });
-    });
-
-    if (changed) {
-      setComponents(nextComponents);
-    }
-  }, [components, connections, setComponents]);
+  // Alignment disabled to avoid auto-reposition loops.
 
 
 
@@ -568,79 +578,137 @@ const Canvas = ({
     [canvasBounds.minX, canvasBounds.minY, zoomPadding]
   );
 
-  const componentById = useMemo(
-    () => new Map(components.map((comp) => [comp.id, comp])),
-    [components]
-  );
-
-  const carrierColorMap = useMemo(() => {
-    const carrierComponents = components.filter((comp) => comp.type === "carrier");
-    const keys = Array.from(
-      new Set(
-        carrierComponents
-          .map((comp) => getCarrierTypeKey(comp))
-          .filter((key) => key)
-      )
-    ).sort();
-
-    const map = new Map<string, string>();
-    keys.forEach((key, index) => {
-      map.set(key, CARRIER_FLOW_PALETTE[index % CARRIER_FLOW_PALETTE.length]);
+  const extraCarrierNames = useMemo(() => {
+    const names: string[] = [];
+    if (!portsByDefinitionId) return names;
+    Object.values(portsByDefinitionId).forEach((payload) => {
+      payload?.ports?.forEach((port) => {
+        port.carriers?.forEach((carrier) => {
+          if (carrier?.name) names.push(carrier.name);
+        });
+      });
     });
+    return names;
+  }, [portsByDefinitionId]);
 
-    // Temporary overrides for testing
-    map.set("air", "#94A3B8");
-    map.set("damaged crops", "#B45309");
-
-    return map;
+  const carrierById = useMemo(() => {
+    return new Map(
+      components.filter((comp) => comp.type === "carrier").map((comp) => [comp.id, comp])
+    );
   }, [components]);
 
-  const carrierLegendItems = useMemo(() => {
-    const displayMap = new Map<string, string>();
-    components
-      .filter((comp) => comp.type === "carrier")
-      .forEach((comp) => {
-        const key = getCarrierTypeKey(comp);
-        if (!key || displayMap.has(key)) return;
-        const label =
-          (typeof comp.data?.product === "string" && comp.data.product) || comp.name || key;
-        displayMap.set(key, label);
+  const equipmentPortAssignments = useMemo(() => {
+    const map = new Map<
+      string,
+      {
+        inputPorts: PortDto[];
+        outputPorts: PortDto[];
+        inputByConn: Map<string, number>;
+        outputByConn: Map<string, number>;
+      }
+    >();
+
+    const componentsById = new Map(components.map((comp) => [comp.id, comp]));
+
+    const buildCarrierInfo = (compId: string) => {
+      const carrier = componentsById.get(compId);
+      if (!carrier || carrier.type !== "carrier") return null;
+      return {
+        id: carrier.id,
+        definitionId: carrier.componentDefinitionId,
+        name: carrier.name,
+        key: getCarrierTypeKey(carrier),
+      };
+    };
+
+    const matchesPort = (
+      port: PortDto,
+      carrier: { definitionId?: number; name: string; key: string }
+    ) => {
+      if (!port.carriers?.length) return true;
+      const allowedIds = new Set(port.carriers.map((c) => c.id));
+      const allowedNames = new Set(port.carriers.map((c) => c.name.toLowerCase()));
+      const allowedComponentIds = new Set(
+        port.carriers
+          .map((c) => c.component_id?.toLowerCase())
+          .filter(Boolean) as string[]
+      );
+      const allowedNormalized = new Set(
+        [...allowedNames, ...allowedComponentIds].map(normalizeKey)
+      );
+      if (carrier.definitionId && allowedIds.has(carrier.definitionId)) return true;
+      if (carrier.key) {
+        const key = carrier.key.toLowerCase();
+        if (allowedNames.has(key) || allowedComponentIds.has(key)) return true;
+        if (allowedNormalized.has(normalizeKey(key))) return true;
+      }
+      const carrierName = carrier.name.toLowerCase();
+      if (allowedNames.has(carrierName) || allowedComponentIds.has(carrierName)) return true;
+      return allowedNormalized.has(normalizeKey(carrierName));
+    };
+
+    const assignPorts = (
+      ports: PortDto[],
+      conns: Array<{ id: string; carrier: ReturnType<typeof buildCarrierInfo> }>
+    ) => {
+      const available = ports.map((port, index) => ({ port, index }));
+      const assignments = new Map<string, number>();
+
+      conns.forEach((conn) => {
+        if (!available.length) return;
+        let assignedIndex = -1;
+        if (conn.carrier) {
+          assignedIndex = available.findIndex((item) => matchesPort(item.port, conn.carrier!));
+        }
+        if (assignedIndex === -1) {
+          // Only auto-assign if the port accepts any carrier.
+          const anyIndex = available.findIndex((item) => !item.port.carriers?.length);
+          if (anyIndex === -1) {
+            return;
+          }
+          assignedIndex = anyIndex;
+        }
+        const selected = available.splice(assignedIndex, 1)[0];
+        if (selected) assignments.set(String(conn.id), selected.index);
       });
 
-    return Array.from(carrierColorMap.entries()).map(([key, color]) => ({
-      key,
-      label: displayMap.get(key) || key,
-      color,
-    }));
-  }, [carrierColorMap, components]);
+      return assignments;
+    };
 
-  const connectionColors = useMemo(() => {
-    const map = new Map<string, string>();
-    connections.forEach((conn) => {
-      let carrierKey = "";
-      const fromComp = componentById.get(conn.from);
-      const toComp = componentById.get(conn.to);
-      if (fromComp?.type === "carrier") {
-        carrierKey = getCarrierTypeKey(fromComp);
-      } else if (toComp?.type === "carrier") {
-        carrierKey = getCarrierTypeKey(toComp);
-      }
+    components.forEach((comp) => {
+      if (comp.type !== "equipment" || typeof comp.componentDefinitionId !== "number") return;
+      const payload = portsByDefinitionId?.[comp.componentDefinitionId];
+      const ports = payload?.ports ?? [];
+      if (!ports.length) return;
 
-      if (!carrierKey) {
-        const typeKey = typeof conn.type === "string" ? conn.type.trim().toLowerCase() : "";
-        if (typeKey && carrierColorMap.has(typeKey)) {
-          carrierKey = typeKey;
-        }
-      }
+      const inputPorts = ports.filter((port) => port.direction === "IN");
+      const outputPorts = ports.filter((port) => port.direction === "OUT");
 
-      if (carrierKey) {
-        map.set(conn.id, carrierColorMap.get(carrierKey) || DEFAULT_CARRIER_FLOW_COLOR);
-      } else {
-        map.set(conn.id, DEFAULT_FLOW_COLOR);
-      }
+      const incomingConns = connections
+        .filter((conn) => conn.to === comp.id)
+        .map((conn) => ({ id: String(conn.id), carrier: buildCarrierInfo(conn.from) }));
+      const outgoingConns = connections
+        .filter((conn) => conn.from === comp.id)
+        .map((conn) => ({ id: String(conn.id), carrier: buildCarrierInfo(conn.to) }));
+
+      const inputByConn = assignPorts(inputPorts, incomingConns);
+      const outputByConn = assignPorts(outputPorts, outgoingConns);
+
+      map.set(comp.id, { inputPorts, outputPorts, inputByConn, outputByConn });
     });
+
     return map;
-  }, [carrierColorMap, componentById, connections]);
+  }, [components, connections, portsByDefinitionId]);
+
+  const {
+    carrierColorMap,
+    carrierLegendItems,
+    carrierLegendItemsAll,
+    connectionColors,
+    connectionLabels,
+    connectionDashed,
+  } =
+    useCarrierVisuals(components, connections, extraCarrierNames);
 
   const rawGateZones = useMemo(
     () => calculateGateZones(components, layoutOrientation),
@@ -749,12 +817,13 @@ const Canvas = ({
         logJson(`[Canvas] Persisting ${payload.length} connections for ${componentId} (instanceId=${instanceId})`, payload);
         await updateComponentInstance(instanceId, { connections: payload });
         logJson(`[Canvas] ✓ Connections persisted for ${componentId}`);
+        onAutoSave?.(new Date().toISOString());
       } catch (err) {
         logJson(`[Canvas] ✗ Failed to persist connections for ${componentId}:`, err);
         toast.error(`Failed to update connections for ${component?.name ?? "component"}`);
       }
     },
-    [components, connections]
+    [components, connections, onAutoSave]
   );
 
   const carrierInstanceRef = useRef(new Map<string, number | undefined>());
@@ -852,6 +921,42 @@ const Canvas = ({
     },
     [canvasOffset.x, canvasOffset.y, zoom]
   );
+
+  useEffect(() => {
+    const dragSourceId = reconnectState?.startId || connectingFrom;
+    const dragSourceSide = reconnectState?.startSide || "right";
+    if (!dragSourceId) {
+      setConnectionDragPoint(null);
+      return;
+    }
+    const comp = components.find((c) => c.id === dragSourceId);
+    if (comp) {
+      const start = getPortPoint(comp, dragSourceSide);
+      setConnectionDragPoint({
+        x: start.x - canvasOffset.x,
+        y: start.y - canvasOffset.y,
+      });
+    }
+
+    const handleMove = (e: MouseEvent) => {
+      const point = getCanvasPoint(e.clientX, e.clientY);
+      if (!point) return;
+      setConnectionDragPoint(point);
+    };
+
+    const handleUp = () => {
+      setConnectingFrom(null);
+      setReconnectState(null);
+      setConnectionDragPoint(null);
+    };
+
+    window.addEventListener("mousemove", handleMove);
+    window.addEventListener("mouseup", handleUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleUp);
+    };
+  }, [canvasOffset.x, components, connectingFrom, getCanvasPoint, reconnectState]);
 
   // Drag & drop from ComponentLibrary
   const handleDrop = useCallback(
@@ -969,6 +1074,7 @@ const Canvas = ({
             }))
           );
 
+          onAutoSave?.(new Date().toISOString());
           toast.success(`${componentData.name} persisted (id ${created.id})`);
         } catch (err) {
           console.warn("Failed to persist component instance:", err);
@@ -977,7 +1083,7 @@ const Canvas = ({
         }
       })();
     },
-    [connections, getCanvasPoint, setComponents, setConnections]
+    [connections, getCanvasPoint, onAutoSave, setComponents, setConnections]
   );
 
   const handleDragOver = (e: React.DragEvent) => e.preventDefault();
@@ -1017,6 +1123,26 @@ const Canvas = ({
   }, []);
 
   useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const handler = (e: WheelEvent) => {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const rect = canvas.getBoundingClientRect();
+      const anchor = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+      const direction = e.deltaY > 0 ? -1 : 1;
+      const nextZoom = zoom + direction * ZOOM_STEP;
+      setHasUserZoomed(true);
+      applyZoom(nextZoom, anchor);
+    };
+    canvas.addEventListener("wheel", handler, { passive: false });
+    return () => {
+      canvas.removeEventListener("wheel", handler);
+    };
+  }, [applyZoom, zoom]);
+
+  useEffect(() => {
     window.addEventListener("mousemove", handlePanMove);
     window.addEventListener("mouseup", handlePanEnd);
     return () => {
@@ -1025,13 +1151,44 @@ const Canvas = ({
     };
   }, [handlePanMove, handlePanEnd]);
 
-  const handleConnectStart = (id: string) => setConnectingFrom(id);
+  const handleConnectStart = (id: string) => {
+    setReconnectState(null);
+    setConnectingFrom(id);
+  };
 
   const handleConnectEnd = (id: string) => {
+    if (reconnectState) {
+      const { connectionId, end } = reconnectState;
+      setConnections((prev) => {
+        const targetConn = prev.find((c) => c.id === connectionId);
+        if (!targetConn) return prev;
+        const next = prev.map((c) => {
+          if (c.id !== connectionId) return c;
+          return end === "to"
+            ? { ...c, to: id }
+            : { ...c, from: id };
+        });
+        const persistIds = new Set<string>([
+          targetConn.from,
+          targetConn.to,
+          end === "to" ? targetConn.from : id,
+          end === "to" ? id : targetConn.to,
+        ]);
+        persistIds.forEach((pid) => {
+          void persistConnectionsForComponent(pid, next);
+        });
+        return next;
+      });
+      setReconnectState(null);
+      setConnectingFrom(null);
+      setConnectionDragPoint(null);
+      return;
+    }
     if (connectingFrom && connectingFrom !== id) {
       onConnect({ source: connectingFrom, target: id });
     }
     setConnectingFrom(null);
+    setConnectionDragPoint(null);
   };
 
   const handleComponentClick = (comp: PlacedComponentType) => {
@@ -1072,6 +1229,7 @@ const Canvas = ({
           logJson(`[Canvas] Sending position update to backend for instanceId ${instanceId}:`, { position });
           await updateComponentInstance(instanceId, { position });
           logJson(`[Canvas] ✓ Position update SUCCESS for ${id} (instanceId: ${instanceId})`);
+          onAutoSave?.(new Date().toISOString());
         } catch (err) {
           logJson(`[Canvas] ✗ Position update FAILED for ${id}:`, err);
         }
@@ -1079,7 +1237,7 @@ const Canvas = ({
     } else {
       logJson(`[Canvas] No instanceId found (instanceId=${comp?.instanceId}, type=${typeof comp?.instanceId}), skipping backend update`);
     }
-  }, [components]);
+  }, [components, onAutoSave]);
 
   const resolveNonOverlappingPosition = useCallback(
     (id: string, position: { x: number; y: number }, current: PlacedComponentType[]) => {
@@ -1424,6 +1582,32 @@ const Canvas = ({
     setSelectedConnection(null);
   };
 
+  const applyInlineConnectionUpdate = useCallback(
+    (conn: ConnectionType, nextQuantity: string, nextUnit: string) => {
+      const parsed = parseNumeric(nextQuantity);
+      const quantity = Number.isFinite(parsed as number) ? (parsed as number) : 0;
+      const unit = nextUnit?.trim() || "unit";
+      const nextData = {
+        ...(conn.data || {}),
+        quantity,
+        unit,
+      };
+      setConnections((prev) => {
+        const next = prev.map((c) =>
+          c.id === conn.id ? { ...c, data: nextData } : c
+        );
+        void persistConnectionsForComponent(conn.from, next);
+        return next;
+      });
+      setConnectionEdits((prev) => ({
+        ...prev,
+        [conn.id]: { quantity: String(quantity), unit },
+      }));
+      setActiveConnectionEditorId(null);
+    },
+    [persistConnectionsForComponent, setConnections]
+  );
+
   const handleAddNewComponent = () => {
     if (!newComponent.name || !newComponent.type || !newComponent.category) return;
 
@@ -1504,6 +1688,7 @@ const Canvas = ({
           return;
         }
 
+        onAutoSave?.(new Date().toISOString());
         toast.success(`${comp.name} persisted (instance id ${created.id})`);
       } catch (err) {
         console.warn("Failed to persist manual component:", err);
@@ -1552,7 +1737,13 @@ const Canvas = ({
           const response = await deleteComponentInstance(instanceId);
           logJson(`[Canvas] ✓ Delete SUCCESS for instanceId ${instanceId}:`, response);
           toast.success(`${comp?.name ?? "Component"} deleted from database`);
+          onAutoSave?.(new Date().toISOString());
         } catch (err) {
+          const message = err instanceof Error ? err.message : "";
+          if (message.includes("Resource not found")) {
+            logJson(`[Canvas] Instance ${instanceId} already removed on server.`);
+            return;
+          }
           logJson(`[Canvas] ✗ Delete FAILED for instanceId ${instanceId}:`, err);
           toast.error("Failed to delete component from database");
         }
@@ -1632,6 +1823,133 @@ const Canvas = ({
       : { fromSide: "top", toSide: "bottom" };
   };
 
+  const getEquipmentPortPoint = (
+    component: PlacedComponentType,
+    side: "left" | "right",
+    index: number,
+    total: number
+  ) => {
+    const x = toNumber(component.position?.x);
+    const y = toNumber(component.position?.y);
+    const bounds = getComponentBounds(component.type);
+    const left = x + bounds.offsetX + canvasOffset.x;
+    const top = y + bounds.offsetY + canvasOffset.y;
+    const right = left + bounds.width;
+    const bottom = top + bounds.height;
+    const offset = 12;
+    const innerTop = top + offset;
+    const innerBottom = bottom - offset;
+    const count = Math.max(total, 1);
+    const step = count === 1 ? 0 : (innerBottom - innerTop) / (count - 1);
+    const yPos = count === 1 ? (innerTop + innerBottom) / 2 : innerTop + step * index;
+    const xPos = side === "left" ? left - 4 : right + 4;
+    return { x: xPos, y: yPos };
+  };
+
+  const connectionRenderItems = useMemo(() => {
+    const items: Array<{
+      conn: ConnectionType;
+      from: { x: number; y: number };
+      to: { x: number; y: number };
+      fromSide: PortSide;
+      toSide: PortSide;
+      isGateCarrierFlow: boolean;
+      isElectric: boolean;
+      shouldDash: boolean;
+      strokeColor?: string;
+      label?: string;
+      labelX: number;
+      labelY: number;
+    }> = [];
+
+    connections.forEach((conn) => {
+      const fromComp = components.find((c) => c.id === conn.from);
+      const toComp = components.find((c) => c.id === conn.to);
+      if (!fromComp || !toComp) return;
+
+      let { fromSide, toSide } = getConnectionSides(fromComp, toComp);
+      let from = getPortPoint(fromComp, fromSide);
+      let to = getPortPoint(toComp, toSide);
+
+      if (fromComp.type === "equipment") {
+        const assignment = equipmentPortAssignments.get(fromComp.id);
+        if (assignment?.outputPorts.length) {
+          fromSide = "right";
+          const portIndex = assignment.outputByConn.get(String(conn.id));
+          if (portIndex !== undefined) {
+            from = getEquipmentPortPoint(
+              fromComp,
+              "right",
+              portIndex,
+              assignment.outputPorts.length
+            );
+          }
+        }
+      }
+
+      if (toComp.type === "equipment") {
+        const assignment = equipmentPortAssignments.get(toComp.id);
+        if (assignment?.inputPorts.length) {
+          toSide = "left";
+          const portIndex = assignment.inputByConn.get(String(conn.id));
+          if (portIndex !== undefined) {
+            to = getEquipmentPortPoint(
+              toComp,
+              "left",
+              portIndex,
+              assignment.inputPorts.length
+            );
+          }
+        }
+      }
+
+      const dx = to.x - from.x;
+      const dy = to.y - from.y;
+      const distance = Math.max(Math.hypot(dx, dy), 1);
+      const normalX = -dy / distance;
+      const normalY = dx / distance;
+      const labelT = 0.78;
+      const labelOffset = 12;
+      const labelX = from.x + dx * labelT + normalX * labelOffset;
+      const labelY = from.y + dy * labelT + normalY * labelOffset;
+
+      const isGateConnection = fromComp.type === "gate" || toComp.type === "gate";
+      const isGateCarrierFlow =
+        (fromComp.type === "gate" && toComp.type === "carrier") ||
+        (fromComp.type === "carrier" && toComp.type === "gate");
+      const isElectric = connectionDashed.get(conn.id) ?? false;
+      const shouldDash = isElectric || isGateConnection;
+      const baseColor = connectionColors.get(conn.id);
+      const strokeColor = isElectric && baseColor ? lightenHex(baseColor, 0.35) : baseColor;
+
+      items.push({
+        conn,
+        from,
+        to,
+        fromSide,
+        toSide,
+        isGateCarrierFlow,
+        isElectric,
+        shouldDash,
+        strokeColor,
+        label: connectionLabels.get(conn.id),
+        labelX,
+        labelY,
+      });
+    });
+
+    return items;
+  }, [
+    components,
+    connections,
+    connectionColors,
+    connectionDashed,
+    connectionLabels,
+    equipmentPortAssignments,
+  ]);
+
+  // Create (or reuse) a carrier node between two endpoints and persist its connections.
+  // This enforces the "single carrier per source + type" rule.
   const createCarrierBetween = useCallback(
     (
       fromId: string,
@@ -1779,111 +2097,19 @@ const Canvas = ({
     [ensureCarrierInstance, persistConnectionsForComponent, setComponents, setConnections]
   );
 
-  const connectionLabels = useMemo(() => {
-    const baseById = new Map<string, { quantity: number | null; unit: string }>();
-    const getConnValues = (conn: ConnectionType) => {
-      const data = conn.data || {};
-      const quantity =
-        parseQuantity((data as any).quantity) ??
-        parseQuantity((data as any).energyAmount) ??
-        parseQuantity((data as any).amount) ??
-        parseQuantity((data as any).value);
-      const unit =
-        normalizeUnit((data as any).unit) ||
-        normalizeUnit((data as any).units) ||
-        normalizeUnit((data as any).energyUnit);
-      return { quantity, unit };
-    };
-
-    connections.forEach((conn) => {
-      baseById.set(conn.id, getConnValues(conn));
-    });
-
-    const derivedById = new Map<string, { quantity: number; unit: string }>();
-
-    const carriers = components.filter((comp) => comp.type === "carrier");
-    carriers.forEach((carrier) => {
-      const incoming = connections.filter((conn) => conn.to === carrier.id);
-      const outgoing = connections.filter((conn) => conn.from === carrier.id);
-      if (!incoming.length && !outgoing.length) return;
-
-      let totalIn = 0;
-      let hasIn = false;
-      let unitHint = "";
-
-      incoming.forEach((conn) => {
-        const base = baseById.get(conn.id);
-        if (!base) return;
-        if (Number.isFinite(base.quantity ?? NaN)) {
-          totalIn += base.quantity as number;
-          hasIn = true;
-        }
-        if (!unitHint && base.unit) unitHint = base.unit;
-      });
-
-      let knownOutTotal = 0;
-      const missingOutputs: ConnectionType[] = [];
-
-      outgoing.forEach((conn) => {
-        const base = baseById.get(conn.id);
-        if (!base) return;
-        if (Number.isFinite(base.quantity ?? NaN)) {
-          knownOutTotal += base.quantity as number;
-        } else {
-          missingOutputs.push(conn);
-        }
-        if (!unitHint && base.unit) unitHint = base.unit;
-      });
-
-      if (hasIn && missingOutputs.length > 0) {
-        const remainder = Math.max(totalIn - knownOutTotal, 0);
-        const per = remainder / missingOutputs.length;
-        missingOutputs.forEach((conn) => {
-          const base = baseById.get(conn.id);
-          const unit = base?.unit || unitHint;
-          derivedById.set(conn.id, { quantity: per, unit });
-        });
-      }
-
-      if (unitHint) {
-        outgoing.forEach((conn) => {
-          const base = baseById.get(conn.id);
-          if (!base) return;
-          if (!base.unit && Number.isFinite(base.quantity ?? NaN)) {
-            derivedById.set(conn.id, { quantity: base.quantity as number, unit: unitHint });
-          }
-        });
-        incoming.forEach((conn) => {
-          const base = baseById.get(conn.id);
-          if (!base) return;
-          if (!base.unit && Number.isFinite(base.quantity ?? NaN)) {
-            derivedById.set(conn.id, { quantity: base.quantity as number, unit: unitHint });
-          }
-        });
-      }
-    });
-
-    const labelMap = new Map<string, string>();
-    connections.forEach((conn) => {
-      const derived = derivedById.get(conn.id);
-      const base = baseById.get(conn.id);
-      const quantity = derived?.quantity ?? base?.quantity;
-      const unit = derived?.unit ?? base?.unit ?? "";
-      const hasQuantity = Number.isFinite(quantity ?? NaN);
-      const displayQuantity = hasQuantity ? (quantity as number) : 0;
-      const displayUnit = unit || (!hasQuantity ? "unit" : "");
-      const label = `${formatQuantity(displayQuantity)}${displayUnit ? ` ${displayUnit}` : ""}`;
-      labelMap.set(conn.id, label);
-    });
-
-    return labelMap;
-  }, [connections, components]);
-
+  const exportDateLine = useMemo(() => {
+    if (!exportMeta?.length) return null;
+    return exportMeta.find((line) => line.toLowerCase().startsWith("exported:")) ?? exportMeta[0];
+  }, [exportMeta]);
+  const exportDetailLines = useMemo(() => {
+    if (!exportMeta?.length) return [];
+    return exportMeta.filter((line) => line !== exportDateLine);
+  }, [exportMeta, exportDateLine]);
 
   return (
     <div className="h-full min-h-0 w-full flex flex-col bg-canvas-bg relative">
       {/* Zoom controls */}
-      <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
+      <div className="canvas-controls absolute top-4 right-4 flex items-center gap-2 z-10">
         <div className="flex items-center gap-2 rounded-md border border-slate-200 bg-white/95 p-1 shadow-sm">
           <Button
             variant={isPanMode ? "secondary" : "outline"}
@@ -1987,7 +2213,7 @@ const Canvas = ({
         {topRightAddon}
       </div>
 
-      <div className="absolute bottom-4 right-4 z-10">
+      <div className="absolute bottom-4 right-4 z-20">
         <div className="rounded-md border border-slate-200 bg-white/95 text-xs text-slate-700 shadow-sm">
           <button
             type="button"
@@ -2000,42 +2226,26 @@ const Canvas = ({
             </span>
           </button>
           {legendOpen && (
-            <div className="px-3 pb-3 pt-1">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="h-2.5 w-2.5 rounded-full bg-blue-500" />
-                  Equipment
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="h-2.5 w-2.5 rounded-full bg-green-500" />
-                  Carrier
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="h-2.5 w-2.5 rounded-full bg-purple-500" />
-                  Gate
-                </div>
+            <div className="px-3 pb-3 pt-1 max-h-40 w-44 overflow-y-auto">
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                Carrier Flows
               </div>
-              <div className="mt-3 border-t border-slate-200 pt-2">
-                <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                  Carrier Flows
-                </div>
-                <div className="mt-2 space-y-1">
-                  {carrierLegendItems.length ? (
-                    carrierLegendItems.map((item) => (
-                      <div key={item.key} className="flex items-center gap-2">
-                        <span
-                          className="h-2.5 w-2.5 rounded-full"
-                          style={{ backgroundColor: item.color }}
-                        />
-                        <span className="max-w-[160px] truncate" title={item.label}>
-                          {item.label}
-                        </span>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-slate-400">No carriers yet</div>
-                  )}
-                </div>
+              <div className="mt-2 space-y-1">
+                {carrierLegendItems.length ? (
+                  carrierLegendItems.map((item) => (
+                    <div key={item.name} className="flex items-center gap-2">
+                      <span
+                        className="h-2.5 w-2.5 rounded-full"
+                        style={{ backgroundColor: item.color }}
+                      />
+                      <span className="max-w-[160px] truncate" title={item.name}>
+                        {item.name}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-slate-400">No carriers yet</div>
+                )}
               </div>
             </div>
           )}
@@ -2060,16 +2270,198 @@ const Canvas = ({
           className="relative"
           style={{ width: canvasSize.width * zoom, height: canvasSize.height * zoom }}
         >
-          <div
-            className="relative"
-            data-plant-builder-canvas={exportId}
-            style={{
-              width: canvasSize.width,
-              height: canvasSize.height,
-              transform: `scale(${zoom})`,
-              transformOrigin: "0 0",
-            }}
-          >
+          <div className="absolute inset-0 z-20 pointer-events-none">
+            {connectionRenderItems.map((item) => {
+              const editState =
+                connectionEdits[item.conn.id] ?? (() => {
+                  const { quantity, unit } = getConnectionQuantityUnit(item.conn);
+                  return {
+                    quantity:
+                      typeof quantity === "number" && Number.isFinite(quantity)
+                        ? String(quantity)
+                        : "0",
+                    unit: unit?.trim() || "unit",
+                  };
+                })();
+
+              const unitOptions = [
+                editState.unit,
+                ...STREAM_UNIT_OPTIONS.filter((opt) => opt !== editState.unit),
+              ].filter(Boolean);
+
+              return (
+                <div
+                  key={`editor-${item.conn.id}`}
+                  className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-auto"
+                  style={{ left: item.labelX * zoom, top: item.labelY * zoom }}
+                >
+                  {activeConnectionEditorId === item.conn.id ? (
+                    <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-white/95 px-2 py-1 shadow-sm">
+                      <input
+                        className="h-6 w-16 rounded-md border border-slate-200 bg-white px-2 text-[11px] font-semibold text-slate-800 outline-none focus:border-blue-500"
+                        value={editState.quantity}
+                        onChange={(e) =>
+                          setConnectionEdits((prev) => ({
+                            ...prev,
+                            [item.conn.id]: { ...editState, quantity: e.target.value },
+                          }))
+                        }
+                      />
+                      <select
+                        className="h-6 rounded-md border border-slate-200 bg-white px-2 text-[11px] font-semibold text-slate-700 outline-none focus:border-blue-500"
+                        value={editState.unit}
+                        onChange={(e) =>
+                          setConnectionEdits((prev) => ({
+                            ...prev,
+                            [item.conn.id]: { ...editState, unit: e.target.value },
+                          }))
+                        }
+                      >
+                        {unitOptions.map((unit) => (
+                          <option key={unit} value={unit}>
+                            {unit}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                        title="Apply"
+                        onClick={() =>
+                          applyInlineConnectionUpdate(
+                            item.conn,
+                            editState.quantity,
+                            editState.unit
+                          )
+                        }
+                      >
+                        <Check className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-rose-200 text-rose-600 hover:bg-rose-50"
+                        title="Delete connection"
+                        onClick={() => handleDeleteConnection(item.conn.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-slate-200 text-slate-500 hover:bg-slate-50"
+                        title="Close editor"
+                        onClick={() => setActiveConnectionEditorId(null)}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      className="rounded-full border border-slate-200 bg-white/95 px-2 py-0.5 text-[10px] font-semibold text-slate-700 shadow-sm hover:border-blue-400 hover:text-blue-700"
+                      onClick={() => setActiveConnectionEditorId(item.conn.id)}
+                    >
+                      {editState.quantity} {editState.unit}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+            {selectedConnection &&
+              connectionRenderItems
+                .filter((item) => item.conn.id === selectedConnection.id)
+                .map((item) => (
+                  <div key={`reconnect-${item.conn.id}`}>
+                    <button
+                      type="button"
+                      className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-auto h-6 w-6 rounded-full border border-blue-200 bg-white text-blue-600 shadow-sm hover:bg-blue-50"
+                      style={{ left: item.from.x * zoom, top: item.from.y * zoom }}
+                      title="Reconnect from source"
+                      onMouseDown={(e) => {
+                        e.stopPropagation();
+                        setReconnectState({
+                          connectionId: item.conn.id,
+                          end: "from",
+                          startId: item.conn.to,
+                          startSide: item.toSide,
+                          color: item.strokeColor,
+                        });
+                      }}
+                    >
+                      <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M10 19l-7-7 7-7" />
+                        <path d="M3 12h18" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-auto h-6 w-6 rounded-full border border-blue-200 bg-white text-blue-600 shadow-sm hover:bg-blue-50"
+                      style={{ left: item.to.x * zoom, top: item.to.y * zoom }}
+                      title="Reconnect to target"
+                      onMouseDown={(e) => {
+                        e.stopPropagation();
+                        setReconnectState({
+                          connectionId: item.conn.id,
+                          end: "to",
+                          startId: item.conn.from,
+                          startSide: item.fromSide,
+                          color: item.strokeColor,
+                        });
+                      }}
+                    >
+                      <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M14 5l7 7-7 7" />
+                        <path d="M3 12h18" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+          </div>
+        <div
+          className="relative"
+          data-plant-builder-canvas={exportId}
+          style={{
+            width: canvasSize.width,
+            height: canvasSize.height,
+            transform: `scale(${zoom})`,
+            transformOrigin: "0 0",
+          }}
+        >
+          {exportTitle && (
+            <div className="plant-export-overlay pointer-events-none">
+              <div className="plant-export-header">
+                <div className="plant-export-bar">
+                  <div className="plant-export-date">{exportDateLine ?? ""}</div>
+                  <div className="plant-export-title">{exportTitle}</div>
+                  <div className="plant-export-spacer" />
+                </div>
+                {exportDetailLines.length ? (
+                  <div className="plant-export-meta">
+                    {exportDetailLines.map((line) => (
+                      <div key={line}>{line}</div>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+              <div className="plant-export-legend">
+                <div className="legend-title">Legend</div>
+                <div className="legend-subtitle">Carrier Flows</div>
+                <div className="legend-section">
+                  {carrierLegendItemsAll.length ? (
+                    carrierLegendItemsAll.map((item) => (
+                      <div key={item.name} className="legend-row">
+                        <span className="legend-dot" style={{ backgroundColor: item.color }} />
+                        <span className="legend-label" title={item.name}>
+                          {item.name}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="legend-empty">No carriers yet</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
           {/* Column shading */}
           <div className="absolute inset-0 pointer-events-none">
             {layoutOrientation === "horizontal" ? (
@@ -2146,10 +2538,12 @@ const Canvas = ({
                 const bottom = top + systemFrame.height;
                 const corner = 18;
                 const tick = 10;
-                const headerHeight = 24;
-                const headerY = Math.max(8, top - headerHeight - 8);
+                const headerHeight = 22;
+                const headerY = top + 10;
                 const headerRadius = 12;
-                const headerPadding = 10;
+                const headerPadding = 12;
+                const footerLabelHeight = 22;
+                const footerPadding = 10;
                 return (
                   <g>
                     <rect
@@ -2196,9 +2590,9 @@ const Canvas = ({
                     </g>
                     <g>
                       <rect
-                        x={left}
+                        x={left + systemFrame.width / 2 - 120}
                         y={headerY}
-                        width={systemFrame.width}
+                        width={240}
                         height={headerHeight}
                         rx={headerRadius}
                         ry={headerRadius}
@@ -2207,65 +2601,118 @@ const Canvas = ({
                         strokeWidth={1}
                       />
                       <text
-                        x={left + headerPadding}
-                        y={headerY + 16}
-                        fontSize={12}
-                        fontWeight={600}
-                        fill="hsl(var(--layer-gate) / 0.95)"
-                      >
-                        {INPUT_GATES_LABEL}
-                      </text>
-                      <text
                         x={left + systemFrame.width / 2}
-                        y={headerY + 16}
+                        y={headerY + 14}
                         textAnchor="middle"
-                        fontSize={12}
-                        fontWeight={600}
+                        fontSize={16}
+                        fontWeight={700}
                         fill="rgb(51, 65, 85)"
                       >
                         {SYSTEM_FRAME_LABEL}
                       </text>
+                    </g>
+                    <g>
+                      <rect
+                        x={left + footerPadding}
+                        y={bottom - footerLabelHeight - footerPadding}
+                        width={110}
+                        height={footerLabelHeight}
+                        rx={8}
+                        ry={8}
+                        fill="rgba(219, 234, 254, 0.9)"
+                        stroke="rgba(59, 130, 246, 0.45)"
+                        strokeWidth={1}
+                      />
                       <text
-                        x={left + systemFrame.width - headerPadding}
-                        y={headerY + 16}
-                        textAnchor="end"
-                        fontSize={12}
-                        fontWeight={600}
-                        fill="hsl(var(--layer-gate) / 0.95)"
+                        x={left + footerPadding + 55}
+                        y={bottom - footerPadding - 6}
+                        textAnchor="middle"
+                        fontSize={13}
+                        fontWeight={700}
+                        fill="rgba(30, 64, 175, 0.9)"
                       >
-                        {OUTPUT_GATES_LABEL}
+                        &larr; UPSTREAM
+                      </text>
+                    </g>
+                    <g>
+                      <rect
+                        x={right - footerPadding - 120}
+                        y={bottom - footerLabelHeight - footerPadding}
+                        width={120}
+                        height={footerLabelHeight}
+                        rx={8}
+                        ry={8}
+                        fill="rgba(254, 243, 199, 0.9)"
+                        stroke="rgba(245, 158, 11, 0.5)"
+                        strokeWidth={1}
+                      />
+                      <text
+                        x={right - footerPadding - 60}
+                        y={bottom - footerPadding - 6}
+                        textAnchor="middle"
+                        fontSize={13}
+                        fontWeight={700}
+                        fill="rgba(180, 83, 9, 0.9)"
+                      >
+                        DOWNSTREAM &rarr;
                       </text>
                     </g>
                   </g>
                 );
               })()}
-            {connections.map((conn) => {
-              const fromComp = components.find((c) => c.id === conn.from);
-              const toComp = components.find((c) => c.id === conn.to);
-              if (!fromComp || !toComp) return null;
+            {connectionRenderItems.map((item) => (
+              <ConnectionArrow
+                key={item.conn.id}
+                id={String(item.conn.id)}
+                from={item.from}
+                to={item.to}
+                fromSide={item.fromSide}
+                toSide={item.toSide}
+                style={connectionStyle}
+                isInvalid={invalidConnectionIds?.has(String(item.conn.id)) ?? false}
+                isDashed={item.shouldDash}
+                isSelected={selectedConnection?.id === item.conn.id}
+                label={undefined}
+                errorMessage={invalidConnectionMessages?.get(String(item.conn.id))}
+                showFlow={item.isGateCarrierFlow}
+                color={item.strokeColor}
+                onClick={() => setSelectedConnection(item.conn)}
+              />
+            ))}
 
-              const { fromSide, toSide } = getConnectionSides(fromComp, toComp);
-              const from = getPortPoint(fromComp, fromSide);
-              const to = getPortPoint(toComp, toSide);
-
+            {(connectingFrom || reconnectState) && connectionDragPoint && (() => {
+              const dragSourceId = reconnectState?.startId || connectingFrom;
+              if (!dragSourceId) return null;
+              const fromComp = components.find((c) => c.id === dragSourceId);
+              if (!fromComp) return null;
+              const startSide = reconnectState?.startSide || "right";
+              const start = getPortPoint(fromComp, startSide);
+              const end = {
+                x: connectionDragPoint.x + canvasOffset.x,
+                y: connectionDragPoint.y + canvasOffset.y,
+              };
+              const previewColor =
+                reconnectState?.color ||
+                (fromComp.type === "carrier"
+                  ? carrierColorMap.get(getCarrierTypeKey(fromComp)) || "#64748B"
+                  : "#94A3B8");
+              const toSide = end.x >= start.x ? "left" : "right";
               return (
                 <ConnectionArrow
-                  key={conn.id}
-                  id={String(conn.id)}
-                  from={from}
-                  to={to}
-                  fromSide={fromSide}
-                  toSide={toSide}
+                  key="preview-connection"
+                  from={start}
+                  to={end}
+                  fromSide={startSide}
+                  toSide={toSide as PortSide}
                   style={connectionStyle}
-                  isInvalid={invalidConnectionIds?.has(String(conn.id)) ?? false}
-                  label={connectionLabels.get(conn.id)}
-                  errorMessage={invalidConnectionMessages?.get(String(conn.id))}
-                  showFlow
-                  color={connectionColors.get(conn.id)}
-                  onClick={() => setSelectedConnection(conn)}
+                  isDashed={false}
+                  label={undefined}
+                  showFlow={false}
+                  color={previewColor}
+                  onClick={() => {}}
                 />
               );
-            })}
+            })()}
           </svg>
 
           {/* Components */}
@@ -2295,6 +2742,93 @@ const Canvas = ({
                 }
                 const carrierKey = comp.type === "carrier" ? getCarrierTypeKey(comp) : "";
                 const carrierAccent = carrierKey ? carrierColorMap.get(carrierKey) : undefined;
+                const portPayload = typeof comp.componentDefinitionId === "number"
+                  ? portsByDefinitionId?.[comp.componentDefinitionId]
+                  : undefined;
+                const allPorts: PortDto[] = portPayload?.ports ?? [];
+
+                const incomingCarriers = connections
+                  .filter((conn) => conn.to === comp.id)
+                  .map((conn) => carrierById.get(conn.from))
+                  .filter(Boolean)
+                  .map((carrier) => ({
+                    id: carrier!.id,
+                    definitionId: carrier!.componentDefinitionId,
+                    name: carrier!.name,
+                    key: getCarrierTypeKey(carrier!),
+                  }));
+
+                const outgoingCarriers = connections
+                  .filter((conn) => conn.from === comp.id)
+                  .map((conn) => carrierById.get(conn.to))
+                  .filter(Boolean)
+                  .map((carrier) => ({
+                    id: carrier!.id,
+                    definitionId: carrier!.componentDefinitionId,
+                    name: carrier!.name,
+                    key: getCarrierTypeKey(carrier!),
+                  }));
+
+                const takeMatch = (
+                  pool: Array<{ id: string; definitionId?: number; name: string; key: string }>,
+                  allowed: Array<{ id: number; name: string }> | undefined
+                ) => {
+                  if (!pool.length) return undefined;
+                  if (!allowed?.length) return pool.shift();
+                  const allowedIds = new Set(allowed.map((c) => c.id));
+                  const allowedKeys = new Set(allowed.map((c) => c.name.toLowerCase()));
+                  const allowedComponentIds = new Set(
+                    allowed
+                      .map((c: any) => (c.component_id as string | undefined)?.toLowerCase())
+                      .filter(Boolean) as string[]
+                  );
+                  const allowedNormalized = new Set(
+                    [...allowedKeys, ...allowedComponentIds].map(normalizeKey)
+                  );
+                  const index = pool.findIndex((carrier) => {
+                    if (carrier.definitionId && allowedIds.has(carrier.definitionId)) return true;
+                    if (carrier.key) {
+                      const key = carrier.key.toLowerCase();
+                      if (allowedKeys.has(key) || allowedComponentIds.has(key)) return true;
+                      if (allowedNormalized.has(normalizeKey(key))) return true;
+                    }
+                    const name = carrier.name.toLowerCase();
+                    if (allowedKeys.has(name) || allowedComponentIds.has(name)) return true;
+                    return allowedNormalized.has(normalizeKey(name));
+                  });
+                  if (index === -1) return undefined;
+                  return pool.splice(index, 1)[0];
+                };
+
+                const buildPortView = (port: PortDto, pool: Array<{ id: string; definitionId?: number; name: string; key: string }>) => {
+                  const allowed = (port.carriers || []).filter(Boolean) as Array<{ id: number; name: string }>;
+                  const connected = takeMatch(pool, allowed);
+                  const allowedNames = allowed.map((c) => c.name).filter(Boolean);
+                  const primaryColorSource = connected?.key || allowedNames[0] || "";
+                  const color = primaryColorSource
+                    ? carrierColorMap.get(primaryColorSource.toLowerCase())
+                    : undefined;
+                  const label = connected
+                    ? `Connected: ${connected.name}`
+                    : allowedNames.length
+                      ? `Allowed: ${allowedNames.join(", ")}`
+                      : port.port_label
+                        ? `Port: ${port.port_label}`
+                        : "Port";
+                  return {
+                    status: connected ? "connected" as const : "missing" as const,
+                    label,
+                    color,
+                    requirement: port.requirement,
+                  };
+                };
+
+                const inputPorts = allPorts
+                  .filter((port) => port.direction === "IN")
+                  .map((port) => buildPortView(port, incomingCarriers));
+                const outputPorts = allPorts
+                  .filter((port) => port.direction === "OUT")
+                  .map((port) => buildPortView(port, outgoingCarriers));
                 const renderComp: PlacedComponentType = {
                   ...comp,
                   position: {
@@ -2315,13 +2849,15 @@ const Canvas = ({
                     onMoveEnd={handleComponentMoveEnd}
                     onConnectStart={handleConnectStart}
                     onConnectEnd={handleConnectEnd}
-                    isConnectingActive={Boolean(connectingFrom)}
-                    isConnecting={connectingFrom === comp.id}
+                    isConnectingActive={Boolean(connectingFrom || reconnectState)}
+                    isConnecting={connectingFrom === comp.id || reconnectState?.startId === comp.id}
                     onDelete={handleDeleteComponent}
                     validationErrors={validationErrorsByComponent?.[String(comp.id)] ?? []}
                     isHighlighted={highlightedComponentId === comp.id}
                     gateDirection={gateDirection}
                     accentColor={carrierAccent}
+                    inputPorts={inputPorts}
+                    outputPorts={outputPorts}
                   />
                 );
               })}
