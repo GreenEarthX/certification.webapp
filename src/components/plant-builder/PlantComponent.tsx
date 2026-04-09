@@ -3,12 +3,8 @@ import { useState, useRef, useEffect } from "react";
 import type { RefObject } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AlertTriangle, Building2, Zap, ArrowRightLeft, X } from "lucide-react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import {
   Dialog,
   DialogContent,
@@ -44,6 +40,18 @@ interface PlantComponentProps {
   isHighlighted?: boolean;
   gateDirection?: "input" | "output" | null;
   accentColor?: string;
+  inputPorts?: Array<{
+    status: "connected" | "missing";
+    label?: string;
+    color?: string;
+    requirement?: "REQUIRED" | "OPTIONAL";
+  }>;
+  outputPorts?: Array<{
+    status: "connected" | "missing";
+    label?: string;
+    color?: string;
+    requirement?: "REQUIRED" | "OPTIONAL";
+  }>;
 }
 
 /* ─────────────────────── REAL TAILWIND COLORS ─────────────────────── */
@@ -167,6 +175,8 @@ const PlantComponent = ({
   isHighlighted = false,
   gateDirection: gateDirectionProp = null,
   accentColor,
+  inputPorts = [],
+  outputPorts = [],
 }: PlantComponentProps) => {
   const [position, setPosition] = useState(component.position);
   const [showValidationModal, setShowValidationModal] = useState(false);
@@ -217,6 +227,57 @@ const PlantComponent = ({
 
   const showLeftPort = !(isGate && gateDirection === "input");
   const showRightPort = !(isGate && gateDirection === "output");
+  const showPortRail = component.type === "equipment" && (inputPorts.length > 0 || outputPorts.length > 0);
+  const renderPortRail = (
+    side: "left" | "right",
+    ports: Array<{ status: "connected" | "missing"; label?: string; color?: string; requirement?: "REQUIRED" | "OPTIONAL" }>
+  ) => {
+    if (!ports.length) return null;
+    return (
+      <div
+        className={`absolute ${side === "left" ? "-left-3" : "-right-3"} top-3 bottom-3 flex flex-col justify-between`}
+      >
+        <TooltipProvider delayDuration={120}>
+          {ports.map((port, idx) => {
+            const filled = port.status === "connected";
+            const color = port.color || "#CBD5E1";
+            const isOptional = port.requirement === "OPTIONAL";
+            const label = port.label ?? "Port";
+            return (
+              <Tooltip key={`${side}-port-${idx}`}>
+                <TooltipTrigger asChild>
+                  <span
+                    className={`h-2.5 w-4 rounded-sm border ${filled ? "shadow-sm" : ""} ${isOptional ? "border-dashed opacity-70" : ""}`}
+                    style={{
+                      backgroundColor: filled ? color : "#ffffff",
+                      borderColor: color,
+                    }}
+                  />
+                </TooltipTrigger>
+                <TooltipContent
+                  side={side === "left" ? "right" : "left"}
+                  align="center"
+                  sideOffset={8}
+                  className="w-56 max-w-56 rounded-md border border-slate-200 bg-white p-2 shadow-lg"
+                >
+                  <div className="max-h-32 space-y-1 overflow-y-auto text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="h-2.5 w-2.5 rounded-sm border" style={{ borderColor: color, backgroundColor: filled ? color : "#ffffff" }} />
+                      <span className="font-semibold text-slate-900">{label}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px] text-slate-600">
+                      <span>{isOptional ? "Optional" : "Required"}</span>
+                      <span className={filled ? "text-emerald-600" : "text-rose-600"}>{filled ? "Connected" : "Missing"}</span>
+                    </div>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            );
+          })}
+        </TooltipProvider>
+      </div>
+    );
+  };
 
   const typeIcon = getTypeIcon(component.type, gateAccent || carrierAccent ? "" : colors.text);
 
@@ -299,6 +360,11 @@ const PlantComponent = ({
       className="absolute cursor-move select-none"
       style={{ left: position.x, top: position.y }}
       onMouseDown={handleMouseDown}
+      onMouseUp={(e) => {
+        if (!isConnectingActive) return;
+        e.stopPropagation();
+        onConnectEnd(component.id);
+      }}
       onDoubleClick={() => {
         if (ignoreClickRef.current) {
           ignoreClickRef.current = false;
@@ -439,6 +505,8 @@ const PlantComponent = ({
         <CardContent
           className={`p-2 flex flex-col items-center justify-center text-center ${contentClasses} max-w-full`}
         >
+          {showPortRail && renderPortRail("left", inputPorts)}
+          {showPortRail && renderPortRail("right", outputPorts)}
           <div
             className="opacity-80"
             style={
@@ -492,14 +560,32 @@ const PlantComponent = ({
 
           {/* Input */}
           {showLeftPort && (
-          <Tooltip>
-            <TooltipTrigger asChild>
+            <>
+              <button
+                type="button"
+                className="absolute -left-8 top-1/2 -translate-y-1/2 rounded-full border border-slate-200 bg-white p-1 text-slate-500 shadow-sm opacity-0 transition-opacity group-hover:opacity-100"
+                onMouseUp={(e) => handleNodeClick(e, false)}
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                }}
+                title="Connect input"
+              >
+                <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M10 19l-7-7 7-7" />
+                  <path d="M3 12h18" />
+                </svg>
+              </button>
               <svg
                 className={`${nodeCls("left")} cursor-pointer z-10`}
                 width="24"
                 height="24"
                 viewBox="0 0 24 24"
-                onClick={(e) => handleNodeClick(e, false)}
+                onMouseUp={(e) => handleNodeClick(e, false)}
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                }}
               >
                 <circle
                   cx="12"
@@ -522,23 +608,37 @@ const PlantComponent = ({
                   }
                 />
               </svg>
-            </TooltipTrigger>
-            <TooltipContent side={isGate ? "top" : "left"}>
-              Click to connect input
-            </TooltipContent>
-          </Tooltip>
+            </>
           )}
 
           {/* Output */}
           {showRightPort && (
-          <Tooltip>
-            <TooltipTrigger asChild>
+            <>
+              <button
+                type="button"
+                className="absolute -right-8 top-1/2 -translate-y-1/2 rounded-full border border-slate-200 bg-white p-1 text-slate-500 shadow-sm opacity-0 transition-opacity group-hover:opacity-100"
+                onMouseDown={(e) => handleNodeClick(e, true)}
+                onMouseUp={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                }}
+                title="Connect output"
+              >
+                <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M14 5l7 7-7 7" />
+                  <path d="M3 12h18" />
+                </svg>
+              </button>
               <svg
                 className={`${nodeCls("right")} cursor-pointer z-10`}
                 width="24"
                 height="24"
                 viewBox="0 0 24 24"
-                onClick={(e) => handleNodeClick(e, true)}
+                onMouseDown={(e) => handleNodeClick(e, true)}
+                onMouseUp={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                }}
               >
                 <circle
                   cx="12"
@@ -561,11 +661,7 @@ const PlantComponent = ({
                   }
                 />
               </svg>
-            </TooltipTrigger>
-            <TooltipContent side={isGate ? "bottom" : "right"}>
-              Click to connect output
-            </TooltipContent>
-          </Tooltip>
+            </>
           )}
         </CardContent>
       </Card>

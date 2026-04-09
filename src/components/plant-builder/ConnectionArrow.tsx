@@ -12,6 +12,8 @@ type ConnectionArrowProps = {
   onClick: () => void;
   style?: "smooth" | "orthogonal" | "straight";
   isInvalid?: boolean;
+  isDashed?: boolean;
+  isSelected?: boolean;
   label?: string;
   errorMessage?: string;
   showFlow?: boolean;
@@ -27,6 +29,8 @@ const ConnectionArrow = ({
   onClick,
   style = "smooth",
   isInvalid = false,
+  isDashed = false,
+  isSelected = false,
   label,
   errorMessage,
   showFlow = false,
@@ -119,14 +123,17 @@ const ConnectionArrow = ({
       <path
         d={pathData}
         stroke={strokeColor}
-        strokeWidth="2.5"
-        strokeDasharray={isInvalid ? "6 4" : "8 10"}
+        strokeWidth={isSelected ? "3.5" : "2.5"}
+        strokeDasharray={isInvalid ? "6 4" : isDashed ? "8 8" : undefined}
         fill="none"
         markerEnd={`url(#${markerId})`}
         strokeLinecap="round"
         strokeLinejoin="round"
         className={showFlow ? "connection-flow" : undefined}
-        style={{ transition: "opacity 0.2s, d 0.2s ease" }}
+        style={{
+          transition: "opacity 0.2s, d 0.2s ease",
+          filter: isSelected ? `drop-shadow(0 0 6px ${strokeColor}80)` : undefined,
+        }}
       />
       <circle cx={startX} cy={startY} r="3" fill={strokeColor} opacity={0.9} />
 
