@@ -117,7 +117,7 @@ const ComponentLibrary = () => {
     if (portDetailsByDefinitionId[definitionId]) return;
     try {
       const payload = await fetchComponentPorts(definitionId);
-      const summary = payload.ports.reduce(
+      const summary = (payload ?? []).reduce(
         (acc, port) => {
           if (port.direction === "IN") {
             if (port.requirement === "REQUIRED") acc.inRequired += 1;
@@ -185,65 +185,6 @@ const ComponentLibrary = () => {
     };
   }, []);
 
-  useEffect(() => {
-    if (!library?.equipment?.length) return;
-    let isMounted = true;
-
-    const loadSummaries = async () => {
-      const pending = library.equipment
-        .map((comp) => comp.definitionId)
-        .filter((id): id is number => typeof id === "number")
-        .filter((id) => !(id in portSummaryByDefinitionId));
-
-      if (!pending.length) return;
-
-      try {
-        const results = await Promise.all(
-          pending.map(async (id) => {
-            const payload = await fetchComponentPorts(id);
-            const summary = payload.ports.reduce(
-              (acc, port) => {
-                if (port.direction === "IN") {
-                  if (port.requirement === "REQUIRED") acc.inRequired += 1;
-                  else acc.inOptional += 1;
-                } else {
-                  if (port.requirement === "REQUIRED") acc.outRequired += 1;
-                  else acc.outOptional += 1;
-                }
-                return acc;
-              },
-              { inRequired: 0, inOptional: 0, outRequired: 0, outOptional: 0 }
-            );
-            return { id, summary, payload };
-          })
-        );
-
-        if (!isMounted) return;
-        setPortSummaryByDefinitionId((prev) => {
-          const next = { ...prev };
-          results.forEach((result) => {
-            next[result.id] = result.summary;
-          });
-          return next;
-        });
-        setPortDetailsByDefinitionId((prev) => {
-          const next = { ...prev };
-          results.forEach((result) => {
-            next[result.id] = result.payload;
-          });
-          return next;
-        });
-      } catch (err) {
-        console.error("Failed to load equipment port summary:", err);
-      }
-    };
-
-    loadSummaries();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [library, portSummaryByDefinitionId]);
 
   const handleDragStart = (
     e: React.DragEvent<HTMLDivElement>,
@@ -325,7 +266,7 @@ const ComponentLibrary = () => {
                         </div>
                       );
                     }
-                    const ports = detail.ports.filter((p) => p.direction === direction);
+                    const ports = detail.filter((p) => p.direction === direction);
                     if (!ports.length) {
                       return (
                         <div className="rounded-md border border-slate-200 bg-white p-2 text-[11px] text-slate-500">

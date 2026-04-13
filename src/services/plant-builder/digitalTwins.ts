@@ -106,3 +106,60 @@ export async function validateDigitalTwinPortConnections(
     { method: "POST" }
   );
 }
+
+// ─── Stream Units ─────────────────────────────────────────────────────────────
+
+export type StreamUnitOption = {
+  allowed_unit: string;
+  factor_to_canonical: number | null;
+  offset_to_canonical: number | null;
+  requires_context: boolean;
+  notes: string | null;
+};
+
+export type StreamInfo = {
+  connection_id: string;
+  from: string;
+  to: string;
+  carrier: { instance_id: string; name: string; carrier_id: string } | null;
+  canonical_unit_family: string | null;
+  canonical_unit: string | null;
+  units: StreamUnitOption[];
+  current_quantity: number | null;
+  current_unit: string | null;
+};
+
+export type DigitalTwinStreamUnits = {
+  digital_twin_id: number;
+  streams: StreamInfo[];
+};
+
+export async function fetchDigitalTwinStreamUnits(
+  digitalTwinId: number
+): Promise<DigitalTwinStreamUnits> {
+  return apiFetch<DigitalTwinStreamUnits>(
+    `${DIGITAL_TWINS_PATH}/${digitalTwinId}/stream-units`
+  );
+}
+
+export async function updateDigitalTwinConnectionData(
+  digitalTwinId: number,
+  connectionId: string,
+  payload: { quantity: number; unit: string }
+): Promise<{ id: string; from: string; to: string; data: Record<string, any> }> {
+  return apiFetch(
+    `${DIGITAL_TWINS_PATH}/${digitalTwinId}/connections/${connectionId}`,
+    { method: "PATCH", body: JSON.stringify(payload) }
+  );
+}
+
+export async function convertDigitalTwinConnectionUnit(
+  digitalTwinId: number,
+  connectionId: string,
+  payload: { from_unit: string; to_unit: string; value: number }
+): Promise<{ converted_value: number; formula: string; [key: string]: any }> {
+  return apiFetch(
+    `${DIGITAL_TWINS_PATH}/${digitalTwinId}/connections/${connectionId}/convert`,
+    { method: "POST", body: JSON.stringify(payload) }
+  );
+}
