@@ -2818,7 +2818,9 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
                 </div>
               </div>
             ) : (
-              <div className="absolute inset-0 min-h-0">
+              <div className={`absolute top-0 right-0 bottom-0 min-h-0 transition-all duration-300 ease-in-out ${
+                showComponentLibrary ? "sm:left-[384px] left-0" : "left-0"
+              }`}>
                 <Canvas
                   components={components}
                   setComponents={setComponents}
