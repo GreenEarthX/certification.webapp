@@ -46,6 +46,11 @@ import {
   Connection as ConnectionType,
 } from "@/app/plant-operator/plant-builder/types";
 import type { DigitalTwinValidationError } from "@/services/plant-builder/digitalTwins";
+import {
+  fetchDigitalTwinStreamUnits,
+  updateDigitalTwinConnectionData,
+  convertDigitalTwinConnectionUnit,
+} from "@/services/plant-builder/digitalTwins";
 import { buildConnectionPayloadForComponent, StoredConnectionPayload } from "@/lib/plant-builder/connection-utils";
 import { toInstanceId } from "@/lib/plant-builder/ids";
 import { 
@@ -420,6 +425,9 @@ const Canvas = ({
   const [connectionEdits, setConnectionEdits] = useState<
     Record<string, { quantity: string; unit: string }>
   >({});
+  const [streamUnitsMap, setStreamUnitsMap] = useState<Map<string, string[]>>(new Map());
+  const [streamConnIdMap, setStreamConnIdMap] = useState<Map<string, string>>(new Map());
+  const [streamUnitsReady, setStreamUnitsReady] = useState(false);
   const [activeConnectionEditorId, setActiveConnectionEditorId] = useState<string | null>(null);
   const [connectionDragPoint, setConnectionDragPoint] = useState<{ x: number; y: number } | null>(null);
   const [reconnectState, setReconnectState] = useState<{
@@ -582,7 +590,7 @@ const Canvas = ({
     const names: string[] = [];
     if (!portsByDefinitionId) return names;
     Object.values(portsByDefinitionId).forEach((payload) => {
-      payload?.ports?.forEach((port) => {
+      payload?.forEach((port) => {
         port.carriers?.forEach((carrier) => {
           if (carrier?.name) names.push(carrier.name);
         });
@@ -677,8 +685,7 @@ const Canvas = ({
 
     components.forEach((comp) => {
       if (comp.type !== "equipment" || typeof comp.componentDefinitionId !== "number") return;
-      const payload = portsByDefinitionId?.[comp.componentDefinitionId];
-      const ports = payload?.ports ?? [];
+      const ports = portsByDefinitionId?.[comp.componentDefinitionId] ?? [];
       if (!ports.length) return;
 
       const inputPorts = ports.filter((port) => port.direction === "IN");
@@ -794,6 +801,58 @@ const Canvas = ({
     });
   }, [setComponents]);
 
+
+  // Fetch stream units from backend and seed connectionEdits with persisted values
+  useEffect(() => {
+    const twinId = Number((window as any).currentTwinId);
+    if (!twinId || Number.isNaN(twinId) || !connections.length) return;
+
+    (async () => {
+      try {
+        const data = await fetchDigitalTwinStreamUnits(twinId);
+        // Key by "from-to" — Canvas generates its own IDs (conn-timestamp) that differ
+        // from the backend's c1/c2/... but from/to instance IDs are identical on both sides.
+        const map = new Map<string, string[]>();
+        const connIdMap = new Map<string, string>(); // "from-to" → backend connection_id
+        data.streams.forEach((s) => {
+          const key = `${s.from}-${s.to}`;
+          const allowed = s.units.map((u) => u.allowed_unit).filter(Boolean);
+          const units = s.canonical_unit
+            ? [s.canonical_unit, ...allowed.filter((u) => u !== s.canonical_unit)]
+            : allowed;
+          if (units.length) map.set(key, units);
+          connIdMap.set(key, s.connection_id);
+        });
+        setStreamUnitsMap(map);
+        setStreamConnIdMap(connIdMap);
+
+        console.log("[stream-units] loaded units per connection (from-to keys):");
+        map.forEach((units, key) => console.log(`  ${key}:`, units));
+
+        // Pre-populate connectionEdits keyed by Canvas connection id (matched via from/to)
+        const edits: Record<string, { quantity: string; unit: string }> = {};
+        data.streams.forEach((s) => {
+          if (s.current_quantity !== null || s.current_unit) {
+            const match = connections.find(
+              (c) => String(c.from) === s.from && String(c.to) === s.to
+            );
+            if (match) {
+              edits[match.id] = {
+                quantity: s.current_quantity !== null ? String(s.current_quantity) : "0",
+                unit: s.current_unit || "unit",
+              };
+            }
+          }
+        });
+        setConnectionEdits((prev) => ({ ...edits, ...prev }));
+        setStreamUnitsReady(true);
+      } catch (err) {
+        console.warn("[stream-units] Failed to fetch stream units:", err);
+        setStreamUnitsReady(true); // unblock even on error so the editor still renders
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [(window as any).currentTwinId, connections.length]);
 
   const persistConnectionsForComponent = useCallback(
     async (
@@ -1604,8 +1663,15 @@ const Canvas = ({
         [conn.id]: { quantity: String(quantity), unit },
       }));
       setActiveConnectionEditorId(null);
+
+      // Also persist to digital_twin_json using the backend's connection_id
+      const twinId = Number((window as any).currentTwinId);
+      const backendConnId = streamConnIdMap.get(`${conn.from}-${conn.to}`);
+      if (twinId && !Number.isNaN(twinId) && backendConnId) {
+        void updateDigitalTwinConnectionData(twinId, backendConnId, { quantity, unit }).catch(() => {});
+      }
     },
-    [persistConnectionsForComponent, setConnections]
+    [persistConnectionsForComponent, setConnections, streamConnIdMap]
   );
 
   const handleAddNewComponent = () => {
@@ -2284,9 +2350,10 @@ const Canvas = ({
                   };
                 })();
 
+              const dynamicUnits = streamUnitsMap.get(`${item.conn.from}-${item.conn.to}`) ?? STREAM_UNIT_OPTIONS;
               const unitOptions = [
                 editState.unit,
-                ...STREAM_UNIT_OPTIONS.filter((opt) => opt !== editState.unit),
+                ...dynamicUnits.filter((opt) => opt !== editState.unit),
               ].filter(Boolean);
 
               return (
@@ -2308,14 +2375,41 @@ const Canvas = ({
                         }
                       />
                       <select
-                        className="h-6 rounded-md border border-slate-200 bg-white px-2 text-[11px] font-semibold text-slate-700 outline-none focus:border-blue-500"
+                        className="h-6 rounded-md border border-slate-200 bg-white px-2 text-[11px] font-semibold text-slate-700 outline-none focus:border-blue-500 disabled:opacity-50"
+                        disabled={!streamUnitsReady}
                         value={editState.unit}
-                        onChange={(e) =>
+                        onChange={async (e) => {
+                          const newUnit = e.target.value;
+                          const prevUnit = editState.unit;
+                          const currentQty = parseNumeric(editState.quantity);
+
+                          // Optimistically update unit label immediately
                           setConnectionEdits((prev) => ({
                             ...prev,
-                            [item.conn.id]: { ...editState, unit: e.target.value },
-                          }))
-                        }
+                            [item.conn.id]: { ...editState, unit: newUnit },
+                          }));
+
+                          // Auto-convert quantity when unit changes
+                          if (currentQty !== null && prevUnit !== newUnit) {
+                            const twinId = Number((window as any).currentTwinId);
+                            const backendId = streamConnIdMap.get(`${item.conn.from}-${item.conn.to}`);
+                            if (twinId && !Number.isNaN(twinId) && backendId) {
+                              try {
+                                const result = await convertDigitalTwinConnectionUnit(twinId, backendId, {
+                                  from_unit: prevUnit,
+                                  to_unit: newUnit,
+                                  value: currentQty,
+                                });
+                                setConnectionEdits((prev) => ({
+                                  ...prev,
+                                  [item.conn.id]: { unit: newUnit, quantity: String(result.converted_value) },
+                                }));
+                              } catch {
+                                // Conversion failed (requires_context, factor=0, etc.) — keep quantity
+                              }
+                            }
+                          }
+                        }}
                       >
                         {unitOptions.map((unit) => (
                           <option key={unit} value={unit}>
@@ -2742,10 +2836,9 @@ const Canvas = ({
                 }
                 const carrierKey = comp.type === "carrier" ? getCarrierTypeKey(comp) : "";
                 const carrierAccent = carrierKey ? carrierColorMap.get(carrierKey) : undefined;
-                const portPayload = typeof comp.componentDefinitionId === "number"
+                const allPorts: PortDto[] = (typeof comp.componentDefinitionId === "number"
                   ? portsByDefinitionId?.[comp.componentDefinitionId]
-                  : undefined;
-                const allPorts: PortDto[] = portPayload?.ports ?? [];
+                  : undefined) ?? [];
 
                 const incomingCarriers = connections
                   .filter((conn) => conn.to === comp.id)

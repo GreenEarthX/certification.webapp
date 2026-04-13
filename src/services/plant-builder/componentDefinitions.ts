@@ -35,10 +35,7 @@ export type PortDto = {
   carriers: PortCarrierDto[];
 };
 
-export type EquipmentPortsDto = {
-  equipmentDefinitionId: number;
-  ports: PortDto[];
-};
+export type EquipmentPortsDto = PortDto[];
 
 export type ComponentLibraryJSON = {
   equipment: ComponentData[];
