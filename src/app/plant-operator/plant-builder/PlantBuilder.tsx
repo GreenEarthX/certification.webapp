@@ -35,7 +35,7 @@ import LoadingPage from "@/components/plant-builder/LoadingPage";
 import Canvas from "@/components/plant-builder/Canvas";
 import ComponentLibrary from "@/components/plant-builder/ComponentLibrary";
 import ValidationPanel from "@/components/plant-builder/ValidationPanel";
-import { ComplianceCheck } from "./ComplianceCheck";
+import { ComplianceCheck } from "./ComplianceChecks";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -1235,6 +1235,12 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
                 });
               });
 
+              // Set global IDs BEFORE triggering React re-renders so the Canvas
+              // useEffect sees currentTwinId when connections.length changes
+              (window as any).currentPlantId = plantId;
+              (window as any).currentTwinId = twinId;
+              console.log("[plant-builder] restored currentPlantId/currentTwinId:", plantId, twinId);
+
               setComponents(mappedComponents);
               setConnections(mappedConnections);
               setOriginalComponents(mappedComponents);
@@ -1244,19 +1250,6 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
                 setPlantInfo(mapPlantToInfo(plant));
               } catch (err) {
                 console.warn("Failed to load plant details:", err);
-              }
-
-              // Set global IDs for Canvas persistence
-              try {
-                (window as any).currentPlantId = plantId;
-                (window as any).currentTwinId = twinId;
-                console.log(
-                  "[plant-builder] restored currentPlantId/currentTwinId:",
-                  (window as any).currentPlantId,
-                  (window as any).currentTwinId
-                );
-              } catch (e) {
-                // ignore
               }
 
               toast.success("Digital twin loaded from database.");
@@ -1321,6 +1314,12 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
           data: conn.data || {},
         }));
 
+        // Set global IDs BEFORE triggering React re-renders so the Canvas
+        // useEffect sees currentTwinId when connections.length changes
+        (window as any).currentPlantId = plantId;
+        (window as any).currentTwinId = Number(records[0].id);
+        console.log("[plant-builder] restored currentPlantId/currentTwinId:", plantId, Number(records[0].id));
+
         setComponents(mappedComponents);
         setConnections(mappedConnections);
         setOriginalComponents(mappedComponents); // Track originals for delete detection
@@ -1330,15 +1329,6 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
           setPlantInfo(mapPlantToInfo(plant));
         } catch (err) {
           console.warn("Failed to load plant details:", err);
-        }
-        
-        // Set global IDs for Canvas persistence
-        try {
-          (window as any).currentPlantId = plantId;
-          (window as any).currentTwinId = Number(records[0].id);
-          console.log("[plant-builder] restored currentPlantId/currentTwinId:", (window as any).currentPlantId, (window as any).currentTwinId);
-        } catch (e) {
-          // ignore
         }
 
         toast.success("Digital twin loaded from database.");
