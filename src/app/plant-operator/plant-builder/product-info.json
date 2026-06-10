@@ -1,0 +1,38 @@
+[
+  {
+    "productName": "Green Hydrogen",
+    "productType": "Hydrogen",
+    "productionCapacity": "100",
+    "unit": "Ton/h",
+    "fuelType": "Hydrogen",
+    "fuelClass": "Renewable fuels of non-biological origin (RFNBO)",
+    "feedstock": "Water",
+    "carbonFootprint": { "value": 2.5, "unit": "gCO2e/MJ" },
+    "offtakeLocation": {
+      "country": "EU",
+      "zip": "80331",
+      "city": "Munich",
+      "street": "Main Street 123"
+    },
+    "downstreamOperations": "Green ammonia production",
+    "verified": true
+  },
+  {
+    "productName": "E-Methanol",
+    "productType": "Methanol",
+    "productionCapacity": "50",
+    "unit": "Ton/h",
+    "fuelType": "Methanol",
+    "fuelClass": "Renewable fuels of non-biological origin (RFNBO)",
+    "feedstock": "CO2 from DAC",
+    "carbonFootprint": { "value": 3.0, "unit": "gCO2e/MJ" },
+    "offtakeLocation": {
+      "country": "UK",
+      "zip": "SW1A",
+      "city": "London",
+      "street": "Westminster Road 10"
+    },
+    "downstreamOperations": "Marine fuel",
+    "verified": false
+  }
+]
