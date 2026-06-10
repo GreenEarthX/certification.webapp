@@ -60,7 +60,7 @@ jobs:
       - name: Deploy frontend on server
         uses: appleboy/ssh-action@v1.2.0
         with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: /opt/greenearthx/scripts/deploy.sh frontend
+          script: /opt/greenearthx/greenearthx-infra/scripts/deploy.sh frontend
