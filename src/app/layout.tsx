@@ -5,7 +5,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Suspense } from "react";
 import "./styles/globals.css";
 
-import AuthGuard from "../components/AuthGuard" 
+import AuthGuard from "../components/AuthGuard"
+import OnboardingGate from "../components/OnboardingGate";
 import Providers from "./providers";
 
 const geistSans = Geist({
@@ -35,6 +36,7 @@ export default function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-blue-50`}>
         <Suspense fallback={null}>
           <AuthGuard />
+          <OnboardingGate />
         </Suspense>
         <Providers>{children}</Providers>
       </body>

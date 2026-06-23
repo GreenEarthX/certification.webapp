@@ -365,9 +365,8 @@ const PlantInfoForm = ({ onSubmit, initialData, submitLabel }: PlantInfoFormProp
     const longitude = Number.parseFloat(formData.longitude);
 
     const submitData: PlantInfo = {
-      projectName: formData.projectName,
+      projectName: "",
       plantName: formData.plantName,
-      companyName: formData.companyName,
       projectLifetimeYears: Number.isFinite(projectLifetime) ? projectLifetime : undefined,
       primaryPathway: formData.primaryPathway || undefined,
       plantConfiguration: formData.plantConfiguration || undefined,
@@ -412,39 +411,16 @@ const PlantInfoForm = ({ onSubmit, initialData, submitLabel }: PlantInfoFormProp
             <form onSubmit={handleSubmit} className="flex flex-col gap-6 h-full">
               <div className="flex-1 min-h-0 overflow-y-auto pr-3 form-scroll space-y-8">
               <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50/60 p-5 shadow-sm">
-                <div className="text-sm font-semibold text-gray-700">A. Project Identity</div>
+                <div className="text-sm font-semibold text-gray-700">A. Plant Identity</div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div className="space-y-1.5">
-                    <Label htmlFor="projectName">Project Name *</Label>
-                    <Input
-                      id="projectName"
-                      required
-                      value={formData.projectName}
-                      onChange={(e) => updateField("projectName", e.target.value)}
-                      placeholder="Project name"
-                      className="h-11 bg-white"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="plantName">Plant Name</Label>
+                    <Label htmlFor="plantName">Plant Name *</Label>
                     <Input
                       id="plantName"
+                      required
                       value={formData.plantName}
                       onChange={(e) => updateField("plantName", e.target.value)}
                       placeholder="Plant name"
-                      className="h-11 bg-white"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="companyName">Company Name *</Label>
-                    <Input
-                      id="companyName"
-                      required
-                      value={formData.companyName}
-                      onChange={(e) => updateField("companyName", e.target.value)}
-                      placeholder="Company name"
                       className="h-11 bg-white"
                     />
                   </div>

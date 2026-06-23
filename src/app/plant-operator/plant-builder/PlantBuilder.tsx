@@ -73,6 +73,7 @@ import {
   createPlant,
   fetchPlantById,
   Plant,
+  PlantPayload,
   updatePlant,
 } from "@/services/plant-builder/plants";
 import {
@@ -457,6 +458,44 @@ const renderTemplatePreviewCanvas = (template: TemplateDto, baseScale = 1) => {
  */
 type PlantBuilderProps = {
   initialView?: "builder" | "templates";
+};
+
+// Map the flat PlantInfo (full-page edit form) to the backend payload using the
+// column-vs-jsonb split. Intentionally omits `publish_to_ecosystem` and `fuels`
+// so an info edit (PATCH) preserves whatever the create wizard set.
+const infoToPlantPayload = (info: PlantInfo): PlantPayload => {
+  const str = (v: any) => {
+    const t = (v ?? "").toString().trim();
+    return t ? t : undefined;
+  };
+  const num = (v: any) => {
+    if (v === undefined || v === null || v === "") return undefined;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : undefined;
+  };
+  return {
+    name: (info.plantName || "").trim(),
+    location: str(info.country),
+    status: str((info as any).projectMaturityStage ?? info.status),
+    pathway: str((info as any).primaryPathway),
+    latitude: num((info as any).coordinates?.latitude),
+    longitude: num((info as any).coordinates?.longitude),
+    address: {
+      street: str((info as any).address),
+      region: str((info as any).region),
+      city: str((info as any).city),
+      postal_code: str((info as any).postalCode),
+    },
+    metadata: {
+      plant_configuration: str((info as any).plantConfiguration),
+      site_environment: str((info as any).siteEnvironment),
+      certification_phase: str((info as any).certificationPhase),
+      commercial_operation_date: str(
+        info.commercialOperationalDate ?? (info as any).expectedCOD,
+      ),
+      project_lifetime_years: num((info as any).projectLifetimeYears),
+    },
+  };
 };
 
 export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => {
@@ -1128,16 +1167,35 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
 
     const mapPlantToInfo = (plant: Plant): PlantInfo => {
       const metadata = plant.metadata || {};
+      const address = plant.address || {};
+      const hasCoords = plant.latitude != null || plant.longitude != null;
       return {
         plantName: plant.name || "New Plant",
-        projectName: metadata.projectName || "",
-        projectType: metadata.projectType || "",
-        primaryFuelType: metadata.primaryFuelType || "",
-        country: plant.location || metadata.country || "",
+        projectName: "",
+        projectType: plant.pathway || "",
+        primaryFuelType: plant.pathway || "",
+        primaryPathway: plant.pathway || "",
+        plantConfiguration: metadata.plant_configuration || "",
+        siteEnvironment: metadata.site_environment || "",
+        country: plant.location || "",
+        region: address.region || "",
+        city: address.city || "",
+        address: address.street || "",
+        postalCode: address.postal_code || "",
+        coordinates: hasCoords
+          ? {
+              latitude: plant.latitude ?? undefined,
+              longitude: plant.longitude ?? undefined,
+            }
+          : undefined,
         status: plant.status || "",
-        commercialOperationalDate: metadata.commercialOperationalDate || "",
-        investment: metadata.investment,
-      };
+        projectMaturityStage: plant.status || "",
+        certificationPhase: metadata.certification_phase || "",
+        commercialOperationalDate: metadata.commercial_operation_date || "",
+        expectedCOD: metadata.commercial_operation_date || "",
+        projectLifetimeYears: metadata.project_lifetime_years ?? undefined,
+        publishToEcosystem: plant.publish_to_ecosystem ?? false,
+      } as PlantInfo;
     };
 
     (async () => {
@@ -1358,18 +1416,7 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
   try {
     toast.loading("Creating plant...");
 
-    const payload = {
-      name: info.plantName,
-      location: info.country,
-      status: info.status,
-      metadata: {
-        projectName: info.projectName,
-        projectType: info.projectType,
-        primaryFuelType: info.primaryFuelType,
-        commercialOperationalDate: info.commercialOperationalDate,
-        investment: info.investment,
-      },
-    };
+    const payload = infoToPlantPayload(info);
 
     const plant = await createPlant(payload);
     toast.success("Plant created successfully!");
@@ -1417,18 +1464,7 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
         toast.error("Missing plant id.");
         return;
       }
-      await updatePlant(plantId, {
-        name: info.plantName,
-        location: info.country,
-        status: info.status,
-        metadata: {
-          projectName: info.projectName,
-          projectType: info.projectType,
-          primaryFuelType: info.primaryFuelType,
-          commercialOperationalDate: info.commercialOperationalDate,
-          investment: info.investment,
-        },
-      });
+      await updatePlant(plantId, infoToPlantPayload(info));
       setPlantInfo(info);
       setIsEditingPlantInfo(false);
       setStep("builder");
