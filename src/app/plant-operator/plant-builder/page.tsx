@@ -43,10 +43,14 @@ import {
   unarchivePlant,
   deactivatePlant,
   fetchPlantUsers,
+  createPlant,
   PlantUser,
   Plant,
+  PlantPayload,
   addUserToPlant,
 } from "@/services/plant-builder/plants";
+import { createDigitalTwin } from "@/services/plant-builder/digitalTwins";
+import NewPlantModal from "@/components/plant-builder/NewPlantModal";
 import {
   fetchCurrentBackendUser,
   type BackendUser,
@@ -82,6 +86,8 @@ export default function ChoosePlantPage() {
   const [plantUsersById, setPlantUsersById] = useState<Record<number, PlantUser[]>>({});
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [currentUser, setCurrentUser] = useState<BackendUser | null>(null);
+  const [showNewPlantModal, setShowNewPlantModal] = useState(false);
+  const [creatingPlant, setCreatingPlant] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -143,8 +149,32 @@ export default function ChoosePlantPage() {
   };
 
   const handleAddNewPlant = () => {
-    // New flow: go to builder wizard with empty data
-    router.push("/plant-operator/plant-builder/builder");
+    setShowNewPlantModal(true);
+  };
+
+  const handleCreatePlant = async (payload: PlantPayload) => {
+    setCreatingPlant(true);
+    try {
+      const plant = await createPlant(payload);
+      try {
+        await createDigitalTwin({
+          plant_id: plant.id,
+          name: `${plant.name} Digital Twin`,
+          version: "1",
+          is_active: true,
+        });
+      } catch (twinErr) {
+        console.error("Failed to create digital twin:", twinErr);
+      }
+      toast.success(`Created "${plant.name}".`);
+      setShowNewPlantModal(false);
+      router.push(`/plant-operator/plant-builder/builder?plantId=${plant.id}`);
+    } catch (err: any) {
+      console.error("Failed to create plant:", err);
+      toast.error(err?.message || "Failed to create plant.");
+    } finally {
+      setCreatingPlant(false);
+    }
   };
 
   const handleRetry = () => {
@@ -794,6 +824,13 @@ export default function ChoosePlantPage() {
           </div>
         )}
       </main>
+
+      <NewPlantModal
+        open={showNewPlantModal}
+        onOpenChange={setShowNewPlantModal}
+        submitting={creatingPlant}
+        onSubmit={handleCreatePlant}
+      />
 
       <Dialog open={showShareModal} onOpenChange={setShowShareModal}>
         <DialogContent className="max-w-md bg-white rounded-lg">
