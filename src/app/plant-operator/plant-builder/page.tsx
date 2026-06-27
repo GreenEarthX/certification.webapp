@@ -16,7 +16,19 @@ import {
   Search,
   MoreVertical,
   Trash2,
+  Fuel,
+  Route,
+  ShieldCheck,
+  CalendarClock,
+  Clock,
 } from "lucide-react";
+import {
+  PRIMARY_PATHWAYS,
+  MATURITY_STAGES,
+  CERTIFICATION_PHASES,
+  FUEL_TYPES,
+  type Option,
+} from "@/constants/plant-builder";
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -64,6 +76,33 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+
+// Convert a stored enum value to its human label; falls back to the raw value.
+const labelFor = (options: Option[], value?: string | null) => {
+  if (!value) return "";
+  return options.find((o) => o.value === value)?.label ?? value;
+};
+
+const CAPACITY_UNIT_SHORT: Record<string, string> = {
+  ton_per_year: "t/yr",
+  ton_per_day: "t/d",
+  kilogram_per_hour: "kg/h",
+  normal_cubic_meter_per_hour: "Nm³/h",
+};
+
+// Build a short, human chip label for a fuel entry, e.g. "Hydrogen · 1000 t/yr".
+const formatFuel = (fuel: { fuel_type: string; capacity?: number; capacity_unit?: string }) => {
+  const name = labelFor(FUEL_TYPES, fuel.fuel_type) || "Fuel";
+  if (fuel.capacity == null || fuel.capacity === ("" as any)) return name;
+  const unit = fuel.capacity_unit ? CAPACITY_UNIT_SHORT[fuel.capacity_unit] ?? fuel.capacity_unit : "";
+  return `${name} · ${fuel.capacity}${unit ? ` ${unit}` : ""}`;
+};
+
+const codYear = (cod?: string | null) => {
+  if (!cod) return "";
+  const match = String(cod).match(/\d{4}/);
+  return match ? match[0] : String(cod);
+};
 
 export default function ChoosePlantPage() {
   const router = useRouter();
@@ -497,18 +536,23 @@ export default function ChoosePlantPage() {
               >
                 <ArrowLeft className="h-5 w-5" />
               </Button>
-              <div>
-                <h1 className="text-lg font-semibold text-gray-900">
-                  Plant Builder
-                </h1>
-                <p className="text-xs sm:text-sm text-gray-600">
-                  Manage your plants, shared models, and templates.
-                </p>
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-[#0F766E] to-[#15936B] shadow-sm">
+                  <Factory className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-lg font-semibold text-gray-900">
+                    Plant Builder
+                  </h1>
+                  <p className="text-xs sm:text-sm text-gray-600">
+                    Manage your plants, shared models, and templates.
+                  </p>
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <Button
-                className="bg-[#4F8FF7] hover:bg-[#3b73c4] text-white text-sm"
+                className="bg-[#0F766E] hover:bg-[#0C5F59] text-white text-sm"
                 onClick={handleAddNewPlant}
               >
                 <Plus className="h-4 w-4 mr-2" />
@@ -521,7 +565,7 @@ export default function ChoosePlantPage() {
               <Button
                 variant={activeTab === "mine" ? "default" : "outline"}
                 size="sm"
-                className={activeTab === "mine" ? "bg-[#4F8FF7] text-white" : ""}
+                className={activeTab === "mine" ? "bg-[#0F766E] text-white" : ""}
                 onClick={() => setActiveTab("mine")}
               >
                 My Plants ({myPlants.length})
@@ -529,7 +573,7 @@ export default function ChoosePlantPage() {
               <Button
                 variant={activeTab === "shared" ? "default" : "outline"}
                 size="sm"
-                className={activeTab === "shared" ? "bg-[#4F8FF7] text-white" : ""}
+                className={activeTab === "shared" ? "bg-[#0F766E] text-white" : ""}
                 onClick={() => setActiveTab("shared")}
               >
                 Shared Plants ({sharedPlants.length})
@@ -537,7 +581,7 @@ export default function ChoosePlantPage() {
               <Button
                 variant={activeTab === "archived" ? "default" : "outline"}
                 size="sm"
-                className={activeTab === "archived" ? "bg-[#4F8FF7] text-white" : ""}
+                className={activeTab === "archived" ? "bg-[#0F766E] text-white" : ""}
                 onClick={() => setActiveTab("archived")}
               >
                 Archived ({archivedOnly.length})
@@ -548,7 +592,7 @@ export default function ChoosePlantPage() {
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                   <input
-                    className="w-full sm:w-64 rounded-md border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm text-gray-700 focus:border-[#4F8FF7] focus:outline-none"
+                    className="w-full sm:w-64 rounded-md border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm text-gray-700 focus:border-[#0F766E] focus:outline-none"
                     placeholder="Search plants"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -556,7 +600,7 @@ export default function ChoosePlantPage() {
                 </div>
                 {activeTab === "mine" && (
                   <select
-                    className="rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-[#4F8FF7] focus:outline-none"
+                    className="rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-[#0F766E] focus:outline-none"
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
                   >
@@ -632,7 +676,7 @@ export default function ChoosePlantPage() {
               </p>
               {activeTab !== "archived" && (
                 <Button
-                  className="mt-4 bg-[#4F8FF7] hover:bg-[#3b73c4] text-white text-sm"
+                  className="mt-4 bg-[#0F766E] hover:bg-[#0C5F59] text-white text-sm"
                   onClick={handleAddNewPlant}
                 >
                   <Plus className="h-4 w-4 mr-2" />
@@ -657,67 +701,127 @@ export default function ChoosePlantPage() {
               >
                 {(() => {
                   const sharedUsers = getSharedUsers(plant.id);
+                  const meta = plant.metadata || {};
+                  const pathwayLabel = labelFor(PRIMARY_PATHWAYS, plant.pathway);
+                  const statusLabel = labelFor(MATURITY_STAGES, plant.status);
+                  const certLabel = labelFor(CERTIFICATION_PHASES, meta.certification_phase);
+                  const fuels = Array.isArray(plant.fuels) ? plant.fuels : [];
+                  const locationText = [plant.address?.city, plant.location]
+                    .filter(Boolean)
+                    .join(", ");
+                  const lifetime = meta.project_lifetime_years;
+                  const cod = codYear(meta.commercial_operation_date);
                   return (
-                <div className="flex items-start gap-3">
-                  <div className="mt-0.5">
-                    <Factory className="h-6 w-6 text-[#4F8FF7]" />
-                  </div>
-                  <div className="flex-1">
-                    <h2 className="text-sm font-semibold text-gray-900">
-                      {plant.name || "Unnamed Plant"}
-                    </h2>
-                    {plant.location && (
-                      <div className="flex items-center gap-1 mt-1 text-xs text-gray-600">
-                        <MapPin className="h-3 w-3" />
-                        <span>{plant.location}</span>
-                      </div>
-                    )}
-                    {plant.status && (
-                      <p className="mt-1 text-xs text-gray-500">
-                        Status:{" "}
-                        <span className="font-medium">{plant.status}</span>
-                      </p>
-                    )}
-                    {activeTab === "shared" && (
-                      <div className="mt-3">
-                        <div className="text-xs text-gray-500">Shared with</div>
-                        {sharedUsers.length === 0 ? (
-                          <div className="text-xs text-gray-400 mt-1">
-                            No other users.
-                          </div>
-                        ) : (
-                          <div className="mt-2 flex items-center -space-x-2">
-                            {sharedUsers.map((user) => (
-                              <Popover key={user.id}>
-                                <PopoverTrigger asChild>
-                                  <button
-                                    type="button"
-                                    className="h-8 w-8 rounded-full border border-[#4F8FF7]/30 bg-[#4F8FF7]/10 text-[10px] font-semibold text-[#1d4ed8] shadow-sm"
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    {getUserInitials(user)}
-                                  </button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-64">
-                                  <div className="text-sm font-semibold text-gray-900">
-                                    {user.name || user.email}
-                                  </div>
-                                  <div className="text-xs text-gray-600">
-                                    {user.email}
-                                  </div>
-                                  {user.company && (
-                                    <div className="text-xs text-gray-500 mt-1">
-                                      {user.company}
-                                    </div>
-                                  )}
-                                </PopoverContent>
-                              </Popover>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+                <div>
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#0F766E]/10">
+                      <Factory className="h-5 w-5 text-[#0F766E]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h2 className="truncate text-sm font-semibold text-gray-900">
+                        {plant.name || "Unnamed Plant"}
+                      </h2>
+                      {locationText ? (
+                        <div className="flex items-center gap-1 mt-0.5 text-xs text-gray-500">
+                          <MapPin className="h-3 w-3 shrink-0" />
+                          <span className="truncate">{locationText}</span>
+                        </div>
+                      ) : (
+                        <div className="mt-0.5 text-xs text-gray-400">No location set</div>
+                      )}
+                    </div>
+                    {pathwayLabel && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-[#0F766E]/10 px-2 py-0.5 text-[10px] font-semibold text-[#0F766E]">
+                        <Route className="h-3 w-3" />
+                        {pathwayLabel.replace(" Pathway", "")}
+                      </span>
                     )}
                   </div>
+
+                  <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                    {statusLabel && (
+                      <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-700">
+                        <Clock className="h-3 w-3" />
+                        {statusLabel}
+                      </span>
+                    )}
+                    {certLabel && (
+                      <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700 border border-amber-100">
+                        <ShieldCheck className="h-3 w-3" />
+                        {certLabel}
+                      </span>
+                    )}
+                  </div>
+
+                  {fuels.length > 0 && (
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                      {fuels.slice(0, 3).map((fuel, i) => (
+                        <span
+                          key={`${fuel.fuel_type}-${i}`}
+                          className="inline-flex items-center gap-1 rounded-md border border-[#0F766E]/15 bg-[#0F766E]/5 px-2 py-0.5 text-[10px] font-medium text-[#0F766E]"
+                        >
+                          <Fuel className="h-3 w-3" />
+                          {formatFuel(fuel)}
+                        </span>
+                      ))}
+                      {fuels.length > 3 && (
+                        <span className="text-[10px] text-gray-400">
+                          +{fuels.length - 3} more
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {(lifetime != null || cod) && (
+                    <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-slate-100 pt-2 text-[11px] text-gray-500">
+                      {lifetime != null && (
+                        <span className="inline-flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          Lifetime: <span className="font-medium text-gray-700">{lifetime} yr</span>
+                        </span>
+                      )}
+                      {cod && (
+                        <span className="inline-flex items-center gap-1">
+                          <CalendarClock className="h-3 w-3" />
+                          COD: <span className="font-medium text-gray-700">{cod}</span>
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {activeTab === "shared" && (
+                    <div className="mt-3">
+                      <div className="text-xs text-gray-500">Shared with</div>
+                      {sharedUsers.length === 0 ? (
+                        <div className="text-xs text-gray-400 mt-1">No other users.</div>
+                      ) : (
+                        <div className="mt-2 flex items-center -space-x-2">
+                          {sharedUsers.map((user) => (
+                            <Popover key={user.id}>
+                              <PopoverTrigger asChild>
+                                <button
+                                  type="button"
+                                  className="h-8 w-8 rounded-full border border-[#0F766E]/30 bg-[#0F766E]/10 text-[10px] font-semibold text-[#0F766E] shadow-sm"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  {getUserInitials(user)}
+                                </button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-64">
+                                <div className="text-sm font-semibold text-gray-900">
+                                  {user.name || user.email}
+                                </div>
+                                <div className="text-xs text-gray-600">{user.email}</div>
+                                {user.company && (
+                                  <div className="text-xs text-gray-500 mt-1">{user.company}</div>
+                                )}
+                              </PopoverContent>
+                            </Popover>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
                   );
                 })()}
@@ -726,7 +830,7 @@ export default function ChoosePlantPage() {
                     {activeTab === "archived" ? (
                       <Button
                         size="sm"
-                        className="bg-[#4F8FF7] hover:bg-[#3b73c4] text-white text-xs"
+                        className="bg-[#0F766E] hover:bg-[#0C5F59] text-white text-xs"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleUnarchivePlant(plant);
@@ -738,7 +842,7 @@ export default function ChoosePlantPage() {
                     ) : (
                       <Button
                         size="sm"
-                        className="bg-[#4F8FF7] hover:bg-[#3b73c4] text-white text-xs"
+                        className="bg-[#0F766E] hover:bg-[#0C5F59] text-white text-xs"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleOpenPlant(plant);
@@ -912,7 +1016,7 @@ export default function ChoosePlantPage() {
               Cancel
             </Button>
             <Button
-              className="bg-[#4F8FF7] hover:bg-[#3b73c4] text-white"
+              className="bg-[#0F766E] hover:bg-[#0C5F59] text-white"
               onClick={handleSendShare}
               disabled={isSharingPlant}
             >
