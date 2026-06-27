@@ -57,17 +57,17 @@ type ComponentSchemaFormProps = {
 };
 
 const fieldWrapper =
-  "rounded-lg border border-gray-200 bg-white p-4 space-y-2 shadow-sm";
+  "rounded-lg border border-slate-200 bg-white p-4 space-y-2 shadow-sm transition-colors hover:border-[#0F766E]/40 focus-within:border-[#0F766E] focus-within:ring-1 focus-within:ring-[#0F766E]/20";
 
-const labelClass = "text-sm font-medium text-gray-900 flex items-center gap-2";
+const labelClass = "text-sm font-medium text-slate-900 flex items-center gap-2";
 
-const helperTextClass = "text-xs text-gray-500 leading-snug";
+const helperTextClass = "text-xs text-slate-500 leading-snug";
 
 const selectTriggerClass =
-  "bg-white text-black border border-gray-300 focus-visible:ring-1 focus-visible:ring-black";
+  "bg-white text-slate-900 border border-slate-300 focus:border-[#0F766E] focus:ring-2 focus:ring-[#0F766E]/25 data-[state=open]:border-[#0F766E]";
 
 const inputClass =
-  "bg-white text-black border border-gray-300 focus-visible:ring-1 focus-visible:ring-black";
+  "bg-white text-slate-900 border border-slate-300 focus-visible:border-[#0F766E] focus-visible:ring-2 focus-visible:ring-[#0F766E]/25";
 
 const unsupportedClass =
   "rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900";

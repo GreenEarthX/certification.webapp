@@ -26,6 +26,7 @@ import {
   Download,
   ChevronLeft,
   ChevronRight,
+  Settings,
 } from "lucide-react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
@@ -73,6 +74,7 @@ import {
   createPlant,
   fetchPlantById,
   Plant,
+  PlantPayload,
   updatePlant,
 } from "@/services/plant-builder/plants";
 import {
@@ -459,6 +461,52 @@ type PlantBuilderProps = {
   initialView?: "builder" | "templates";
 };
 
+// Map the flat PlantInfo (full-page edit form) to the backend payload using the
+// column-vs-jsonb split. Intentionally omits `publish_to_ecosystem` and `fuels`
+// so an info edit (PATCH) preserves whatever the create wizard set.
+const infoToPlantPayload = (info: PlantInfo): PlantPayload => {
+  const str = (v: any) => {
+    const t = (v ?? "").toString().trim();
+    return t ? t : undefined;
+  };
+  const num = (v: any) => {
+    if (v === undefined || v === null || v === "") return undefined;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : undefined;
+  };
+  return {
+    name: (info.plantName || "").trim(),
+    location: str(info.country),
+    status: str((info as any).projectMaturityStage ?? info.status),
+    pathway: str((info as any).primaryPathway),
+    latitude: num((info as any).coordinates?.latitude),
+    longitude: num((info as any).coordinates?.longitude),
+    address: {
+      street: str((info as any).address),
+      region: str((info as any).region),
+      city: str((info as any).city),
+      postal_code: str((info as any).postalCode),
+    },
+    // Only present when edited via the embedded Product details section.
+    fuels: Array.isArray((info as any).fuels) ? (info as any).fuels : undefined,
+    metadata: {
+      plant_configuration: str((info as any).plantConfiguration),
+      site_environment: str((info as any).siteEnvironment),
+      certification_phase: str((info as any).certificationPhase),
+      commercial_operation_date: str(
+        info.commercialOperationalDate ?? (info as any).expectedCOD,
+      ),
+      project_lifetime_years: num((info as any).projectLifetimeYears),
+      availability_basis: {
+        total_calendar_hours_per_year: num((info as any).totalCalendarHours),
+        plant_availability_pct: num((info as any).plantAvailability),
+        effective_operating_hours_per_year: num((info as any).effectiveOperatingHours),
+        effective_operating_days_per_year: num((info as any).effectiveOperatingDays),
+      },
+    },
+  };
+};
+
 export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => {
   const router = useRouter();
   const [step, setStep] = useState<
@@ -502,6 +550,7 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
   const [isEditingPlantInfo, setIsEditingPlantInfo] = useState(false);
+  const [showInfoModal, setShowInfoModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [templateNameInput, setTemplateNameInput] = useState("");
   const [templateDescriptionInput, setTemplateDescriptionInput] = useState("");
@@ -1123,22 +1172,58 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
     const plantId = Number(plantIdParam);
     if (Number.isNaN(plantId)) return;
 
+    // Set the plant id immediately so saving from the edit popup always works,
+    // even if the digital-twin load below errors or finds no records.
+    (window as any).currentPlantId = plantId;
+
     setIsEditingPlantInfo(editMode);
-    setStep(editMode ? "info" : "builder");
+    // The edit form is now a popup over the builder canvas (not a full-screen step).
+    setStep("builder");
+    if (editMode) setShowInfoModal(true);
 
     const mapPlantToInfo = (plant: Plant): PlantInfo => {
       const metadata = plant.metadata || {};
+      const availabilityBasis = metadata.availability_basis || {};
+      const address = plant.address || {};
+      const hasCoords = plant.latitude != null || plant.longitude != null;
       return {
         plantName: plant.name || "New Plant",
-        projectName: metadata.projectName || "",
-        projectType: metadata.projectType || "",
-        primaryFuelType: metadata.primaryFuelType || "",
-        country: plant.location || metadata.country || "",
+        projectName: "",
+        projectType: plant.pathway || "",
+        primaryFuelType: plant.pathway || "",
+        primaryPathway: plant.pathway || "",
+        plantConfiguration: metadata.plant_configuration || "",
+        siteEnvironment: metadata.site_environment || "",
+        country: plant.location || "",
+        region: address.region || "",
+        city: address.city || "",
+        address: address.street || "",
+        postalCode: address.postal_code || "",
+        coordinates: hasCoords
+          ? {
+              latitude: plant.latitude ?? undefined,
+              longitude: plant.longitude ?? undefined,
+            }
+          : undefined,
         status: plant.status || "",
-        commercialOperationalDate: metadata.commercialOperationalDate || "",
-        investment: metadata.investment,
-      };
+        projectMaturityStage: plant.status || "",
+        certificationPhase: metadata.certification_phase || "",
+        commercialOperationalDate: metadata.commercial_operation_date || "",
+        expectedCOD: metadata.commercial_operation_date || "",
+        projectLifetimeYears: metadata.project_lifetime_years ?? undefined,
+        totalCalendarHours: availabilityBasis.total_calendar_hours_per_year ?? undefined,
+        plantAvailability: availabilityBasis.plant_availability_pct ?? undefined,
+        effectiveOperatingHours: availabilityBasis.effective_operating_hours_per_year ?? undefined,
+        effectiveOperatingDays: availabilityBasis.effective_operating_days_per_year ?? undefined,
+        fuels: Array.isArray(plant.fuels) ? plant.fuels : [],
+        publishToEcosystem: plant.publish_to_ecosystem ?? false,
+      } as PlantInfo;
     };
+
+    // Preload plant details so the edit popup prefills regardless of digital-twin state.
+    fetchPlantById(plantId)
+      .then((plant) => setPlantInfo(mapPlantToInfo(plant)))
+      .catch((err) => console.warn("Failed to preload plant details:", err));
 
     (async () => {
       try {
@@ -1358,18 +1443,7 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
   try {
     toast.loading("Creating plant...");
 
-    const payload = {
-      name: info.plantName,
-      location: info.country,
-      status: info.status,
-      metadata: {
-        projectName: info.projectName,
-        projectType: info.projectType,
-        primaryFuelType: info.primaryFuelType,
-        commercialOperationalDate: info.commercialOperationalDate,
-        investment: info.investment,
-      },
-    };
+    const payload = infoToPlantPayload(info);
 
     const plant = await createPlant(payload);
     toast.success("Plant created successfully!");
@@ -1417,20 +1491,10 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
         toast.error("Missing plant id.");
         return;
       }
-      await updatePlant(plantId, {
-        name: info.plantName,
-        location: info.country,
-        status: info.status,
-        metadata: {
-          projectName: info.projectName,
-          projectType: info.projectType,
-          primaryFuelType: info.primaryFuelType,
-          commercialOperationalDate: info.commercialOperationalDate,
-          investment: info.investment,
-        },
-      });
+      await updatePlant(plantId, infoToPlantPayload(info));
       setPlantInfo(info);
       setIsEditingPlantInfo(false);
+      setShowInfoModal(false);
       setStep("builder");
       toast.success("Plant info updated.");
     } catch (err: any) {
@@ -2379,7 +2443,7 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-[#4F8FF7]/10">
+                <TableRow className="bg-[#0F766E]/10">
                   <TableHead className="font-semibold text-gray-700 text-sm">Component ID</TableHead>
                   <TableHead className="font-semibold text-gray-700 text-sm">Component Name</TableHead>
                   <TableHead className="font-semibold text-gray-700 text-sm">Type</TableHead>
@@ -2406,7 +2470,7 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
                     );
                   }
                   return (
-                    <TableRow key={`item-${row.id}-${idx}`} className="hover:bg-[#4F8FF7]/5">
+                    <TableRow key={`item-${row.id}-${idx}`} className="hover:bg-[#0F766E]/5">
                       <TableCell className="text-gray-900 text-sm">{row.id}</TableCell>
                       <TableCell className="text-gray-900 text-sm">{row.name}</TableCell>
                       <TableCell className="text-gray-900 text-sm">{row.typeLabel}</TableCell>
@@ -2490,7 +2554,7 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-[#4F8FF7]/10">
+                <TableRow className="bg-[#0F766E]/10">
                   <TableHead className="font-semibold text-gray-700 text-sm">From</TableHead>
                   <TableHead className="font-semibold text-gray-700 text-sm">To</TableHead>
                 </TableRow>
@@ -2504,7 +2568,7 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
                   </TableRow>
                 ) : (
                   pageRows.map((c) => (
-                    <TableRow key={`${c.from}->${c.to}`} className="hover:bg-[#4F8FF7]/5">
+                    <TableRow key={`${c.from}->${c.to}`} className="hover:bg-[#0F766E]/5">
                       <TableCell className="text-gray-900 text-sm">{getComponentLabel(c.from)}</TableCell>
                       <TableCell className="text-gray-900 text-sm">{getComponentLabel(c.to)}</TableCell>
                     </TableRow>
@@ -2523,7 +2587,7 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
-            <TableRow className="bg-[#4F8FF7]/10">
+            <TableRow className="bg-[#0F766E]/10">
               <TableHead className="font-semibold text-gray-700 text-sm">Field</TableHead>
               <TableHead className="font-semibold text-gray-700 text-sm">Value</TableHead>
             </TableRow>
@@ -2531,7 +2595,7 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
           <TableBody>
             {plantInfo ? (
               Object.entries(plantInfo).map(([key, value]) => (
-                <TableRow key={key} className="hover:bg-[#4F8FF7]/5">
+                <TableRow key={key} className="hover:bg-[#0F766E]/5">
                   <TableCell className="text-gray-900 text-sm capitalize">
                     {key.replace(/([A-Z])/g, " $1")}
                   </TableCell>
@@ -2582,12 +2646,33 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
             <ArrowLeft className="h-5 w-5" />
           </Button>
 
-          <div>
-            <h1 className="text-base sm:text-lg font-semibold">
-              {plantInfo ? plantInfo.plantName : "New Plant"}
-            </h1>
-            {plantInfo && (
-              <p className="text-xs sm:text-sm opacity-80">{plantInfo.projectName}</p>
+          <div className="flex items-center gap-1.5">
+            <div>
+              <h1 className="text-base sm:text-lg font-semibold">
+                {plantInfo ? plantInfo.plantName : "New Plant"}
+              </h1>
+              {plantInfo && (
+                <p className="text-xs sm:text-sm opacity-80">{plantInfo.projectName}</p>
+              )}
+            </div>
+            {step === "builder" && (
+              <TooltipProvider delayDuration={120}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-slate-500 hover:text-[#0F766E] hover:bg-[#0F766E]/10"
+                      onClick={() => setShowInfoModal(true)}
+                      disabled={!plantInfo}
+                      aria-label="Edit plant details"
+                    >
+                      <Settings className="h-5 w-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">Edit plant details</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
           </div>
         </div>
@@ -2601,7 +2686,7 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
                       variant="outline"
                       onClick={handleSave}
                       size="sm"
-                      className="h-8 text-xs border-[#4F8FF7] hover:bg-[#4F8FF7]/10"
+                      className="h-8 text-xs border-[#0F766E] hover:bg-[#0F766E]/10"
                     >
                       <Save className="h-4 w-4 mr-2" />
                       Save
@@ -2644,7 +2729,7 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
             {/*
               <Button
                 variant="outline"
-                className="text-sm border-[#4F8FF7] text-[#1d4ed8] hover:bg-[#4F8FF7]/10"
+                className="text-sm border-[#0F766E] text-[#0F766E] hover:bg-[#0F766E]/10"
                 onClick={handleBrowseTemplates}
               >
                 Browse Templates
@@ -2756,7 +2841,7 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
                                     Preview
                                   </Button>
                                   <Button
-                                    className="bg-[#4F8FF7] hover:bg-[#3b73c4] text-white text-xs"
+                                    className="bg-[#0F766E] hover:bg-[#0C5F59] text-white text-xs"
                                     onClick={() => handleInstantiateTemplate(template)}
                                     disabled={isApplyingTemplate}
                                   >
@@ -2793,7 +2878,7 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
                                       link.download = `${template.name || "template"}-preview.png`;
                                       link.click();
                                     }}
-                                    className="text-blue-600 hover:text-blue-700 hover:underline"
+                                    className="text-[#0F766E] hover:text-[#0C5F59] hover:underline"
                                   >
                                     Export image
                                   </button>
@@ -2859,14 +2944,14 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
                   </div>
                 )}
                 <div
-                  className="w-10 bg-gray-100 hover:bg-[#4F8FF7]/10 cursor-pointer flex items-center justify-center transition-colors duration-200"
+                  className="w-10 bg-gray-100 hover:bg-[#0F766E]/10 cursor-pointer flex items-center justify-center transition-colors duration-200"
                   onClick={toggleComponentLibrary}
                   title={showComponentLibrary ? "Hide Library" : "Show Library"}
                 >
                   {showComponentLibrary ? (
-                    <ChevronLeft className="h-5 w-5 text-[#4F8FF7]" />
+                    <ChevronLeft className="h-5 w-5 text-[#0F766E]" />
                   ) : (
-                    <ChevronRight className="h-5 w-5 text-[#4F8FF7]" />
+                    <ChevronRight className="h-5 w-5 text-[#0F766E]" />
                   )}
                 </div>
               </div>
@@ -2914,6 +2999,18 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
           <LoadingPage />
         )}
       </div>
+
+      <Dialog open={showInfoModal} onOpenChange={setShowInfoModal}>
+        <DialogContent className="max-w-4xl p-0 overflow-hidden bg-white rounded-xl max-h-[90vh]">
+          <DialogTitle className="sr-only">Edit plant details</DialogTitle>
+          <PlantInfoForm
+            embedded
+            initialData={plantInfo || undefined}
+            submitLabel="Save Plant Info"
+            onSubmit={handleInfoUpdate}
+          />
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showDataModel} onOpenChange={setShowDataModel}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto bg-white rounded-lg">
@@ -2968,7 +3065,7 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
             <div className="flex flex-col sm:flex-row justify-between gap-4">
               <div className="flex flex-col sm:flex-row gap-2">
                 <Button
-                  className="bg-blue-600 hover:bg-blue-700 text-white text-sm"
+                  className="bg-[#0F766E] hover:bg-[#0C5F59] text-white text-sm"
                   onClick={handleExportCanvasImage}
                 >
                   <Download className="h-4 w-4 mr-2" />
@@ -3007,7 +3104,7 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
                   setNewComponent({ ...newComponent, type: value as "equipment" | "carrier" | "gate" })
                 }
               >
-                <SelectTrigger id="componentType" className="border-[#4F8FF7]/30 focus:ring-[#4F8FF7] text-sm">
+                <SelectTrigger id="componentType" className="border-[#0F766E]/30 focus:ring-[#0F766E] text-sm">
                   <SelectValue placeholder="Select component type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -3025,7 +3122,7 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
                 onChange={(e) => setNewComponent({ ...newComponent, name: e.target.value })}
                 placeholder="Enter component name (e.g., Electrolyzer)"
                 maxLength={100}
-                className="border-[#4F8FF7]/30 focus:ring-[#4F8FF7] text-sm"
+                className="border-[#0F766E]/30 focus:ring-[#0F766E] text-sm"
               />
             </div>
             <div className="space-y-2">
@@ -3036,7 +3133,7 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
                 onChange={(e) => setNewComponent({ ...newComponent, category: e.target.value })}
                 placeholder="Enter category (e.g., Power-to-X)"
                 maxLength={100}
-                className="border-[#4F8FF7]/30 focus:ring-[#4F8FF7] text-sm"
+                className="border-[#0F766E]/30 focus:ring-[#0F766E] text-sm"
               />
             </div>
           </div>
@@ -3044,14 +3141,14 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
             <Button
               variant="outline"
               onClick={() => setShowAddComponent(false)}
-              className="border-[#4F8FF7]/30 hover:bg-[#4F8FF7]/10 text-sm"
+              className="border-[#0F766E]/30 hover:bg-[#0F766E]/10 text-sm"
             >
               Cancel
             </Button>
             <Button
               onClick={handleAddNewComponent}
               disabled={!newComponent.name || !newComponent.type || !newComponent.category}
-              className="bg-[#4F8FF7] hover:bg-[#4F8FF7]/90 text-white text-sm"
+              className="bg-[#0F766E] hover:bg-[#0C5F59] text-white text-sm"
             >
               Add
             </Button>
@@ -3085,7 +3182,7 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
                     name="inquiry"
                     placeholder="Describe your issue or request"
                     required
-                    className="border-[#4F8FF7]/30 focus:ring-[#4F8FF7] text-sm"
+                    className="border-[#0F766E]/30 focus:ring-[#0F766E] text-sm"
                   />
                 </div>
                 <Button type="submit" className="w-full bg-green-600 hover:bg-green-700 text-white text-sm">
@@ -3131,7 +3228,7 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
               Cancel
             </Button>
             <Button
-              className="bg-[#4F8FF7] hover:bg-[#3b73c4] text-white"
+              className="bg-[#0F766E] hover:bg-[#0C5F59] text-white"
               onClick={handleSendShare}
               disabled={isSharingPlant}
             >
