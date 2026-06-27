@@ -349,14 +349,15 @@ const ComponentDetailDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-6 bg-white text-black">
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-bold">{component.name}</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0 bg-white text-slate-900">
+        <DialogHeader className="bg-gradient-to-br from-[#0F766E] to-[#15936B] px-6 py-5">
+          <DialogTitle className="text-2xl font-bold text-white">{component.name}</DialogTitle>
+          <DialogDescription className="text-teal-50/90">
             Configure the technical specifications for this {component.type} component
           </DialogDescription>
         </DialogHeader>
 
+        <div className="px-6 pb-6">
         <div className="mt-6 space-y-4">
           {schemaError && (
             <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
@@ -364,7 +365,10 @@ const ComponentDetailDialog = ({
             </div>
           )}
           {isSchemaLoading ? (
-            <div className="text-sm text-muted-foreground">Loading component fields…</div>
+            <div className="flex items-center gap-2 text-sm text-slate-500">
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-[#0F766E]" />
+              Loading component fields…
+            </div>
           ) : (
             <ComponentSchemaForm
               fields={schemaFields}
@@ -406,23 +410,29 @@ const ComponentDetailDialog = ({
         */}
 
         {/* Existing Connections */}
-        <div className="mt-8 border-t pt-6 space-y-4">
-          <div>
-            <h4 className="font-semibold text-lg">Inputs</h4>
-            {inputs.length === 0 ? <p className="text-gray-500 text-sm">No inputs</p> : (
-              <ul className="space-y-1">
+        <div className="mt-8 border-t border-slate-200 pt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-4">
+            <h4 className="flex items-center gap-2 font-semibold text-base text-slate-800">
+              <span className="h-4 w-1 rounded-full bg-[#0F766E]" />
+              Inputs
+            </h4>
+            {inputs.length === 0 ? <p className="text-slate-400 text-sm mt-2">No inputs</p> : (
+              <ul className="space-y-1 mt-2">
                 {inputs.map((conn) => (
-                  <li key={conn.id} className="text-sm">From: <strong>{getComponentName(conn.from)}</strong> ({conn.type || "Untitled"}) — Reason: {conn.reason || "N/A"}</li>
+                  <li key={conn.id} className="text-sm text-slate-600">From: <strong className="text-slate-900">{getComponentName(conn.from)}</strong> ({conn.type || "Untitled"}) — Reason: {conn.reason || "N/A"}</li>
                 ))}
               </ul>
             )}
           </div>
-          <div>
-            <h4 className="font-semibold text-lg">Outputs</h4>
-            {outputs.length === 0 ? <p className="text-gray-500 text-sm">No outputs</p> : (
-              <ul className="space-y-1">
+          <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-4">
+            <h4 className="flex items-center gap-2 font-semibold text-base text-slate-800">
+              <span className="h-4 w-1 rounded-full bg-[#0F766E]" />
+              Outputs
+            </h4>
+            {outputs.length === 0 ? <p className="text-slate-400 text-sm mt-2">No outputs</p> : (
+              <ul className="space-y-1 mt-2">
                 {outputs.map((conn) => (
-                  <li key={conn.id} className="text-sm">To: <strong>{getComponentName(conn.to)}</strong> ({conn.type || "Untitled"}) — Reason: {conn.reason || "N/A"}</li>
+                  <li key={conn.id} className="text-sm text-slate-600">To: <strong className="text-slate-900">{getComponentName(conn.to)}</strong> ({conn.type || "Untitled"}) — Reason: {conn.reason || "N/A"}</li>
                 ))}
               </ul>
             )}
@@ -448,12 +458,13 @@ const ComponentDetailDialog = ({
         </div>
         */}
 
-        <DialogFooter className="mt-6 flex justify-end gap-3">
-          <Button variant="outline" onClick={onClose} className="border-gray-300">Cancel</Button>
-          <Button onClick={handleSave} disabled={isSaving} className="bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-60">
+        <DialogFooter className="mt-8 flex justify-end gap-3 border-t border-slate-200 pt-5">
+          <Button variant="outline" onClick={onClose} className="border-slate-300 bg-white text-slate-700 hover:bg-slate-100 hover:text-slate-900">Cancel</Button>
+          <Button onClick={handleSave} disabled={isSaving} className="bg-[#0F766E] hover:bg-[#0C5F59] text-white shadow-sm disabled:opacity-60">
             {isSaving ? "Saving..." : "Save Details"}
           </Button>
         </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );

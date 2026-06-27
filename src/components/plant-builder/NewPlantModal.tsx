@@ -37,10 +37,18 @@ import {
   type PlantPayload,
 } from "@/services/plant-builder/plants";
 
-// Static-theme styling (no dark/light variants; explicit colors).
-const inputClass = "h-11 bg-white border-gray-300 text-slate-900";
-const triggerClass = "h-11 bg-white border-gray-300 text-slate-900";
-const contentClass = "bg-white border-gray-300 text-slate-900";
+// Static-theme styling (no dark/light variants; explicit GreenEarthX colors).
+// The shadcn semantic tokens (ring/border-input/accent) are undefined in this
+// app, so focus rings and outline-button states are set explicitly here.
+const inputClass =
+  "h-11 bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-[#0F766E]/30 focus-visible:border-[#0F766E]";
+const triggerClass =
+  "h-11 bg-white border-slate-300 text-slate-900 focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] data-[state=open]:border-[#0F766E]";
+const contentClass = "bg-white border-slate-200 text-slate-900";
+const outlineBtnClass =
+  "border-slate-300 bg-white text-slate-700 hover:bg-slate-100 hover:text-slate-900";
+const primaryBtnClass =
+  "bg-[#0F766E] hover:bg-[#0C5F59] text-white min-w-[140px] shadow-sm transition-colors";
 
 const EMPTY_FUEL: PlantFuelRow = {
   fuel_type: "",
@@ -156,10 +164,13 @@ export default function NewPlantModal({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-3xl max-h-[88vh] overflow-hidden flex flex-col bg-white p-0">
-        <DialogHeader className="border-b border-slate-200 bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-5">
+        <DialogHeader className="bg-gradient-to-br from-[#0F766E] to-[#15936B] px-6 py-5">
           <DialogTitle className="text-xl font-bold text-white">
             New Plant
           </DialogTitle>
+          <p className="text-sm text-teal-50/90">
+            Set up the plant profile, then add the products it makes.
+          </p>
           <Stepper step={step} />
         </DialogHeader>
 
@@ -188,6 +199,7 @@ export default function NewPlantModal({
               variant="outline"
               onClick={() => setStep(1)}
               disabled={submitting}
+              className={outlineBtnClass}
             >
               Back
             </Button>
@@ -197,17 +209,14 @@ export default function NewPlantModal({
               variant="outline"
               onClick={() => handleOpenChange(false)}
               disabled={submitting}
+              className={outlineBtnClass}
             >
               Cancel
             </Button>
           )}
 
           {step === 1 ? (
-            <Button
-              type="button"
-              onClick={handleNext}
-              className="bg-[#4F8FF7] hover:bg-[#3b73c4] text-white min-w-[140px]"
-            >
+            <Button type="button" onClick={handleNext} className={primaryBtnClass}>
               Next
             </Button>
           ) : (
@@ -215,7 +224,7 @@ export default function NewPlantModal({
               type="button"
               onClick={handleCreate}
               disabled={submitting}
-              className="bg-[#4F8FF7] hover:bg-[#3b73c4] text-white min-w-[140px]"
+              className={primaryBtnClass}
             >
               {submitting ? "Creating…" : "Create Plant"}
             </Button>
@@ -237,9 +246,9 @@ function Stepper({ step }: { step: 1 | 2 }) {
         return (
           <div key={label} className="flex flex-1 items-center gap-2">
             <div
-              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold ${
+              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold transition-colors ${
                 done || active
-                  ? "border-white bg-white text-blue-600"
+                  ? "border-white bg-white text-[#0F766E]"
                   : "border-white/50 text-white/70"
               }`}
             >
@@ -269,7 +278,8 @@ function SubCard({
 }) {
   return (
     <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50/60 p-5 shadow-sm">
-      <div className="text-xs font-semibold uppercase tracking-wide text-gray-600">
+      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
+        <span className="h-3.5 w-1 rounded-full bg-[#0F766E]" />
         {title}
       </div>
       {children}
@@ -597,7 +607,7 @@ function Section2({
         type="button"
         variant="outline"
         onClick={addFuel}
-        className="w-full border-dashed border-slate-300 text-slate-600"
+        className="w-full border-dashed border-slate-300 bg-white text-slate-600 hover:border-[#0F766E] hover:bg-[#0F766E]/5 hover:text-[#0F766E]"
       >
         <Plus className="mr-2 h-4 w-4" />
         Add fuel

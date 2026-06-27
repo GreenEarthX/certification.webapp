@@ -18,12 +18,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Building2, SlidersHorizontal, Package, Plus, Trash2 } from "lucide-react";
+import {
+  FUEL_TYPES,
+  CAPACITY_UNITS,
+} from "@/constants/plant-builder";
 import type { PlantInfo } from "@/app/plant-operator/plant-builder/types";
+
+type FuelRow = { fuel_type: string; capacity: string; capacity_unit: string };
+type SectionKey = "details" | "parameters" | "product";
+const SECTION_NAV: { key: SectionKey; label: string; Icon: typeof Building2 }[] = [
+  { key: "details", label: "Plant details", Icon: Building2 },
+  { key: "parameters", label: "Plant Parameters", Icon: SlidersHorizontal },
+  { key: "product", label: "Product details", Icon: Package },
+];
 
 type PlantInfoFormProps = {
   onSubmit: (info: PlantInfo) => void;
   initialData?: Partial<PlantInfo>;
   submitLabel?: string;
+  /** When true, render a compact layout that fits inside a Dialog/modal. */
+  embedded?: boolean;
 };
 
 const COUNTRIES = [
@@ -276,7 +291,7 @@ const CERTIFICATION_PHASES = [
   { value: "surveillance", label: "Surveillance" },
 ];
 
-const PlantInfoForm = ({ onSubmit, initialData, submitLabel }: PlantInfoFormProps) => {
+const PlantInfoForm = ({ onSubmit, initialData, submitLabel, embedded = false }: PlantInfoFormProps) => {
   const currentYear = new Date().getFullYear();
   const [formData, setFormData] = useState({
     projectName: "",
@@ -298,7 +313,23 @@ const PlantInfoForm = ({ onSubmit, initialData, submitLabel }: PlantInfoFormProp
     certificationPhase: "",
     expectedCOD: "",
     expectedCODMode: "year",
+    totalCalendarHours: "",
+    plantAvailability: "",
+    effectiveOperatingHours: "",
+    effectiveOperatingDays: "",
   });
+
+  // Embedded modal: which section the right-hand nav is showing.
+  const [activeSection, setActiveSection] = useState<SectionKey>("details");
+
+  // Product details = the plant's output fuels (persisted to plant.fuels).
+  const [fuels, setFuels] = useState<FuelRow[]>([]);
+  const addFuel = () =>
+    setFuels((prev) => [...prev, { fuel_type: "", capacity: "", capacity_unit: "" }]);
+  const removeFuel = (index: number) =>
+    setFuels((prev) => prev.filter((_, i) => i !== index));
+  const updateFuel = (index: number, field: keyof FuelRow, value: string) =>
+    setFuels((prev) => prev.map((row, i) => (i === index ? { ...row, [field]: value } : row)));
 
   useEffect(() => {
     document.documentElement.classList.remove("dark");
@@ -350,7 +381,34 @@ const PlantInfoForm = ({ onSubmit, initialData, submitLabel }: PlantInfoFormProp
       certificationPhase: (initialData as any).certificationPhase ?? prev.certificationPhase,
       expectedCOD: inferredCod || prev.expectedCOD,
       expectedCODMode: inferredCod ? inferredCodMode : prev.expectedCODMode,
+      totalCalendarHours:
+        (initialData as any).totalCalendarHours != null
+          ? String((initialData as any).totalCalendarHours)
+          : prev.totalCalendarHours,
+      plantAvailability:
+        (initialData as any).plantAvailability != null
+          ? String((initialData as any).plantAvailability)
+          : prev.plantAvailability,
+      effectiveOperatingHours:
+        (initialData as any).effectiveOperatingHours != null
+          ? String((initialData as any).effectiveOperatingHours)
+          : prev.effectiveOperatingHours,
+      effectiveOperatingDays:
+        (initialData as any).effectiveOperatingDays != null
+          ? String((initialData as any).effectiveOperatingDays)
+          : prev.effectiveOperatingDays,
     }));
+
+    const initialFuels = (initialData as any).fuels;
+    if (Array.isArray(initialFuels)) {
+      setFuels(
+        initialFuels.map((f: any) => ({
+          fuel_type: f.fuel_type ?? "",
+          capacity: f.capacity != null ? String(f.capacity) : "",
+          capacity_unit: f.capacity_unit ?? "",
+        })),
+      );
+    }
   }, [initialData]);
 
   const updateField = (field: keyof typeof formData, value: string) => {
@@ -363,6 +421,10 @@ const PlantInfoForm = ({ onSubmit, initialData, submitLabel }: PlantInfoFormProp
     const projectLifetime = Number.parseFloat(formData.projectLifetimeYears);
     const latitude = Number.parseFloat(formData.latitude);
     const longitude = Number.parseFloat(formData.longitude);
+    const totalCalendarHours = Number.parseFloat(formData.totalCalendarHours);
+    const plantAvailability = Number.parseFloat(formData.plantAvailability);
+    const effectiveOperatingHours = Number.parseFloat(formData.effectiveOperatingHours);
+    const effectiveOperatingDays = Number.parseFloat(formData.effectiveOperatingDays);
 
     const submitData: PlantInfo = {
       projectName: "",
@@ -391,27 +453,95 @@ const PlantInfoForm = ({ onSubmit, initialData, submitLabel }: PlantInfoFormProp
       certificationPhase: formData.certificationPhase || undefined,
       commercialOperationalDate: formData.expectedCOD || "",
       expectedCOD: formData.expectedCOD || undefined,
+      totalCalendarHours: Number.isFinite(totalCalendarHours) ? totalCalendarHours : undefined,
+      plantAvailability: Number.isFinite(plantAvailability) ? plantAvailability : undefined,
+      effectiveOperatingHours: Number.isFinite(effectiveOperatingHours)
+        ? effectiveOperatingHours
+        : undefined,
+      effectiveOperatingDays: Number.isFinite(effectiveOperatingDays)
+        ? effectiveOperatingDays
+        : undefined,
+      // Only round-trip fuels from the embedded editor (the Product details section).
+      ...(embedded
+        ? {
+            fuels: fuels
+              .filter((f) => f.fuel_type)
+              .map((f) => {
+                const cap = Number.parseFloat(f.capacity);
+                return {
+                  fuel_type: f.fuel_type,
+                  capacity: Number.isFinite(cap) ? cap : undefined,
+                  capacity_unit: f.capacity_unit || undefined,
+                };
+              }),
+          }
+        : {}),
     };
 
     onSubmit(submitData);
   };
 
   return (
-    <div className="w-full min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-4 md:p-8 flex items-start">
-      <div className="w-full max-w-none">
-        <Card className="w-full h-[calc(100vh-140px)] bg-white border border-gray-300 shadow-xl rounded-xl overflow-hidden flex flex-col">
-          <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6">
-            <CardTitle className="text-2xl font-bold">Project Setup</CardTitle>
-            <CardDescription className="text-blue-100 mt-1">
+    <div
+      className={
+        embedded
+          ? "plant-info-form w-full"
+          : "plant-info-form w-full min-h-screen bg-gradient-to-br from-teal-50 via-white to-emerald-50 p-4 md:p-8 flex items-start"
+      }
+    >
+      <div className={embedded ? "w-full" : "w-full max-w-none"}>
+        <Card
+          className={
+            embedded
+              ? "w-full bg-white border-0 shadow-none rounded-none overflow-hidden flex flex-col"
+              : "w-full h-[calc(100vh-140px)] bg-white border border-slate-200 shadow-xl rounded-xl overflow-hidden flex flex-col"
+          }
+        >
+          <CardHeader className="bg-gradient-to-br from-[#0F766E] to-[#15936B] text-white p-6">
+            <CardTitle className="text-2xl font-bold">
+              {embedded ? "Edit Plant Details" : "Project Setup"}
+            </CardTitle>
+            <CardDescription className="text-teal-50/90 mt-1">
               Provide the baseline project details. Only required fields are marked.
             </CardDescription>
           </CardHeader>
 
-          <CardContent className="p-6 md:p-8 bg-white flex-1 min-h-0">
-            <form onSubmit={handleSubmit} className="flex flex-col gap-6 h-full">
-              <div className="flex-1 min-h-0 overflow-y-auto pr-3 form-scroll space-y-8">
+          <CardContent className={embedded ? "p-6 bg-white" : "p-6 md:p-8 bg-white flex-1 min-h-0"}>
+            <form onSubmit={handleSubmit} className={embedded ? "flex flex-col gap-6" : "flex flex-col gap-6 h-full"}>
+              <div className={embedded ? "flex gap-4" : "contents"}>
+              {embedded && (
+                <nav className="order-2 w-44 shrink-0 space-y-1">
+                  {SECTION_NAV.map(({ key, label, Icon }) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setActiveSection(key)}
+                      className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
+                        activeSection === key
+                          ? "bg-[#0F766E] text-white shadow-sm"
+                          : "text-slate-600 hover:bg-slate-100"
+                      }`}
+                    >
+                      <Icon className="h-4 w-4 shrink-0" />
+                      {label}
+                    </button>
+                  ))}
+                </nav>
+              )}
+              <div
+                className={
+                  embedded
+                    ? "order-1 flex-1 min-w-0 overflow-y-auto pr-3 form-scroll space-y-6 max-h-[60vh]"
+                    : "flex-1 min-h-0 overflow-y-auto pr-3 form-scroll space-y-8"
+                }
+              >
+              {(!embedded || activeSection === "details") && (
+              <>
               <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50/60 p-5 shadow-sm">
-                <div className="text-sm font-semibold text-gray-700">A. Plant Identity</div>
+                <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                  <span className="h-4 w-1 rounded-full bg-[#0F766E]" />
+                  A. Plant Identity
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div className="space-y-1.5">
                     <Label htmlFor="plantName">Plant Name *</Label>
@@ -440,7 +570,10 @@ const PlantInfoForm = ({ onSubmit, initialData, submitLabel }: PlantInfoFormProp
               </div>
 
               <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50/60 p-5 shadow-sm">
-                <div className="text-sm font-semibold text-gray-700">B. Pathway and Configuration</div>
+                <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                  <span className="h-4 w-1 rounded-full bg-[#0F766E]" />
+                  B. Pathway and Configuration
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div className="space-y-1.5">
                     <Label htmlFor="primaryPathway">Primary Pathway</Label>
@@ -479,7 +612,10 @@ const PlantInfoForm = ({ onSubmit, initialData, submitLabel }: PlantInfoFormProp
               </div>
 
               <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50/60 p-5 shadow-sm">
-                <div className="text-sm font-semibold text-gray-700">C. Location</div>
+                <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                  <span className="h-4 w-1 rounded-full bg-[#0F766E]" />
+                  C. Location
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div className="space-y-1.5">
                     <Label htmlFor="country">Country *</Label>
@@ -592,7 +728,10 @@ const PlantInfoForm = ({ onSubmit, initialData, submitLabel }: PlantInfoFormProp
               </div>
 
               <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50/60 p-5 shadow-sm">
-                <div className="text-sm font-semibold text-gray-700">D. Project Maturity</div>
+                <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                  <span className="h-4 w-1 rounded-full bg-[#0F766E]" />
+                  D. Project Maturity
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div className="space-y-1.5">
                     <Label htmlFor="projectMaturityStage">Project Maturity Stage *</Label>
@@ -698,12 +837,174 @@ const PlantInfoForm = ({ onSubmit, initialData, submitLabel }: PlantInfoFormProp
                 </div>
               </div>
 
+              </>
+              )}
+
+              {(!embedded || activeSection === "parameters") && (
+              <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50/60 p-5 shadow-sm">
+                <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                  <span className="h-4 w-1 rounded-full bg-[#0F766E]" />
+                  E. Plant Parameters
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="totalCalendarHours">Total Calendar Hours per Year (h/yr)</Label>
+                    <Input
+                      id="totalCalendarHours"
+                      type="number"
+                      step="any"
+                      min="0"
+                      value={formData.totalCalendarHours}
+                      onChange={(e) => updateField("totalCalendarHours", e.target.value)}
+                      placeholder="e.g., 8760"
+                      className="h-11 bg-white"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="plantAvailability">Plant Availability (%)</Label>
+                    <Input
+                      id="plantAvailability"
+                      type="number"
+                      step="any"
+                      min="0"
+                      max="100"
+                      value={formData.plantAvailability}
+                      onChange={(e) => updateField("plantAvailability", e.target.value)}
+                      placeholder="e.g., 92"
+                      className="h-11 bg-white"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="effectiveOperatingHours">Effective Operating Hours (h/yr)</Label>
+                    <Input
+                      id="effectiveOperatingHours"
+                      type="number"
+                      step="any"
+                      min="0"
+                      value={formData.effectiveOperatingHours}
+                      onChange={(e) => updateField("effectiveOperatingHours", e.target.value)}
+                      placeholder="e.g., 8059"
+                      className="h-11 bg-white"
+                    />
+                    <p className="text-xs text-gray-500">Hint: Annual Hours × Plant Availability</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="effectiveOperatingDays">Effective Operating Days (d/yr)</Label>
+                    <Input
+                      id="effectiveOperatingDays"
+                      type="number"
+                      step="any"
+                      min="0"
+                      value={formData.effectiveOperatingDays}
+                      onChange={(e) => updateField("effectiveOperatingDays", e.target.value)}
+                      placeholder="e.g., 336"
+                      className="h-11 bg-white"
+                    />
+                    <p className="text-xs text-gray-500">Hint: Effective Operating Hours ÷ 24</p>
+                  </div>
+                </div>
+              </div>
+              )}
+
+              {embedded && activeSection === "product" && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                    <span className="h-4 w-1 rounded-full bg-[#0F766E]" />
+                    Product Details
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Output fuels this plant produces. Add as many as needed — these appear on the
+                    plant cards and across the ecosystem.
+                  </p>
+                  {fuels.map((row, i) => (
+                    <div
+                      key={i}
+                      className="space-y-4 rounded-xl border border-slate-200 bg-slate-50/60 p-5 shadow-sm"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+                          Product {i + 1}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeFuel(i)}
+                          className="flex items-center gap-1 text-xs font-medium text-red-500 hover:text-red-600"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Remove
+                        </button>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Fuel Type *</Label>
+                        <Select
+                          value={row.fuel_type || undefined}
+                          onValueChange={(v) => updateFuel(i, "fuel_type", v)}
+                        >
+                          <SelectTrigger className="h-11 bg-white border-gray-300">
+                            <SelectValue placeholder="Select fuel type" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white border-gray-300 max-h-72">
+                            {FUEL_TYPES.map((o) => (
+                              <SelectItem key={o.value} value={o.value}>
+                                {o.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div className="space-y-1.5">
+                          <Label>Production Capacity</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="any"
+                            value={row.capacity}
+                            onChange={(e) => updateFuel(i, "capacity", e.target.value)}
+                            placeholder="e.g., 1000"
+                            className="h-11 bg-white"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label>Capacity Unit</Label>
+                          <Select
+                            value={row.capacity_unit || undefined}
+                            onValueChange={(v) => updateFuel(i, "capacity_unit", v)}
+                          >
+                            <SelectTrigger className="h-11 bg-white border-gray-300">
+                              <SelectValue placeholder="Select unit" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-white border-gray-300">
+                              {CAPACITY_UNITS.map((o) => (
+                                <SelectItem key={o.value} value={o.value}>
+                                  {o.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={addFuel}
+                    className="w-full border-dashed border-slate-300 bg-white text-slate-600 hover:border-[#0F766E] hover:bg-[#0F766E]/5 hover:text-[#0F766E]"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add product
+                  </Button>
+                </div>
+              )}
+
+              </div>
               </div>
               <div className="flex justify-end pt-4 border-t border-slate-200 bg-white shrink-0">
                 <Button
                   type="submit"
                   size="lg"
-                  className="min-w-[200px] bg-[#4F8FF7] hover:bg-[#3A78E0] text-white font-medium px-6 py-3 rounded-lg shadow-md transition-all duration-200 hover:shadow-lg"
+                  className="min-w-[200px] bg-[#0F766E] hover:bg-[#0C5F59] text-white font-medium px-6 py-3 rounded-lg shadow-md transition-all duration-200 hover:shadow-lg"
                 >
                   {submitLabel || "Continue"}
                 </Button>
@@ -715,7 +1016,7 @@ const PlantInfoForm = ({ onSubmit, initialData, submitLabel }: PlantInfoFormProp
       <style jsx>{`
         .form-scroll {
           scrollbar-width: thin;
-          scrollbar-color: rgba(79, 143, 247, 0.85) rgba(226, 232, 240, 0.8);
+          scrollbar-color: rgba(15, 118, 110, 0.85) rgba(226, 232, 240, 0.8);
         }
         .form-scroll::-webkit-scrollbar {
           width: 12px;
@@ -725,9 +1026,17 @@ const PlantInfoForm = ({ onSubmit, initialData, submitLabel }: PlantInfoFormProp
           border-radius: 10px;
         }
         .form-scroll::-webkit-scrollbar-thumb {
-          background: rgba(79, 143, 247, 0.85);
+          background: rgba(15, 118, 110, 0.85);
           border-radius: 10px;
           border: 2px solid rgba(226, 232, 240, 0.8);
+        }
+      `}</style>
+      <style jsx global>{`
+        .plant-info-form input:focus-visible,
+        .plant-info-form button[role="combobox"]:focus-visible {
+          border-color: #0f766e !important;
+          box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.25);
+          outline: none;
         }
       `}</style>
     </div>
