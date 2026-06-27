@@ -1,0 +1,54 @@
+
+[
+  {
+    "product": {
+      "productName": "Green Hydrogen",
+      "productType": "Hydrogen",
+      "productionCapacity": "100",
+      "unit": "Ton/h",
+      "fuelType": "Hydrogen",
+      "fuelClass": "Renewable fuels of non-biological origin (RFNBO)",
+      "feedstock": "Water",
+      "carbonFootprint": { "value": 2.5, "unit": "gCO2e/MJ" },
+      "offtakeLocation": {
+        "country": "EU",
+        "zip": "80331",
+        "city": "Munich",
+        "street": "Main Street 123"
+      },
+      "downstreamOperations": "Green ammonia production",
+      "verified": true
+    },
+    "scheme": {
+      "id": "rfnbo",
+      "name": "RFNBO",
+      "criteria": {
+        "origin": ["wind", "solar", "hydro"],
+        "carbonFootprint": { "max": 3.4, "unit": "gCO2e/MJ" },
+        "chainOfCustody": ["mass-balance", "book-and-claim"],
+        "markets": ["EU", "UK"]
+      },
+      "weight": 0.4
+    },
+    "attributes": {
+      "origin": {
+        "status": "match",
+        "value": "solar",
+        "details": "Matches: solar"
+      },
+      "carbonFootprint": {
+        "status": "match",
+        "value": 2.5,
+        "details": "Value: 2.5 gCO2e/MJ (Max: 3.4)"
+      },
+      "chainOfCustody": {
+        "status": "match",
+        "value": "mass-balance",
+        "details": "Matches: mass-balance"
+      }
+    },
+    "confidenceScore": 90,
+    "eligibleMarkets": ["EU"],
+    "fuelClass": "RFNBO"
+  }
+]
