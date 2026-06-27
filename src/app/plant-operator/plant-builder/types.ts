@@ -17,6 +17,13 @@ export interface PlantInfo {
   status: string;
   commercialOperationalDate: string;
   investment?: { amount: number; unit: string };
+  // Plant Parameters → metadata.availability_basis
+  totalCalendarHours?: number;
+  plantAvailability?: number;
+  effectiveOperatingHours?: number;
+  effectiveOperatingDays?: number;
+  // Product details → plant.fuels
+  fuels?: { fuel_type: string; capacity?: number; capacity_unit?: string }[];
   [key: string]: any;
 }
 
