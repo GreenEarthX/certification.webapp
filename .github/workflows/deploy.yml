@@ -1,0 +1,66 @@
+name: Build and Deploy — Frontend
+
+on:
+  push:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ghcr.io/greenearthx/certification-webapp
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest
+            type=sha,prefix=,format=short
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            NEXT_PUBLIC_HCS_TOPIC_ID=${{ vars.NEXT_PUBLIC_HCS_TOPIC_ID }}
+            NEXT_PUBLIC_AUTH0_REDIRECT_URI=${{ vars.NEXT_PUBLIC_AUTH0_REDIRECT_URI }}
+            NEXT_PUBLIC_AUTH0_POST_LOGOUT_REDIRECT_URI=${{ vars.NEXT_PUBLIC_AUTH0_POST_LOGOUT_REDIRECT_URI }}
+            NEXT_PUBLIC_ONBOARDING_URL=${{ vars.NEXT_PUBLIC_ONBOARDING_URL }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy frontend on server
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: /opt/greenearthx/greenearthx-infra/scripts/deploy.sh frontend

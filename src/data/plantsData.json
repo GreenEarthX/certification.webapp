@@ -1,0 +1,45 @@
+[
+    {
+      "id": 1,
+      "name": "HydroDuoX Facility",
+      "type": "Hydrogen",
+      "address": "California/USA",
+      "riskScore": 80
+    },
+    {
+      "id": 2,
+      "name": "VerdaH2 Hub",
+      "type": "Ammonia",
+      "address": "Amsterdam/Nederland",
+      "riskScore": 20
+    },
+    {
+      "id": 3,
+      "name": "NEOM Green Hydrogen",
+      "type": "Hydrogen",
+      "address": "Saudi Arabia",
+      "riskScore": 50
+    },
+    {
+        "id": 5,
+        "name": "Jenbacher CHP",
+        "type": "Hydrogen",
+        "address": "Austria",
+        "riskScore": 70
+    },
+    {
+      "id": 4,
+      "name": "Aqua Ventus",
+      "type": "Hydrogen",
+      "address": "Germany",
+      "riskScore": 60
+    },
+    {
+      "id": 6,
+      "name": "ACME",
+      "type": "Green Ammonia",
+      "address": "Thoothukudi/India",
+      "riskScore": 40
+    }
+
+  ]
