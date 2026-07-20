@@ -1629,9 +1629,17 @@ const Canvas = ({
     setSelectedComponent(null);
   };
 
-  const handleSaveConnection = (id: string, type: string, reason: string, data: any) => {
+  const handleSaveConnection = (
+    id: string,
+    type: string,
+    reason: string,
+    data: any,
+    port_id?: string
+  ) => {
     setConnections((prev) => {
-      const next = prev.map((c) => (c.id === id ? { ...c, type, reason, data } : c));
+      const next = prev.map((c) =>
+        c.id === id ? { ...c, type, reason, data, port_id } : c
+      );
       const updated = prev.find((c) => c.id === id);
       if (updated) {
         void persistConnectionsForComponent(updated.from, next);

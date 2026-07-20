@@ -7,6 +7,8 @@ export type StoredConnectionPayload = {
   type?: string;
   reason?: string;
   data?: Record<string, any>;
+  /** Equipment-side port; the mass-balance engine reads this to resolve streams. */
+  port_id?: string;
 };
 
 export const buildConnectionPayloadForComponent = (
@@ -31,6 +33,7 @@ export const buildConnectionPayloadForComponent = (
         type: conn.type,
         reason: conn.reason,
         data: conn.data || {},
+        port_id: conn.port_id,
       };
     })
     .filter((payload): payload is NonNullable<typeof payload> => payload !== null);

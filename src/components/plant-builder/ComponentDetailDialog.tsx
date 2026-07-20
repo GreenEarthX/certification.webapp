@@ -21,9 +21,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Upload, Plus, ChevronDown, Trash2 } from "lucide-react";
+import { Upload, Plus, ChevronDown, Trash2, Sigma } from "lucide-react";
 import type { PlacedComponent, Connection } from "@/app/plant-operator/plant-builder/types";
 import ComponentSchemaForm, { ComponentFieldDefinition } from "./ComponentSchemaForm";
+import EquipmentEquationsModule from "./EquipmentEquationsModule";
 import { fetchComponentInstanceById, updateComponentInstance } from "@/services/plant-builder/componentInstances";
 import { fetchComponentDefinitionById, fetchComponentDefinitions } from "@/services/plant-builder/componentDefinitions";
 import toast from "react-hot-toast";
@@ -98,6 +99,10 @@ const ComponentDetailDialog = ({
     component.componentDefinitionId ?? null
   );
   const [isSaving, setIsSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState<"form" | "equations">("form");
+  // Business component id (e.g. "E166") — resolved from the definition, NOT the
+  // display `category` label. Equations are keyed by this id.
+  const [equipmentComponentId, setEquipmentComponentId] = useState<string | null>(null);
 
   useEffect(() => {
     setFieldValues(sanitizeFieldValues(component.data));
@@ -105,6 +110,8 @@ const ComponentDetailDialog = ({
     setActiveDefinitionId(component.componentDefinitionId ?? null);
     setInputStreams([]);
     setOutputStreams([]);
+    setActiveTab("form");
+    setEquipmentComponentId(null);
   }, [component]);
 
   useEffect(() => {
@@ -141,8 +148,10 @@ const ComponentDetailDialog = ({
           const definition = await fetchComponentDefinitionById(definitionId);
           if (cancelled) return;
           setSchemaFields(definition.field_schema?.fields || []);
+          setEquipmentComponentId(definition.component_id ?? null);
         } else {
           setSchemaFields([]);
+          setEquipmentComponentId(null);
         }
       } catch (err) {
         console.error("Failed to load component schema:", err);
@@ -347,6 +356,11 @@ const ComponentDetailDialog = ({
     </div>
   );
 
+  // The in-form equations module applies to placed equipment only. The tab is
+  // shown for any equipment; the module itself resolves its equations by the
+  // business component id once the definition loads.
+  const showEquationsModule = component.type === "equipment";
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0 bg-white text-slate-900">
@@ -358,86 +372,106 @@ const ComponentDetailDialog = ({
         </DialogHeader>
 
         <div className="px-6 pb-6">
-        <div className="mt-6 space-y-4">
-          {schemaError && (
-            <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-              {schemaError}
+        {/* Tab bar — equipment gets a second tab for its equations. */}
+        {showEquationsModule && (
+          <div className="mt-5 flex items-center gap-1 border-b border-slate-200">
+            <button
+              type="button"
+              onClick={() => setActiveTab("form")}
+              className={`-mb-px px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
+                activeTab === "form"
+                  ? "border-[#0F766E] text-[#0F766E]"
+                  : "border-transparent text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              Details
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("equations")}
+              className={`-mb-px flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
+                activeTab === "equations"
+                  ? "border-[#0F766E] text-[#0F766E]"
+                  : "border-transparent text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              <Sigma className="h-4 w-4" />
+              Mass Balance Equations
+            </button>
+          </div>
+        )}
+
+        {/* FORM TAB — kept mounted so field values persist across tab switches. */}
+        <div className={showEquationsModule && activeTab !== "form" ? "hidden" : "block"}>
+          <div className="mt-6 space-y-4">
+            {schemaError && (
+              <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                {schemaError}
+              </div>
+            )}
+            {isSchemaLoading ? (
+              <div className="flex items-center gap-2 text-sm text-slate-500">
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-[#0F766E]" />
+                Loading component fields…
+              </div>
+            ) : (
+              <ComponentSchemaForm
+                fields={schemaFields}
+                values={fieldValues}
+                onChange={(name, value) =>
+                  setFieldValues((prev) => ({
+                    ...prev,
+                    [name]: value,
+                  }))
+                }
+              />
+            )}
+          </div>
+
+          {/* Existing Connections */}
+          <div className="mt-8 border-t border-slate-200 pt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-4">
+              <h4 className="flex items-center gap-2 font-semibold text-base text-slate-800">
+                <span className="h-4 w-1 rounded-full bg-[#0F766E]" />
+                Inputs
+              </h4>
+              {inputs.length === 0 ? <p className="text-slate-400 text-sm mt-2">No inputs</p> : (
+                <ul className="space-y-1 mt-2">
+                  {inputs.map((conn) => (
+                    <li key={conn.id} className="text-sm text-slate-600">From: <strong className="text-slate-900">{getComponentName(conn.from)}</strong> ({conn.type || "Untitled"}) — Reason: {conn.reason || "N/A"}</li>
+                  ))}
+                </ul>
+              )}
             </div>
-          )}
-          {isSchemaLoading ? (
-            <div className="flex items-center gap-2 text-sm text-slate-500">
-              <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-[#0F766E]" />
-              Loading component fields…
+            <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-4">
+              <h4 className="flex items-center gap-2 font-semibold text-base text-slate-800">
+                <span className="h-4 w-1 rounded-full bg-[#0F766E]" />
+                Outputs
+              </h4>
+              {outputs.length === 0 ? <p className="text-slate-400 text-sm mt-2">No outputs</p> : (
+                <ul className="space-y-1 mt-2">
+                  {outputs.map((conn) => (
+                    <li key={conn.id} className="text-sm text-slate-600">To: <strong className="text-slate-900">{getComponentName(conn.to)}</strong> ({conn.type || "Untitled"}) — Reason: {conn.reason || "N/A"}</li>
+                  ))}
+                </ul>
+              )}
             </div>
-          ) : (
-            <ComponentSchemaForm
-              fields={schemaFields}
-              values={fieldValues}
-              onChange={(name, value) =>
-                setFieldValues((prev) => ({
-                  ...prev,
-                  [name]: value,
-                }))
+          </div>
+        </div>
+
+        {/* EQUATIONS TAB — kept mounted so definitions/results aren't refetched. */}
+        {showEquationsModule && (
+          <div className={activeTab === "equations" ? "block mt-6" : "hidden"}>
+            <EquipmentEquationsModule
+              componentId={equipmentComponentId ?? undefined}
+              instanceId={component.instanceId}
+              getFieldValues={() => fieldValues}
+              onComputedFields={(computed) =>
+                setFieldValues((prev) => ({ ...prev, ...computed }))
               }
             />
-          )}
-        </div>
-
-        {/*
-        <div className="mt-8 border-t pt-6">
-          <h4 className="font-semibold text-lg mb-4">Ports Configuration</h4>
-          <div className="space-y-6">
-            <div>
-              <h5 className="font-medium mb-3">Input Streams</h5>
-              <div className="space-y-4">
-                {inputStreams.map((stream) => renderStreamForm(stream, true, inputStreams, setInputStreams))}
-                <Button variant="outline" className="w-full border-gray-300" onClick={addInputStream}>
-                  <Plus className="h-4 w-4 mr-2" /> Add Input Stream
-                </Button>
-              </div>
-            </div>
-            <div>
-              <h5 className="font-medium mb-3">Output Streams</h5>
-              <div className="space-y-4">
-                {outputStreams.map((stream) => renderStreamForm(stream, false, outputStreams, setOutputStreams))}
-                <Button variant="outline" className="w-full border-gray-300" onClick={addOutputStream}>
-                  <Plus className="h-4 w-4 mr-2" /> Add Output Stream
-                </Button>
-              </div>
-            </div>
           </div>
-        </div>
-        */}
-
-        {/* Existing Connections */}
-        <div className="mt-8 border-t border-slate-200 pt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-4">
-            <h4 className="flex items-center gap-2 font-semibold text-base text-slate-800">
-              <span className="h-4 w-1 rounded-full bg-[#0F766E]" />
-              Inputs
-            </h4>
-            {inputs.length === 0 ? <p className="text-slate-400 text-sm mt-2">No inputs</p> : (
-              <ul className="space-y-1 mt-2">
-                {inputs.map((conn) => (
-                  <li key={conn.id} className="text-sm text-slate-600">From: <strong className="text-slate-900">{getComponentName(conn.from)}</strong> ({conn.type || "Untitled"}) — Reason: {conn.reason || "N/A"}</li>
-                ))}
-              </ul>
-            )}
-          </div>
-          <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-4">
-            <h4 className="flex items-center gap-2 font-semibold text-base text-slate-800">
-              <span className="h-4 w-1 rounded-full bg-[#0F766E]" />
-              Outputs
-            </h4>
-            {outputs.length === 0 ? <p className="text-slate-400 text-sm mt-2">No outputs</p> : (
-              <ul className="space-y-1 mt-2">
-                {outputs.map((conn) => (
-                  <li key={conn.id} className="text-sm text-slate-600">To: <strong className="text-slate-900">{getComponentName(conn.to)}</strong> ({conn.type || "Untitled"}) — Reason: {conn.reason || "N/A"}</li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
+        )}
 
         {/*
         <div className="mt-8 border-t pt-6">
