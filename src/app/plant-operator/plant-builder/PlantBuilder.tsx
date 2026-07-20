@@ -27,6 +27,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Settings,
+  Sigma,
 } from "lucide-react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
@@ -96,6 +97,16 @@ import {
   buildFallbackValidationError,
   formatPortErrorMessage,
 } from "@/lib/plant-builder/validation";
+import {
+  fetchEquipmentResults,
+  runEquipment,
+  type EquipmentRun,
+} from "@/services/plant-builder/massBalance";
+import {
+  equipmentRefsFromComponents,
+  type EquipmentRunMap,
+} from "@/lib/plant-builder/equations";
+import EquationReportDialog from "@/components/plant-builder/EquationReportDialog";
 import { toInstanceId, toOptionalNumber } from "@/lib/plant-builder/ids";
 import { updateComponentInstance, deleteComponentInstance, fetchComponentInstances } from "@/services/plant-builder/componentInstances";
 import { buildConnectionPayloadForComponent, StoredConnectionPayload } from "@/lib/plant-builder/connection-utils";
@@ -540,8 +551,14 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
   const [error, setError] = useState<string | null>(null);
   const [plantModelJson, setPlantModelJson] = useState<string>("");
   const [validationResult, setValidationResult] = useState<DigitalTwinValidationResult | null>(null);
-  const [validationStep, setValidationStep] = useState<"structure" | "ports" | null>(null);
+  const [validationStep, setValidationStep] = useState<"structure" | "ports" | "equations" | null>(null);
   const [isValidating, setIsValidating] = useState(false);
+  // Per-equipment equation runs: instanceId → latest {run, results}.
+  const [equationRuns, setEquationRuns] = useState<EquipmentRunMap>({});
+  const [computingEquipmentIds, setComputingEquipmentIds] = useState<Set<number>>(
+    () => new Set()
+  );
+  const [showEquationReport, setShowEquationReport] = useState(false);
   const [carrierDefNames, setCarrierDefNames] = useState<Record<number, string>>({});
   const [showValidationPanel, setShowValidationPanel] = useState(true);
   const [focusRequest, setFocusRequest] = useState<{ id: string; ts: number } | null>(null);
@@ -1628,6 +1645,113 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
       setIsValidating(false);
     }
   };
+
+  // Equipment references for the equation engine (client-side coverage source).
+  const equipmentRefs = useMemo(
+    () => equipmentRefsFromComponents(components),
+    [components]
+  );
+
+  // Whether the equation engine can run (both process-flow checks passed).
+  const equationsReady =
+    validationStep === "equations" ||
+    (validationStep === "ports" && Boolean(validationResult?.valid));
+
+  const resolveTwinId = useCallback((): number | null => {
+    const twinId = Number((window as any).currentTwinId);
+    return twinId && !Number.isNaN(twinId) ? twinId : null;
+  }, []);
+
+  // Step 3a: run the equations of ONE equipment (per-card Run button).
+  // Resolves parameters from the current persisted state — upstream equipment
+  // outputs are read as saved, so users can iterate equipment by equipment.
+  const handleRunEquipment = useCallback(
+    async (instanceId: number) => {
+      const twinId = resolveTwinId();
+      if (!twinId) {
+        toast.error("No digital twin found. Please save or reload the plant model first.");
+        return;
+      }
+      if (!equationsReady) {
+        toast.info("Run the structure and port checks first.");
+        return;
+      }
+
+      setComputingEquipmentIds((prev) => new Set(prev).add(instanceId));
+      try {
+        const er = await runEquipment(twinId, instanceId);
+        setEquationRuns((prev) => ({ ...prev, [instanceId]: er }));
+        setValidationStep("equations");
+
+        const name =
+          equipmentRefs.find((e) => e.instanceId === instanceId)?.name ??
+          `Equipment #${instanceId}`;
+        const failed = er.results.filter((r) => r.status === "failed").length;
+        const skipped = er.results.filter((r) => r.status === "skipped").length;
+        const ok = er.results.filter((r) => r.status === "success").length;
+        if (failed > 0) {
+          toast.warning(`${name}: ${ok} computed · ${failed} failed.`);
+        } else if (skipped > 0) {
+          toast.info(`${name}: ${ok} computed · ${skipped} skipped (missing inputs).`);
+        } else {
+          toast.success(`${name}: ${ok} equation${ok === 1 ? "" : "s"} computed.`);
+        }
+      } catch (err) {
+        console.error(err);
+        toast.error(
+          err instanceof Error ? err.message : "Failed to run the equipment equations."
+        );
+      } finally {
+        setComputingEquipmentIds((prev) => {
+          const next = new Set(prev);
+          next.delete(instanceId);
+          return next;
+        });
+      }
+    },
+    [equationsReady, equipmentRefs, resolveTwinId]
+  );
+
+  // Open the consolidated report of whatever has been run per equipment.
+  // Computation is strictly per equipment — from an equipment's form (Mass
+  // Balance Equations module) or its card in the Equations panel.
+  const handleGenerateEquationReport = useCallback(() => {
+    setShowEquationReport(true);
+  }, []);
+
+  // Hydrate persisted results once the equations step unlocks, so the panel
+  // shows the last saved run per equipment across page reloads.
+  const hydratedTwinRef = useRef<number | null>(null);
+  useEffect(() => {
+    const twinId = resolveTwinId();
+    if (!twinId || !equationsReady || hydratedTwinRef.current === twinId) return;
+    if (equipmentRefs.length === 0) return;
+    hydratedTwinRef.current = twinId;
+    void (async () => {
+      const entries = await Promise.all(
+        equipmentRefs.map(async (ref) => {
+          try {
+            return [ref.instanceId, await fetchEquipmentResults(twinId, ref.instanceId)] as const;
+          } catch {
+            return [ref.instanceId, { run: null, results: [] } as EquipmentRun] as const;
+          }
+        })
+      );
+      setEquationRuns((prev) => {
+        // Do not clobber fresher in-session results.
+        const next: EquipmentRunMap = {};
+        for (const [id, er] of entries) if (er.run) next[id] = er;
+        return { ...next, ...prev };
+      });
+    })();
+  }, [equationsReady, equipmentRefs, resolveTwinId]);
+
+  // Invalidate computed runs whenever the model changes, so the panel prompts
+  // a re-run instead of showing stale numbers.
+  useEffect(() => {
+    setEquationRuns((prev) => (Object.keys(prev).length ? {} : prev));
+    hydratedTwinRef.current = null;
+  }, [components, connections]);
 
   // Save plant model: update positions and delete removed components
   const handleSave = async () => {
@@ -2722,6 +2846,29 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
                 <Download className="h-4 w-4 mr-2" />
                 Save Plant Model
               </Button>
+              <TooltipProvider delayDuration={120}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={!equationsReady}
+                        onClick={handleGenerateEquationReport}
+                        className="h-8 text-xs border-[#0F766E] text-[#0F766E] hover:bg-[#0F766E]/10"
+                      >
+                        <Sigma className="h-4 w-4 mr-2" />
+                        Equation Report
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" align="end" className="bg-white">
+                    {equationsReady
+                      ? "Run the mass-balance engine and view the report"
+                      : "Pass the Structure and Port checks first"}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           )}
           {(step === "builder" || step === "compliance") && (
@@ -2968,8 +3115,19 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
                 onFocusComponent={handleFocusComponent}
                 onRunStructureCheck={handleRunComplianceCheck}
                 onRunPortCheck={handleRunPortCheck}
+                equationRuns={equationRuns}
+                equipment={equipmentRefs}
+                computingEquipmentIds={computingEquipmentIds}
+                onRunEquipment={handleRunEquipment}
               />
             )}
+            <EquationReportDialog
+              open={showEquationReport}
+              onOpenChange={setShowEquationReport}
+              runs={equationRuns}
+              equipment={equipmentRefs}
+              isComputing={computingEquipmentIds.size > 0}
+            />
           </div>
         ) : step === "compliance" ? (
           <div className="h-full overflow-y-auto">
