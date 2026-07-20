@@ -1,0 +1,80 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Facility Compliance Information",
+  "sectionKey": "facilityCompliance",
+  "sections": [
+    {
+      "title": "Basic Info",
+      "key": "basicInfo",
+      "fields": [
+        {
+          "type": "text",
+          "key": "facilityName",
+          "label": "Facility name",
+          "required": true
+        },
+        {
+          "type": "date",
+          "key": "operationalSince",
+          "label": "Operational since",
+          "required": true
+        },
+        {
+          "type": "radioGroup",
+          "key": "hasEnvironmentalClearance",
+          "label": "Do you have environmental clearance?",
+          "options": ["Yes", "No"],
+          "required": true
+        }
+      ]
+    },
+    {
+      "title": "Compliance",
+      "key": "compliance",
+      "fields": [
+        {
+          "type": "radioGroup",
+          "key": "isCompliantWithNationalStandards",
+          "label": "Compliant with national environmental standards?",
+          "options": ["Yes", "No"]
+        },
+        {
+          "type": "text",
+          "key": "nonComplianceReason",
+          "label": "If not, specify the reason",
+          "condition": {
+            "field": "facilityCompliance.compliance.isCompliantWithNationalStandards",
+            "value": "No"
+          }
+        },
+        {
+          "type": "select",
+          "key": "auditFrequency",
+          "label": "Environmental audit frequency",
+          "options": ["Monthly", "Quarterly", "Annually"],
+          "condition": {
+            "field": "facilityCompliance.basicInfo.hasEnvironmentalClearance",
+            "value": "Yes"
+          }
+        }
+      ]
+    },
+    {
+      "title": "Resources Used",
+      "key": "resources",
+      "fields": [
+        {
+          "type": "multiSelect",
+          "key": "energySources",
+          "label": "Select energy sources used",
+          "options": ["Solar", "Grid Electricity", "Diesel", "Natural Gas"]
+        },
+        {
+          "type": "number",
+          "key": "avgMonthlyConsumption",
+          "label": "Average monthly energy consumption (MWh)"
+        }
+      ]
+    }
+  ]
+}

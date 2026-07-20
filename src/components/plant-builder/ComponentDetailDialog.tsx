@@ -1,0 +1,507 @@
+'use client';
+
+import { useEffect } from "react"; // ← THIS KILLS DARK MODE
+import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Upload, Plus, ChevronDown, Trash2, Sigma } from "lucide-react";
+import type { PlacedComponent, Connection } from "@/app/plant-operator/plant-builder/types";
+import ComponentSchemaForm, { ComponentFieldDefinition } from "./ComponentSchemaForm";
+import EquipmentEquationsModule from "./EquipmentEquationsModule";
+import { fetchComponentInstanceById, updateComponentInstance } from "@/services/plant-builder/componentInstances";
+import { fetchComponentDefinitionById, fetchComponentDefinitions } from "@/services/plant-builder/componentDefinitions";
+import toast from "react-hot-toast";
+
+type ComponentDetailDialogProps = {
+  component: PlacedComponent;
+  components: PlacedComponent[];
+  connections: Connection[];
+  open: boolean;
+  onClose: () => void;
+  onSave: (id: string, data: any, certifications: string[], componentDefinitionId?: number | null) => void;
+  onAddConnection: (
+    from: string,
+    to: string,
+    type: string,
+    reason: string,
+    quantity?: string,
+    unit?: string
+  ) => void;
+};
+
+type Stream = {
+  id: string;
+  from: string;
+  to: string;
+  carrier: string;
+  energyAmount: string;
+  unit: string;
+  additionalDetails: string;
+  additionalExpanded: boolean;
+};
+
+const sanitizeFieldValues = (data?: Record<string, any> | null): Record<string, any> => {
+  if (!data) return {};
+  const keys = Object.keys(data);
+  if (
+    keys.length === 1 &&
+    keys[0] === "technicalData" &&
+    typeof data["technicalData"] === "object" &&
+    data["technicalData"] !== null &&
+    Object.keys(data["technicalData"]).length === 0
+  ) {
+    return {};
+  }
+  return data;
+};
+
+const ComponentDetailDialog = ({
+  component,
+  components,
+  connections,
+  open,
+  onClose,
+  onSave,
+  onAddConnection,
+}: ComponentDetailDialogProps) => {
+  // FORCE LIGHT MODE — NO DARK MODE ALLOWED HERE
+  useEffect(() => {
+    document.documentElement.classList.remove("dark");
+  }, []);
+
+  const [certifications, setCertifications] = useState<string[]>(component.certifications || []);
+  const [inputStreams, setInputStreams] = useState<Stream[]>([]);
+  const [outputStreams, setOutputStreams] = useState<Stream[]>([]);
+  const [fieldValues, setFieldValues] = useState<Record<string, any>>(
+    sanitizeFieldValues(component.data)
+  );
+  const [schemaFields, setSchemaFields] = useState<ComponentFieldDefinition[]>([]);
+  const [isSchemaLoading, setIsSchemaLoading] = useState(false);
+  const [schemaError, setSchemaError] = useState<string | null>(null);
+  const [activeDefinitionId, setActiveDefinitionId] = useState<number | null>(
+    component.componentDefinitionId ?? null
+  );
+  const [isSaving, setIsSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState<"form" | "equations">("form");
+  // Business component id (e.g. "E166") — resolved from the definition, NOT the
+  // display `category` label. Equations are keyed by this id.
+  const [equipmentComponentId, setEquipmentComponentId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setFieldValues(sanitizeFieldValues(component.data));
+    setCertifications(component.certifications || []);
+    setActiveDefinitionId(component.componentDefinitionId ?? null);
+    setInputStreams([]);
+    setOutputStreams([]);
+    setActiveTab("form");
+    setEquipmentComponentId(null);
+  }, [component]);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+
+    const loadSchema = async () => {
+      setIsSchemaLoading(true);
+      setSchemaError(null);
+      try {
+        let definitionId = component.componentDefinitionId ?? null;
+        let nextValues: Record<string, any> = sanitizeFieldValues(component.data);
+
+        if (component.instanceId) {
+          const instance = await fetchComponentInstanceById(component.instanceId);
+          if (cancelled) return;
+          nextValues = sanitizeFieldValues(instance.field_values);
+          definitionId = definitionId ?? instance.component_definition_id ?? null;
+        }
+
+        if (!definitionId) {
+          const defs = await fetchComponentDefinitions();
+          if (cancelled) return;
+          const match = defs.find(
+            (def) => def.component_name === component.name && def.component_type === component.type
+          );
+          definitionId = match?.id ?? null;
+        }
+
+        setFieldValues(nextValues);
+        setActiveDefinitionId(definitionId);
+
+        if (definitionId) {
+          const definition = await fetchComponentDefinitionById(definitionId);
+          if (cancelled) return;
+          setSchemaFields(definition.field_schema?.fields || []);
+          setEquipmentComponentId(definition.component_id ?? null);
+        } else {
+          setSchemaFields([]);
+          setEquipmentComponentId(null);
+        }
+      } catch (err) {
+        console.error("Failed to load component schema:", err);
+        if (!cancelled) {
+          setSchemaFields([]);
+          setSchemaError("Unable to load component fields.");
+        }
+      } finally {
+        if (!cancelled) {
+          setIsSchemaLoading(false);
+        }
+      }
+    };
+
+    loadSchema();
+    return () => {
+      cancelled = true;
+    };
+  }, [component.id, component.instanceId, component.componentDefinitionId, component.name, component.type, open]);
+
+  const handleSave = () => {
+    inputStreams.forEach((stream) => {
+      if (stream.from && stream.carrier) {
+        onAddConnection(
+          stream.from,
+          stream.to,
+          stream.carrier,
+          stream.additionalDetails,
+          stream.energyAmount,
+          stream.unit
+        );
+      }
+    });
+    outputStreams.forEach((stream) => {
+      if (stream.to && stream.carrier) {
+        onAddConnection(
+          stream.from,
+          stream.to,
+          stream.carrier,
+          stream.additionalDetails,
+          stream.energyAmount,
+          stream.unit
+        );
+      }
+    });
+    onSave(component.id, fieldValues, certifications, activeDefinitionId);
+    if (component.instanceId) {
+      setIsSaving(true);
+      updateComponentInstance(component.instanceId, {
+        field_values: fieldValues,
+        component_definition_id: activeDefinitionId ?? undefined,
+      })
+        .then(() => {
+          toast.success(`${component.name} updated`);
+        })
+        .catch((err) => {
+          console.error("Failed to update component instance:", err);
+          toast.error("Failed to save component fields");
+        })
+        .finally(() => setIsSaving(false));
+    }
+  };
+
+  const addInputStream = () => {
+    setInputStreams((prev) => [...prev, {
+      id: Date.now().toString(),
+      from: "",
+      to: component.id,
+      carrier: "",
+      energyAmount: "",
+      unit: "",
+      additionalDetails: "",
+      additionalExpanded: false,
+    }]);
+  };
+
+  const addOutputStream = () => {
+    setOutputStreams((prev) => [...prev, {
+      id: Date.now().toString(),
+      from: component.id,
+      to: "",
+      carrier: "",
+      energyAmount: "",
+      unit: "",
+      additionalDetails: "",
+      additionalExpanded: false,
+    }]);
+  };
+
+  const updateStream = (
+    streams: Stream[],
+    setStreams: React.Dispatch<React.SetStateAction<Stream[]>>,
+    id: string,
+    field: keyof Omit<Stream, "id" | "additionalExpanded">,
+    value: string
+  ) => {
+    setStreams((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, [field]: value } : s))
+    );
+  };
+
+  const toggleAdditional = (
+    streams: Stream[],
+    setStreams: React.Dispatch<React.SetStateAction<Stream[]>>,
+    id: string
+  ) => {
+    setStreams((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, additionalExpanded: !s.additionalExpanded } : s))
+    );
+  };
+
+  const removeStream = (id: string, isInput: boolean) => {
+    if (isInput) {
+      setInputStreams((prev) => prev.filter((s) => s.id !== id));
+    } else {
+      setOutputStreams((prev) => prev.filter((s) => s.id !== id));
+    }
+  };
+
+  const handleUploadCertification = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.[0]) {
+      const file = e.target.files[0];
+      const url = URL.createObjectURL(file);
+      setCertifications((prev) => [...prev, url]);
+    }
+  };
+
+  const inputs = connections.filter((conn) => conn.to === component.id);
+  const outputs = connections.filter((conn) => conn.from === component.id);
+
+  const getComponentName = (id: string) => {
+    return components.find((c) => c.id === id)?.name || "Unknown";
+  };
+
+  // Reusable form renders with forced white background
+  const renderStreamForm = (stream: Stream, isInput: boolean, streams: Stream[], setStreams: React.Dispatch<React.SetStateAction<Stream[]>>) => (
+    <div key={stream.id} className="flex items-end gap-3 pb-3 mb-3 border-b last:border-0">
+      <div className="flex-1">
+        <Label>{isInput ? "From" : "To"}</Label>
+        <Select value={isInput ? stream.from : stream.to} onValueChange={(v) => updateStream(streams, setStreams, stream.id, isInput ? "from" : "to", v)}>
+          <SelectTrigger className="bg-white border-gray-300"><SelectValue placeholder="Select component" /></SelectTrigger>
+          <SelectContent className="bg-white border-gray-300">
+            {components.filter((c) => c.id !== component.id).map((c) => (
+              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="flex-1">
+        <Label>{isInput ? "To" : "From"}</Label>
+        <Input value={component.name} disabled className="bg-gray-100" />
+      </div>
+      <div className="flex-1">
+        <Label>Carrier</Label>
+        <Select value={stream.carrier} onValueChange={(v) => updateStream(streams, setStreams, stream.id, "carrier", v)}>
+          <SelectTrigger className="bg-white border-gray-300"><SelectValue placeholder="Select carrier" /></SelectTrigger>
+          <SelectContent className="bg-white border-gray-300">
+            {"hydrogen,co2,methanol,ammonia,electricity,water,biomass".split(",").map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="flex-1">
+        <Label>Energy Amount</Label>
+        <Input type="number" value={stream.energyAmount} onChange={(e) => updateStream(streams, setStreams, stream.id, "energyAmount", e.target.value)} placeholder="0" className="bg-white" />
+      </div>
+      <div className="flex-1">
+        <Label>Unit</Label>
+        <Select value={stream.unit} onValueChange={(v) => updateStream(streams, setStreams, stream.id, "unit", v)}>
+          <SelectTrigger className="bg-white border-gray-300"><SelectValue placeholder="Unit" /></SelectTrigger>
+          <SelectContent className="bg-white border-gray-300">
+            {"MW,MWel,nm3,kt,t".split(",").map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="flex-1">
+        <Label>Details</Label>
+        <Button variant="outline" className="w-full" onClick={() => toggleAdditional(streams, setStreams, stream.id)}>
+          {stream.additionalExpanded ? "Hide" : "Show"}
+          <ChevronDown className={`ml-1 h-3 w-3 transition-transform ${stream.additionalExpanded ? "rotate-180" : ""}`} />
+        </Button>
+      </div>
+      {/* RED TRASH BUTTON — ALWAYS RED + WHITE TEXT */}
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => removeStream(stream.id, isInput)}
+        className="text-white bg-red-600 hover:bg-red-700 rounded-lg"
+      >
+        <Trash2 className="h-4 w-4" />
+      </Button>
+      {stream.additionalExpanded && (
+        <div className="col-span-full ml-4 mt-2">
+          <Label>Additional Details</Label>
+          <Textarea
+            value={stream.additionalDetails}
+            onChange={(e) => updateStream(streams, setStreams, stream.id, "additionalDetails", e.target.value)}
+            placeholder="Enter additional details"
+            className="min-h-20 bg-white"
+          />
+        </div>
+      )}
+    </div>
+  );
+
+  // The in-form equations module applies to placed equipment only. The tab is
+  // shown for any equipment; the module itself resolves its equations by the
+  // business component id once the definition loads.
+  const showEquationsModule = component.type === "equipment";
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0 bg-white text-slate-900">
+        <DialogHeader className="bg-gradient-to-br from-[#0F766E] to-[#15936B] px-6 py-5">
+          <DialogTitle className="text-2xl font-bold text-white">{component.name}</DialogTitle>
+          <DialogDescription className="text-teal-50/90">
+            Configure the technical specifications for this {component.type} component
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="px-6 pb-6">
+        {/* Tab bar — equipment gets a second tab for its equations. */}
+        {showEquationsModule && (
+          <div className="mt-5 flex items-center gap-1 border-b border-slate-200">
+            <button
+              type="button"
+              onClick={() => setActiveTab("form")}
+              className={`-mb-px px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
+                activeTab === "form"
+                  ? "border-[#0F766E] text-[#0F766E]"
+                  : "border-transparent text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              Details
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("equations")}
+              className={`-mb-px flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
+                activeTab === "equations"
+                  ? "border-[#0F766E] text-[#0F766E]"
+                  : "border-transparent text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              <Sigma className="h-4 w-4" />
+              Mass Balance Equations
+            </button>
+          </div>
+        )}
+
+        {/* FORM TAB — kept mounted so field values persist across tab switches. */}
+        <div className={showEquationsModule && activeTab !== "form" ? "hidden" : "block"}>
+          <div className="mt-6 space-y-4">
+            {schemaError && (
+              <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                {schemaError}
+              </div>
+            )}
+            {isSchemaLoading ? (
+              <div className="flex items-center gap-2 text-sm text-slate-500">
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-[#0F766E]" />
+                Loading component fields…
+              </div>
+            ) : (
+              <ComponentSchemaForm
+                fields={schemaFields}
+                values={fieldValues}
+                onChange={(name, value) =>
+                  setFieldValues((prev) => ({
+                    ...prev,
+                    [name]: value,
+                  }))
+                }
+              />
+            )}
+          </div>
+
+          {/* Existing Connections */}
+          <div className="mt-8 border-t border-slate-200 pt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-4">
+              <h4 className="flex items-center gap-2 font-semibold text-base text-slate-800">
+                <span className="h-4 w-1 rounded-full bg-[#0F766E]" />
+                Inputs
+              </h4>
+              {inputs.length === 0 ? <p className="text-slate-400 text-sm mt-2">No inputs</p> : (
+                <ul className="space-y-1 mt-2">
+                  {inputs.map((conn) => (
+                    <li key={conn.id} className="text-sm text-slate-600">From: <strong className="text-slate-900">{getComponentName(conn.from)}</strong> ({conn.type || "Untitled"}) — Reason: {conn.reason || "N/A"}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-4">
+              <h4 className="flex items-center gap-2 font-semibold text-base text-slate-800">
+                <span className="h-4 w-1 rounded-full bg-[#0F766E]" />
+                Outputs
+              </h4>
+              {outputs.length === 0 ? <p className="text-slate-400 text-sm mt-2">No outputs</p> : (
+                <ul className="space-y-1 mt-2">
+                  {outputs.map((conn) => (
+                    <li key={conn.id} className="text-sm text-slate-600">To: <strong className="text-slate-900">{getComponentName(conn.to)}</strong> ({conn.type || "Untitled"}) — Reason: {conn.reason || "N/A"}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* EQUATIONS TAB — kept mounted so definitions/results aren't refetched. */}
+        {showEquationsModule && (
+          <div className={activeTab === "equations" ? "block mt-6" : "hidden"}>
+            <EquipmentEquationsModule
+              componentId={equipmentComponentId ?? undefined}
+              instanceId={component.instanceId}
+              getFieldValues={() => fieldValues}
+              onComputedFields={(computed) =>
+                setFieldValues((prev) => ({ ...prev, ...computed }))
+              }
+            />
+          </div>
+        )}
+
+        {/*
+        <div className="mt-8 border-t pt-6">
+          <h4 className="font-semibold text-lg mb-3">Certifications</h4>
+          <label>
+            <Button variant="outline" asChild className="border-gray-300">
+              <span><Upload className="h-4 w-4 mr-2" /> Upload Certification</span>
+            </Button>
+            <input type="file" className="hidden" onChange={handleUploadCertification} accept=".pdf,.jpg,.png" />
+          </label>
+          {certifications.length > 0 && (
+            <ul className="mt-3 space-y-1">
+              {certifications.map((cert, i) => (
+                <li key={i}><a href={cert} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline text-sm">Certification {i + 1}</a></li>
+              ))}
+            </ul>
+          )}
+        </div>
+        */}
+
+        <DialogFooter className="mt-8 flex justify-end gap-3 border-t border-slate-200 pt-5">
+          <Button variant="outline" onClick={onClose} className="border-slate-300 bg-white text-slate-700 hover:bg-slate-100 hover:text-slate-900">Cancel</Button>
+          <Button onClick={handleSave} disabled={isSaving} className="bg-[#0F766E] hover:bg-[#0C5F59] text-white shadow-sm disabled:opacity-60">
+            {isSaving ? "Saving..." : "Save Details"}
+          </Button>
+        </DialogFooter>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+export default ComponentDetailDialog;
