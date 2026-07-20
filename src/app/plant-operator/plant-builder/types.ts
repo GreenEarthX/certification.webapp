@@ -145,6 +145,9 @@ export interface Connection {
   type: string;
   reason?: string;
   data?: { [key: string]: any };
+  /** Equipment-side port (e.g. "P1") this stream attaches to — makes
+   *  mass-balance parameter resolution deterministic instead of inferred. */
+  port_id?: string;
 }
 
 export interface CertificationScheme {
