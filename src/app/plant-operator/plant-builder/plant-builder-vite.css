@@ -30,8 +30,8 @@
     --layer-equipment-light: 217 91% 95%;
     --layer-carrier: 142 76% 36%;
     --layer-carrier-light: 142 76% 95%;
-    --layer-gate: 271 91% 65%;
-    --layer-gate-light: 271 91% 95%;
+    --layer-gate: 77 60% 50%;
+    --layer-gate-light: 77 60% 92%;
     --canvas-bg: 210 40% 98%;
     --canvas-grid: 214 32% 91%;
   }
@@ -59,7 +59,7 @@
 
     --layer-equipment-light: 217 91% 20%;
     --layer-carrier-light: 142 76% 20%;
-    --layer-gate-light: 271 91% 20%;
+    --layer-gate-light: 77 60% 20%;
     --canvas-bg: 222 47% 8%;
     --canvas-grid: 217 33% 17%;
   }

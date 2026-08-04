@@ -54,6 +54,11 @@ interface PlantComponentProps {
   }>;
 }
 
+/* Brand gate color — applied inline since Tailwind can't emit an arbitrary hex from a class. */
+const GATE_COLOR = "#A1CB35";
+const GATE_TINT = "#F2F7DE";
+const GATE_TEXT = "#4D6B12";
+
 /* ─────────────────────── REAL TAILWIND COLORS ─────────────────────── */
 const layerColors: Record<
   string,
@@ -72,10 +77,11 @@ const layerColors: Record<
     fill: "fill-green-600",
   },
   gate: {
-    bg: "bg-purple-50",
-    border: "border-purple-500",
-    text: "text-purple-700",
-    fill: "fill-purple-600",
+    // Base green fallback (exact #A1CB35 border/bg applied inline via gateAccent below).
+    bg: "bg-lime-50",
+    border: "border-lime-500",
+    text: "text-lime-800",
+    fill: "fill-lime-600",
   },
 };
 
@@ -201,7 +207,9 @@ const PlantComponent = ({
     ? { border: "#38BDF8", text: "#0284C7", bg: "#E0F2FE" }
     : gateDirection === "output"
       ? { border: "#FBBF24", text: "#B45309", bg: "#FEF3C7" }
-      : null;
+      : component.type === "gate"
+        ? { border: GATE_COLOR, text: GATE_TEXT, bg: GATE_TINT }
+        : null;
 
   const carrierAccent = component.type === "carrier"
     ? accentColor || getCarrierAccent(component)
@@ -382,6 +390,7 @@ const PlantComponent = ({
             const style: React.CSSProperties = {};
             if (gateAccent) {
               style.borderColor = gateAccent.border;
+              style.backgroundColor = gateAccent.bg;
             }
             if (carrierAccent && !gateAccent) {
               style.borderColor = carrierAccent;
