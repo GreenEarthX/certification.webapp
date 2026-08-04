@@ -88,7 +88,9 @@ const CANVAS_BASE_WIDTH = 2400;
 const CANVAS_BASE_HEIGHT = 1800;
 const CANVAS_PADDING = 200;
 const ZOOM_MIN = 0.25;
-const ZOOM_MAX = 2;
+// Capped at 1.0: zooming past 100% is the regime where the layout used to break.
+// Combined with the zoom-independent padding below, the canvas stays stable.
+const ZOOM_MAX = 1.0;
 const ZOOM_STEP = 0.03;
 const GATE_EDGE_GUTTER = 120;
 const SYSTEM_FRAME_PADDING = 48;
@@ -442,7 +444,7 @@ const Canvas = ({
   const [hasUserZoomed, setHasUserZoomed] = useState(false);
   const [showAddComponent, setShowAddComponent] = useState(false);
   const [newComponent, setNewComponent] = useState({ name: "", type: "" as "equipment" | "carrier" | "gate", category: "" });
-  const [connectionStyle, setConnectionStyle] = useState<"smooth" | "orthogonal" | "straight">("smooth");
+  const [connectionStyle, setConnectionStyle] = useState<"smooth" | "orthogonal" | "straight">("orthogonal");
   const [layoutOrientation, setLayoutOrientation] = useState<"horizontal" | "vertical">("horizontal");
   const [legendOpen, setLegendOpen] = useState(true);
   const [isPanMode, setIsPanMode] = useState(false);
@@ -488,10 +490,13 @@ const Canvas = ({
     [clampZoom, zoom]
   );
 
-  const zoomPadding = useMemo(
-    () => CANVAS_PADDING + Math.max(0, (zoom - 1) * 600),
-    [zoom]
-  );
+  // Padding is intentionally INDEPENDENT of zoom. Visible scaling is done purely
+  // via `transform: scale(zoom)` on the content layer, so the layout coordinate
+  // space (canvasSize / canvasOffset) must stay constant. The previous
+  // zoom-dependent term ((zoom - 1) * 600) fed back into canvasSize and desynced
+  // the scaled layers from the scroll re-anchor, which is what broke the canvas
+  // once zoom went past 1.
+  const zoomPadding = CANVAS_PADDING;
 
   const canvasBounds = useMemo(() => {
     if (!components.length) {
