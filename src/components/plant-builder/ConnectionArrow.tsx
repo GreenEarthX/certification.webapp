@@ -27,7 +27,7 @@ const ConnectionArrow = ({
   fromSide = "right",
   toSide = "left",
   onClick,
-  style = "smooth",
+  style = "orthogonal",
   isInvalid = false,
   isDashed = false,
   isSelected = false,
