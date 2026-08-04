@@ -122,7 +122,7 @@ import {
 const TEMPLATE_NODE_COLORS: Record<string, string> = {
   equipment: "#4F8FF7",
   carrier: "#10B981",
-  gate: "#F59E0B",
+  gate: "#A1CB35",
   default: "#94A3B8",
 };
 
@@ -3127,6 +3127,7 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
               runs={equationRuns}
               equipment={equipmentRefs}
               isComputing={computingEquipmentIds.size > 0}
+              plantName={plantInfo?.plantName || plantInfo?.projectName || undefined}
             />
           </div>
         ) : step === "compliance" ? (

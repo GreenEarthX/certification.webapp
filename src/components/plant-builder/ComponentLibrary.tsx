@@ -288,19 +288,27 @@ const ComponentLibrary = () => {
                                   {port.requirement === "REQUIRED" ? "Required" : "Optional"}
                                 </span>
                               </div>
-                              <select
-                                className="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-[10px] text-slate-700"
-                                defaultValue=""
-                              >
-                                <option value="" disabled>
-                                  {carriers.length ? "Allowed carriers" : "All carriers allowed"}
-                                </option>
-                                {carriers.map((carrier) => (
-                                  <option key={`${port.id}-${carrier.id}`} value={carrier.name}>
-                                    {carrier.name}
-                                  </option>
-                                ))}
-                              </select>
+                              {carriers.length ? (
+                                <div className="space-y-1">
+                                  <div className="text-[9px] font-semibold uppercase tracking-wide text-slate-400">
+                                    Allowed carriers
+                                  </div>
+                                  <div className="flex flex-wrap gap-1">
+                                    {carriers.map((carrier) => (
+                                      <span
+                                        key={`${port.id}-${carrier.id}`}
+                                        className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] text-slate-700"
+                                      >
+                                        {carrier.name}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="text-[10px] italic text-slate-400">
+                                  All carriers allowed
+                                </div>
+                              )}
                             </div>
                           );
                         })}
