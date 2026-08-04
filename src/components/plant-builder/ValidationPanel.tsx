@@ -1,5 +1,5 @@
-import { AlertTriangle, CheckCircle2, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { DigitalTwinValidationError, DigitalTwinValidationResult } from "@/services/plant-builder/digitalTwins";
 import {
@@ -54,6 +54,37 @@ const ValidationPanel = ({
 }: ValidationPanelProps) => {
   const [activeTab, setActiveTab] = useState<TabKey>(validationStep ?? "structure");
 
+  // Panel sizing: drag the left edge to resize; collapse to a thin strip.
+  const PANEL_MIN_WIDTH = 300;
+  const PANEL_MAX_WIDTH = 720;
+  const [width, setWidth] = useState(360);
+  const [collapsed, setCollapsed] = useState(false);
+  const resizeRef = useRef<{ startX: number; startWidth: number } | null>(null);
+
+  const startResize = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      resizeRef.current = { startX: e.clientX, startWidth: width };
+      const onMove = (ev: MouseEvent) => {
+        const state = resizeRef.current;
+        if (!state) return;
+        // Panel is anchored right, so dragging left (smaller clientX) widens it.
+        const next = state.startWidth + (state.startX - ev.clientX);
+        setWidth(Math.min(PANEL_MAX_WIDTH, Math.max(PANEL_MIN_WIDTH, next)));
+      };
+      const onUp = () => {
+        resizeRef.current = null;
+        window.removeEventListener("mousemove", onMove);
+        window.removeEventListener("mouseup", onUp);
+        document.body.style.userSelect = "";
+      };
+      window.addEventListener("mousemove", onMove);
+      window.addEventListener("mouseup", onUp);
+      document.body.style.userSelect = "none";
+    },
+    [width]
+  );
+
   useEffect(() => {
     if (validationStep) setActiveTab(validationStep);
   }, [validationStep]);
@@ -98,8 +129,43 @@ const ValidationPanel = ({
         ? "Step 3/3 · Equation Engine"
         : "Step 1/3 · Structure Check";
 
+  if (collapsed) {
+    return (
+      <aside className="absolute top-0 right-0 h-full w-10 z-30 bg-white/95 backdrop-blur border-l border-gray-200 shadow-xl flex flex-col items-center gap-1 py-2">
+        <button
+          type="button"
+          onClick={() => setCollapsed(false)}
+          title="Expand panel"
+          className="p-1 text-slate-600 hover:text-slate-900"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          onClick={onClose}
+          title="Close panel"
+          className="p-1 text-slate-500 hover:text-slate-700"
+        >
+          <X className="h-4 w-4" />
+        </button>
+        <div className="mt-2 text-[11px] font-semibold text-slate-500 [writing-mode:vertical-rl] rotate-180 select-none tracking-wide">
+          Process Flow
+        </div>
+      </aside>
+    );
+  }
+
   return (
-    <aside className="absolute top-0 right-0 h-full w-full max-w-[360px] z-30 bg-white/95 backdrop-blur border-l border-gray-200 shadow-xl flex flex-col">
+    <aside
+      style={{ width }}
+      className="absolute top-0 right-0 h-full z-30 bg-white/95 backdrop-blur border-l border-gray-200 shadow-xl flex flex-col"
+    >
+      {/* Left-edge drag handle to resize the panel */}
+      <div
+        onMouseDown={startResize}
+        title="Drag to resize"
+        className="absolute left-0 top-0 h-full w-1.5 cursor-col-resize z-40 hover:bg-[#A1CB35]/50 transition-colors"
+      />
       <div className="p-4 border-b border-gray-200 flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
           <div
@@ -137,9 +203,24 @@ const ValidationPanel = ({
             </div>
           </div>
         </div>
-        <button type="button" onClick={onClose} className="text-gray-500 hover:text-gray-700">
-          <X className="h-4 w-4" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setCollapsed(true)}
+            title="Collapse panel"
+            className="text-gray-500 hover:text-gray-700"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            title="Close panel"
+            className="text-gray-500 hover:text-gray-700"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       <div className="px-4 pt-3 pb-2 text-xs text-gray-500 space-y-3">
