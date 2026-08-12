@@ -1,41 +1,18 @@
 // src/app/api/hcs-trace/route.ts
-import {
-  Client,
-  PrivateKey,
-  AccountId,
-  TopicMessageSubmitTransaction,
-  TopicId,
-  Hbar, // ← ADD THIS
-} from "@hashgraph/sdk";
+//
+// DISABLED — 2026-08 security incident.
+// This route submitted a message to our Hedera consensus topic signed with
+// OPERATOR_PRIVATE_KEY, with setMaxTransactionFee(2 HBAR), and had no
+// authentication whatsoever. Anyone on the internet could drain the operator
+// account and write arbitrary entries to the topic.
+//
+// See src/lib/disabled-endpoint.ts for the re-enablement checklist.
+// Previous implementation is in git history.
 
-export async function POST(req: Request) {
-  const body = await req.json();
-  const { seal_hash, plant_id, validity_date, timestamp, is_valid } = body;
+import { disabledEndpoint } from "@/lib/disabled-endpoint";
 
-  const network = process.env.HEDERA_NETWORK || "testnet";
-  const operatorId = AccountId.fromString(process.env.OPERATOR_ACCOUNT_ID!);
-  const operatorKey = PrivateKey.fromStringECDSA(process.env.OPERATOR_PRIVATE_KEY!);
-  const topicId = TopicId.fromString(process.env.HCS_TOPIC_ID!);
-
-  const client = Client.forName(network).setOperator(operatorId, operatorKey);
-
-  const message = JSON.stringify({
-    event: "PLAUSIBILITY_CHECK",
-    seal_hash,
-    plant_id,
-    validity_date,
-    timestamp,
-    is_valid,
-  });
-
-  const tx = new TopicMessageSubmitTransaction()
-    .setTopicId(topicId)
-    .setMessage(message)
-    .setMaxTransactionFee(new Hbar(2)); // ← NOW WORKS
-
-  const txSigned = await tx.freezeWith(client).sign(operatorKey);
-  await txSigned.execute(client);
-
-  client.close();
-  return Response.json({ success: true });
+export async function POST() {
+  return disabledEndpoint(
+    "Hedera consensus writes are suspended pending authentication and spend caps."
+  );
 }

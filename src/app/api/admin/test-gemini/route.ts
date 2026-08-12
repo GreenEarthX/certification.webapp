@@ -1,29 +1,18 @@
-import { NextRequest, NextResponse } from 'next/server';
+// src/app/api/admin/test-gemini/route.ts
+//
+// DISABLED — 2026-08 security incident.
+// Despite sitting under /api/admin/, this route had no authentication and
+// forwarded an arbitrary caller-supplied prompt to Google Gemini using our
+// paid GEMINI_API_KEY. That is a free, unmetered LLM proxy for anyone who
+// finds it, billed to us.
+//
+// See src/lib/disabled-endpoint.ts for the re-enablement checklist.
+// Previous implementation is in git history.
 
-export async function POST(req: NextRequest) {
-  try {
-    const { input } = await req.json();
-    const apiKey = process.env.GEMINI_API_KEY!;
-    
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: input }] }]
-      })
-    });
+import { disabledEndpoint } from "@/lib/disabled-endpoint";
 
-    const data = await res.json();
-
-    const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-    
-    // 🔍 Clean & Parse Gemini's markdown-wrapped JSON
-    const cleaned = rawText.trim().replace(/^```json/, '').replace(/```$/, '');
-    const extractedJSON = JSON.parse(cleaned);
-
-    return NextResponse.json(extractedJSON, { status: 200 });
-  } catch (err) {
-    console.error('❌ Error extracting Gemini content:', err);
-    return NextResponse.json({ error: 'Failed to extract certification data' }, { status: 500 });
-  }
+export async function POST() {
+  return disabledEndpoint(
+    "The Gemini test endpoint is suspended pending admin authentication and rate limiting."
+  );
 }
