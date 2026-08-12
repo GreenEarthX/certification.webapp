@@ -1,30 +1,38 @@
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { getSessionUser } from '@/lib/auth';
+import { authErrorResponse } from '@/lib/api-auth';
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const type = searchParams.get('type');
 
   try {
+    // Previously fully unauthenticated. The 'plants' case dumped every plant
+    // in the database - name, country and offtaker markets - to anyone who
+    // asked. It is now authenticated, and scoped to the caller's own plants.
+    const userSub = await getSessionUser(request);
+
     switch (type) {
       case 'plants':
         const plantsResult = await pool.query(`
-          SELECT 
+          SELECT
             p.plant_id,
             p.plant_name,
             a.country AS manufacturing_country,
             p.plant_details->'generalInfo'->'technology'->>'mainProduct' AS fuel_name,
             COALESCE(
-              (SELECT array_agg(DISTINCT l->>'country') 
+              (SELECT array_agg(DISTINCT l->>'country')
                FROM jsonb_array_elements(p.plant_details->'offtakers'->'locations') AS l
                WHERE l->>'country' IS NOT NULL),
               ARRAY[]::text[]
             ) AS target_markets
           FROM plants p
           LEFT JOIN address a ON p.address_id = a.address_id
-        `);
-        console.log('Plants Query Result:', plantsResult.rows);
+          JOIN users u ON p.operator_id = u.user_id
+          WHERE u.auth0sub = $1
+        `, [userSub]);
         return NextResponse.json(
           plantsResult.rows.map((plant) => ({
             plant_id: plant.plant_id,
@@ -114,7 +122,11 @@ const schemesResult = await pool.query(`
         return NextResponse.json({ error: 'Invalid type parameter' }, { status: 400 });
     }
   } catch (error: any) {
-    console.error(`Error fetching ${type}:`, error.stack);
-    return NextResponse.json({ error: `Failed to fetch ${type}`, details: error.message }, { status: 500 });
+    const denied = authErrorResponse(error);
+    if (denied) return denied;
+
+    // Do not return error.message to the client - it leaks schema details.
+    console.error(`Error fetching ${type}:`, error?.stack);
+    return NextResponse.json({ error: `Failed to fetch ${type}` }, { status: 500 });
   }
 }
