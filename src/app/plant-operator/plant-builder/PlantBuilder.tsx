@@ -28,6 +28,7 @@ import {
   ChevronRight,
   Settings,
   Sigma,
+  FileText,
 } from "lucide-react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
@@ -107,6 +108,7 @@ import {
   type EquipmentRunMap,
 } from "@/lib/plant-builder/equations";
 import EquationReportDialog from "@/components/plant-builder/EquationReportDialog";
+import ReportsDialog from "@/components/plant-builder/reports/ReportsDialog";
 import { toInstanceId, toOptionalNumber } from "@/lib/plant-builder/ids";
 import { updateComponentInstance, deleteComponentInstance, fetchComponentInstances } from "@/services/plant-builder/componentInstances";
 import { buildConnectionPayloadForComponent, StoredConnectionPayload } from "@/lib/plant-builder/connection-utils";
@@ -559,6 +561,8 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
     () => new Set()
   );
   const [showEquationReport, setShowEquationReport] = useState(false);
+  const [showReports, setShowReports] = useState(false);
+  const [reportsTwinId, setReportsTwinId] = useState<number | null>(null);
   const [carrierDefNames, setCarrierDefNames] = useState<Record<number, string>>({});
   const [showValidationPanel, setShowValidationPanel] = useState(true);
   const [focusRequest, setFocusRequest] = useState<{ id: string; ts: number } | null>(null);
@@ -1661,6 +1665,19 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
     const twinId = Number((window as any).currentTwinId);
     return twinId && !Number.isNaN(twinId) ? twinId : null;
   }, []);
+
+  // The twin id lives on a window global, so it cannot drive a `disabled`
+  // prop — mutating it does not re-render. Resolve it at click time instead,
+  // the same way handleGenerateEquationReport does.
+  const handleOpenReports = useCallback(() => {
+    const twinId = resolveTwinId();
+    if (!twinId) {
+      toast.error("Save the plant model before generating a report.");
+      return;
+    }
+    setReportsTwinId(twinId);
+    setShowReports(true);
+  }, [resolveTwinId]);
 
   // Step 3a: run the equations of ONE equipment (per-card Run button).
   // Resolves parameters from the current persisted state — upstream equipment
@@ -2869,6 +2886,31 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
+              <TooltipProvider delayDuration={120}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    {/* A disabled button swallows pointer events, so the
+                        tooltip trigger has to wrap it. */}
+                    <span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={components.length === 0}
+                        onClick={handleOpenReports}
+                        className="h-8 text-xs border-[#0F766E] text-[#0F766E] hover:bg-[#0F766E]/10"
+                      >
+                        <FileText className="h-4 w-4 mr-2" />
+                        Reports
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" align="end" className="bg-white">
+                    {components.length === 0
+                      ? "Add components to the canvas first"
+                      : "Generate a plant document"}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           )}
           {(step === "builder" || step === "compliance") && (
@@ -3128,6 +3170,11 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
               equipment={equipmentRefs}
               isComputing={computingEquipmentIds.size > 0}
               plantName={plantInfo?.plantName || plantInfo?.projectName || undefined}
+            />
+            <ReportsDialog
+              open={showReports}
+              onOpenChange={setShowReports}
+              digitalTwinId={reportsTwinId}
             />
           </div>
         ) : step === "compliance" ? (
