@@ -1248,8 +1248,6 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
 
     (async () => {
       try {
-        toast.info("Loading digital twin from database…");
-
         const records = await fetchDigitalTwinJsonForPlant(plantId);
 
         if (!records.length) {
@@ -1358,7 +1356,6 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
                 console.warn("Failed to load plant details:", err);
               }
 
-              toast.success("Digital twin loaded from database.");
               return;
             }
           }
@@ -1437,7 +1434,6 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
           console.warn("Failed to load plant details:", err);
         }
 
-        toast.success("Digital twin loaded from database.");
       } catch (err: any) {
         console.error("Failed to load digital twin JSON:", err);
         setError("Failed to load digital twin model from database.");
@@ -1462,7 +1458,6 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
   // Create plant and digital twin; set global IDs for component persistence
   const handleInfoSubmit = async (info: PlantInfo) => {
   try {
-    toast.loading("Creating plant...");
 
     const payload = infoToPlantPayload(info);
 
@@ -1634,7 +1629,6 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
           return;
         }
         setStep("compliance");
-        toast.info("Starting compliance check process.");
       } else {
         toast.error(
           `Port validation failed with ${finalResult.errors.length} issue${
@@ -1785,7 +1779,6 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
         return;
       }
 
-      toast.loading("Saving plant model...");
 
       // LOG: Current state before Save
       logJson(`[PlantBuilder] ========== SAVE START ==========`);
@@ -2335,7 +2328,6 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
       setIsApplyingTemplate(true);
       setShowTemplatesModal(false);
       setStep("loading");
-      toast.info("Applying template. Please wait...");
       await instantiateTemplate(template.id, { plantId, name });
       toast.success("Template instantiated.");
       window.location.href = `/plant-operator/plant-builder/builder?plantId=${plantId}`;

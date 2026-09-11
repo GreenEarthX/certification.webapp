@@ -1,13 +1,18 @@
 import type { ComponentType } from "react";
 import {
   ClipboardList,
-  Scale,
   ShieldCheck,
+  Waypoints,
   type LucideIcon,
 } from "lucide-react";
 import PlantComponentRegistryPreview from "@/components/plant-builder/reports/PlantComponentRegistryPreview";
-import { generatePlantComponentRegistry } from "@/services/plant-builder/reports";
+import ProcessFlowOperationsPreview from "@/components/plant-builder/reports/ProcessFlowOperationsPreview";
+import {
+  generatePlantComponentRegistry,
+  generateProcessFlowOperations,
+} from "@/services/plant-builder/reports";
 import { renderPlantComponentRegistryPdf } from "./plant-component-registry.pdf";
+import { renderProcessFlowOperationsPdf } from "./process-flow-operations.pdf";
 import type { ReportBodyBase, ReportTypeId } from "./types";
 
 /**
@@ -72,15 +77,18 @@ export const REPORT_REGISTRY: ReportDefinition<any>[] = [
     stages: REPORT_STAGES,
   },
   {
-    id: "mass_balance_summary",
-    title: "Mass Balance Summary",
-    subtitle: "Streams · Flows · Yields",
+    id: "process_flow_operations",
+    title: "Process Flow Operations",
+    subtitle: "Upstream · Downstream · Economics",
     description:
-      "Computed stream quantities and per-equipment balances across the plant.",
-    icon: Scale,
-    accent: "#3C83F6",
-    status: "coming_soon",
-    comingSoonNote: "Available once the equation engine is certified.",
+      "Every stream crossing the system boundary, at hourly, daily and yearly resolution, with the economics declared on each gate.",
+    icon: Waypoints,
+    accent: "#206A5D",
+    status: "available",
+    generate: generateProcessFlowOperations,
+    Preview: ProcessFlowOperationsPreview,
+    toPdf: renderProcessFlowOperationsPdf,
+    stages: REPORT_STAGES,
   },
   {
     id: "compliance_dossier",

@@ -274,7 +274,6 @@ export default function ChoosePlantPage() {
     }
     if (!backendUsersLoaded || backendUsersLoading) {
       setShareEmailError("Loading users list. Please wait a moment.");
-      toast.info("Loading users list. Please wait a moment.");
       return;
     }
     const exists = backendUsers.some(

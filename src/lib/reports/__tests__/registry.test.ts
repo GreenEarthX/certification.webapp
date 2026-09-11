@@ -66,7 +66,10 @@ describe("report registry", () => {
     expect(getReportDefinition("plant_component_registry")?.status).toBe(
       "available"
     );
-    expect(getReportDefinition("mass_balance_summary")?.status).toBe(
+    expect(getReportDefinition("process_flow_operations")?.status).toBe(
+      "available"
+    );
+    expect(getReportDefinition("compliance_dossier")?.status).toBe(
       "coming_soon"
     );
   });

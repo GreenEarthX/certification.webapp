@@ -2,25 +2,50 @@
 "use client";
 
 import { apiFetch } from "@/services/api-client";
-import type { PlantComponentRegistryDto } from "@/lib/reports/types";
+import type {
+  PlantComponentRegistryDto,
+  ProcessFlowOperationsDto,
+  ReportBody,
+  ReportTypeId,
+} from "@/lib/reports/types";
 
 const REPORTS_PATH = "/reports";
 
 /**
- * Generates a Plant Component Registry for one digital twin (the plant
- * variation). Every call mints a new document reference and writes an audit
- * row, so callers must guard against double submission.
+ * Every call mints a new document reference and writes an audit row, so callers
+ * must guard against double submission.
  */
-export async function generatePlantComponentRegistry(
+async function generateReport<T extends ReportBody>(
+  reportType: ReportTypeId,
   digitalTwinId: number
-): Promise<PlantComponentRegistryDto> {
-  return apiFetch<PlantComponentRegistryDto>(`${REPORTS_PATH}/generate`, {
+): Promise<T> {
+  return apiFetch<T>(`${REPORTS_PATH}/generate`, {
     method: "POST",
     body: JSON.stringify({
-      report_type: "plant_component_registry",
+      report_type: reportType,
       digital_twin_id: digitalTwinId,
     }),
   });
+}
+
+/** Type-level inventory of one digital twin (the plant variation). */
+export async function generatePlantComponentRegistry(
+  digitalTwinId: number
+): Promise<PlantComponentRegistryDto> {
+  return generateReport<PlantComponentRegistryDto>(
+    "plant_component_registry",
+    digitalTwinId
+  );
+}
+
+/** Every stream crossing the system boundary, with its declared economics. */
+export async function generateProcessFlowOperations(
+  digitalTwinId: number
+): Promise<ProcessFlowOperationsDto> {
+  return generateReport<ProcessFlowOperationsDto>(
+    "process_flow_operations",
+    digitalTwinId
+  );
 }
 
 export type ReportDocumentHeader = {
@@ -48,8 +73,6 @@ export async function listReports(
 /** Re-opens a past document from its snapshot; mints no new reference. */
 export async function fetchReport(
   reportDocumentId: number
-): Promise<PlantComponentRegistryDto> {
-  return apiFetch<PlantComponentRegistryDto>(
-    `${REPORTS_PATH}/${reportDocumentId}`
-  );
+): Promise<ReportBody> {
+  return apiFetch<ReportBody>(`${REPORTS_PATH}/${reportDocumentId}`);
 }
