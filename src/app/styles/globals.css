@@ -201,6 +201,39 @@ body {
   background: var(--gex-surface-tint);
 }
 
+/* ── Interaction states (app chrome) ──────────────────────────────────
+   One visible keyboard-focus treatment for every interactive element, and
+   a default colour/shadow transition so hover states never snap. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--gex-ring);
+    outline-offset: 2px;
+    border-radius: var(--gex-radius-sm);
+  }
+
+  a,
+  button,
+  [role="button"],
+  input,
+  select,
+  textarea,
+  summary {
+    transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+    transition-duration: 150ms;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
 body.plant-exporting .canvas-controls {
   display: none !important;
 }
