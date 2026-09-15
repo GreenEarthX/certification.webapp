@@ -1,6 +1,7 @@
 import React from "react";
 import { FaCheckCircle, FaExclamationCircle, FaClock, FaTimesCircle } from "react-icons/fa";
 import StatCard from "./StatCard";
+import { StatCardSkeleton } from "@/components/common/LoadingState";
 import { Stats } from "@/models/stat";
 
 interface DashboardStatsProps {
@@ -10,8 +11,15 @@ interface DashboardStatsProps {
 }
 
 const DashboardStats: React.FC<DashboardStatsProps> = ({ stats, loading, error }) => {
-  if (loading) return <p>Loading stats...</p>;
-  if (error) return <p className="text-red-500">{error}</p>;
+  if (loading) {
+    return (
+      <section>
+        <h2 className="mb-4 text-lg font-semibold tracking-tight text-slate-900">Certifications</h2>
+        <StatCardSkeleton count={3} />
+      </section>
+    );
+  }
+  if (error) return <p className="py-4 text-sm text-red-600">{error}</p>;
 
   return (
     <section>

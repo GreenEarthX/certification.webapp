@@ -3,9 +3,11 @@
 import React, { useState } from "react";
 import { Plant } from "@/models/plant";
 import Link from "next/link";
-import { CheckCircle2, Trash2 } from "lucide-react";
+import { CheckCircle2, Factory, Trash2 } from "lucide-react";
 import { useDeletePlant } from "@/hooks/useDeletePlant";
 import { Button } from "@/components/ui/button";
+import EmptyState from "@/components/common/EmptyState";
+import { TableSkeleton } from "@/components/common/LoadingState";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,8 +31,8 @@ const PlantsList: React.FC<PlantsListProps> = ({ plants, loading, error, onDelet
   const [plantToDelete, setPlantToDelete] = useState<Plant | null>(null);
   const [deleteSuccess, setDeleteSuccess] = useState(false);
 
-  if (loading) return <p>Loading plants...</p>;
-  if (error) return <p className="text-red-500">{error}</p>;
+  if (loading) return <TableSkeleton rows={4} columns={5} />;
+  if (error) return <p className="py-4 text-sm text-red-600">{error}</p>;
 
   const getRiskScoreColor = (score: number): string => {
     if (score >= 70) return "bg-green-500";
@@ -41,6 +43,21 @@ const PlantsList: React.FC<PlantsListProps> = ({ plants, loading, error, onDelet
   const getRiskScoreText = (score: number): string => `${score}%`;
 
   const closeDialog = () => setPlantToDelete(null);
+
+  if (plants.length === 0) {
+    return (
+      <EmptyState
+        icon={Factory}
+        title="No plants yet"
+        description="Add your first plant to start tracking its maturity and certifications."
+        action={
+          <Button asChild size="sm">
+            <Link href="/plant-operator/plants/add">Add Plant</Link>
+          </Button>
+        }
+      />
+    );
+  }
 
   return (
     <div className="overflow-x-auto">

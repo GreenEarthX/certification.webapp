@@ -6,6 +6,7 @@ import CertificationCard from '@/components/plant-operator/certifications/Certif
 import CertificationReportComponent from '@/components/plant-operator/certifications/CertificationReportComponent';
 import reportsData from '@/data/reportsData.json';
 import { useCertifications } from '@/hooks/useCertifications';
+import { InlineLoading } from "@/components/common/LoadingState";
 
 export default function CertificationDetails() {
   const { id: certificationId } = useParams();
@@ -15,7 +16,7 @@ export default function CertificationDetails() {
     error,
   } = useCertifications(certificationId as string);
 
-  if (loading) return <div className="p-6">Loading...</div>;
+  if (loading) return <InlineLoading label="Loading certification…" className="p-6" />;
   if (error || !certification) return <div className="p-6">Certification not found</div>;
 
   return (

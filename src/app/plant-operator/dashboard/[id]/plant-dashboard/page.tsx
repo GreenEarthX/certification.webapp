@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { ArrowLeft, ArrowRight, Upload } from "lucide-react";
 import { usePlants } from "@/hooks/usePlants";
 import { Button } from "@/components/ui/button";
+import { InlineLoading } from "@/components/common/LoadingState";
 
 const moduleCards = [
   {
@@ -78,7 +79,7 @@ export default function PlantDashboard() {
   }, [params.id, plants]);
 
   if (loading) {
-    return <div className="p-6 text-sm text-muted-foreground">Loading plant...</div>;
+    return <InlineLoading label="Loading plant…" className="p-6" />;
   }
 
   if (error) {

@@ -4,6 +4,7 @@ import React from "react";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
 import { useMediaQuery } from "@mui/material";
 import { useCertifications } from "@/hooks/useCertifications";
+import { InlineLoading } from "@/components/common/LoadingState";
 
 const columns: GridColDef[] = [
   { field: "Certification", headerName: "Certification", flex: 1, minWidth: 120 },
@@ -74,7 +75,7 @@ export default function CertificationsTable() {
         <br />
 
         {loading ? (
-          <p>Loading certifications...</p>
+          <InlineLoading label="Loading certifications…" />
         ) : error ? (
           <p className="text-red-500">{error}</p>
         ) : (

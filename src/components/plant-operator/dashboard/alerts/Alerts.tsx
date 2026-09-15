@@ -1,5 +1,8 @@
 import React from "react";
+import { BellOff } from "lucide-react";
 import { Alert } from "@/models/alert";
+import EmptyState from "@/components/common/EmptyState";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface AlertsProps {
   alerts: Alert[];
@@ -8,8 +11,25 @@ interface AlertsProps {
 }
 
 const Alerts: React.FC<AlertsProps> = ({ alerts, loading, error }) => {
-  if (loading) return <p className="text-gray-500">Loading alerts...</p>;
-  if (error) return <p className="text-red-500">{error}</p>;
+  if (loading) {
+    return (
+      <div>
+        <h3 className="mb-4 text-lg font-semibold tracking-tight text-slate-900">Alerts</h3>
+        <div className="space-y-3" aria-busy>
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="flex gap-3">
+              <Skeleton className="w-1 self-stretch rounded-full" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-3.5 w-1/2" />
+                <Skeleton className="h-3 w-3/4" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  if (error) return <p className="py-4 text-sm text-red-600">{error}</p>;
 
   return (
     <div>
@@ -35,7 +55,7 @@ const Alerts: React.FC<AlertsProps> = ({ alerts, loading, error }) => {
             </div>
           ))
         ) : (
-          <p className="text-gray-500">No alerts available</p>
+          <EmptyState icon={BellOff} title="No alerts" description="You're up to date — nothing needs attention." className="py-8" />
         )}
       </div>
     </div>
