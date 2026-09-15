@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaDownload } from 'react-icons/fa'; 
+import { Download } from 'lucide-react';
 import { Report } from '@/models/report';
 
 interface CertificationReportComponentProps {
@@ -27,9 +27,10 @@ const CertificationReportComponent: React.FC<CertificationReportComponentProps> 
               <a
                 href={report.pdfUrl}
                 download
-                className="text-gray-600 hover:text-gray-800"
+                className="flex size-9 items-center justify-center rounded-full text-slate-500 hover:bg-brand-50 hover:text-brand-700"
+                aria-label="Download report"
               >
-                <FaDownload className="w-5 h-5" />
+                <Download className="size-5" />
               </a>
             </div>
             {index < reports.length - 1 && <hr className="my-4 border-gray-200" />}

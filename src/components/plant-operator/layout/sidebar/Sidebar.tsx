@@ -13,14 +13,16 @@ import {
   Box,
   IconButton,
 } from '@mui/material';
-import { FaChevronLeft, FaChevronRight, FaHome } from 'react-icons/fa';
 import {
-  FaSitemap,
-  FaFileAlt,
-  FaFileMedical,
-  FaCheckCircle,   // For Plausibility Check
-  FaTools,         // For Plant Builder
-} from 'react-icons/fa';
+  ChevronLeft,
+  ChevronRight,
+  LayoutDashboard,
+  Network,
+  FileText,
+  CheckCircle2,   // For Plausibility Check
+  Wrench,         // For Plant Builder
+  Lightbulb,
+} from 'lucide-react';
 
 import styles from "../../../../app/styles/sidebar.module.css";
 
@@ -59,9 +61,9 @@ const Sidebar: React.FC = () => {
       >
         <IconButton className={styles.toggleButton}>
           {isCollapsed ? (
-            <FaChevronRight className={styles.arrowIcon} />
+            <ChevronRight className={styles.arrowIcon} />
           ) : (
-            <FaChevronLeft className={styles.arrowIcon} />
+            <ChevronLeft className={styles.arrowIcon} />
           )}
         </IconButton>
       </Box>
@@ -71,15 +73,15 @@ const Sidebar: React.FC = () => {
       {/* Navigation Menu */}
       <List sx={{ paddingTop: '16px' }}>
         {[
-          { text: 'Dashboard',       icon: <FaHome />,           path: '/plant-operator/dashboard' },
-          { text: 'Manage Plants',   icon: <FaSitemap />,        path: '/plant-operator/manage-plants-json' },
-          { text: 'Certifications',  icon: <FaFileAlt />,        path: '/plant-operator/certifications' },
+          { text: 'Dashboard',       icon: <LayoutDashboard />,           path: '/plant-operator/dashboard' },
+          { text: 'Manage Plants',   icon: <Network />,        path: '/plant-operator/manage-plants-json' },
+          { text: 'Certifications',  icon: <FileText />,        path: '/plant-operator/certifications' },
           
           // REAL PAGE NAMES
-          { text: 'Plausibility Check', icon: <FaCheckCircle />, path: '/plant-operator/plausibility-check' },
-          { text: 'Plant Builder',      icon: <FaTools />,       path: '/plant-operator/plant-builder' },
+          { text: 'Plausibility Check', icon: <CheckCircle2 />, path: '/plant-operator/plausibility-check' },
+          { text: 'Plant Builder',      icon: <Wrench />,       path: '/plant-operator/plant-builder' },
 
-          { text: 'Recommendations', icon: <FaFileMedical />,   path: '/plant-operator/recommendations' },
+          { text: 'Recommendations', icon: <Lightbulb />,   path: '/plant-operator/recommendations' },
         ].map((item) => (
           <ListItem
             key={item.text}

@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useServiceDetails } from "@/hooks/useSchemeDetails";
 import { Tooltip } from "@mui/material";
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography } from "@mui/material";
-import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import { Info } from "lucide-react";
 import { useState } from "react";
 
 const SchemeDetailsPage = () => {
@@ -187,7 +187,7 @@ const SchemeDetailsPage = () => {
           onClick={() => setShowComplianceModal(true)}
           className="bg-blue-600 text-white text-xs font-medium px-4 py-1.5 rounded-full hover:bg-blue-700 flex items-center gap-1 transition"
         >
-          <InfoOutlinedIcon fontSize="small" />
+          <Info className="size-4" />
           View Full Calculation Process
         </button>
       </div>

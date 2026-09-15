@@ -12,7 +12,7 @@ import {
   Box,
 } from "@mui/material";
 import { Dialog, DialogTitle, DialogContent, DialogActions } from "@mui/material";
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import { CheckCircle2 } from 'lucide-react';
 
 
 import { Recommendation } from "@/models/recommendation";
@@ -185,7 +185,7 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({ recommen
         </DialogTitle>
 
         <DialogContent>
-          <CheckCircleOutlineIcon sx={{ fontSize: 60, color: "#00C851", mb: 2 }} />
+          <CheckCircle2 className="mb-4 size-14 text-brand-600" strokeWidth={1.5} />
           <Typography variant="body1" sx={{ mb: 2 }}>
             Your certification process has started successfully.
           </Typography>

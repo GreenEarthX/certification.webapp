@@ -9,7 +9,7 @@ import {
   Box,
   Divider,
 } from "@mui/material";
-import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import { Info } from "lucide-react";
 
 interface RiskScoreProps {
   score: number;
@@ -65,7 +65,7 @@ const RiskScore: React.FC<RiskScoreProps> = ({ score }) => {
               onClick={() => setShowFullModal(true)}
               className="bg-blue-600 text-white text-xs font-medium px-4 py-1.5 rounded-full hover:bg-blue-700 flex items-center gap-1 transition"
             >
-              <InfoOutlinedIcon fontSize="small" />
+              <Info className="size-4" />
               View Full Calculation Process
             </button>
           </div>
