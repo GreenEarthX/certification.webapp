@@ -9,7 +9,7 @@ interface CertificationReportComponentProps {
 const CertificationReportComponent: React.FC<CertificationReportComponentProps> = ({ reports }) => {
   return (
     <div className="bg-white rounded-lg shadow-sm p-6">
-      <h2 className="text-2xl font-semibold mb-6">Reports of Approval</h2>
+      <h2 className="text-lg font-semibold tracking-tight text-slate-900 mb-6">Reports of Approval</h2>
       <div className="space-y-4">
         {reports.map((report, index) => (
           <div key={index}>

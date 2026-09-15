@@ -8,7 +8,7 @@ interface Step2UploadProps {
 
 const Step2Upload: React.FC<Step2UploadProps> = ({ handleFileUpload, isLoading }) => (
   <div>
-    <h2 className="text-xl font-bold mb-6 text-center">Upload Certification</h2>
+    <h2 className="text-lg font-semibold tracking-tight text-slate-900 mb-6 text-center">Upload Certification</h2>
     <div className="border-2 border-dashed border-gray-300 rounded-lg p-10 text-center">
       <p className="text-gray-600 mb-4">Drag and drop your PDF here or</p>
       <label htmlFor="file-upload" className="cursor-pointer bg-brand-700 text-white px-6 py-3 rounded-md hover:bg-brand-800">

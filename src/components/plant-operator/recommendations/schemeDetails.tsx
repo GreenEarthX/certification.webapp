@@ -147,7 +147,7 @@ const SchemeDetailsPage = () => {
     <section className="p-6 rounded-lg">
       {/* Scheme title and compliance score */}
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-800">{schemeName}</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">{schemeName}</h1>
         <div
   className="relative flex items-center space-x-3"
   onMouseEnter={handleMouseEnter}

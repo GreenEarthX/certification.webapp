@@ -11,7 +11,7 @@ interface Step4SuccessProps {
 const Step5Success: React.FC<Step4SuccessProps> = ({ onGoToDashboard }) => {
   return (
     <div className="text-center p-6">
-      <h2 className="text-xl font-bold mb-4 text-green-700">Success!</h2>
+      <h2 className="text-lg font-semibold tracking-tight mb-4 text-brand-700">Success!</h2>
 
       <p className="text-gray-700">
         The process has been completed successfully.

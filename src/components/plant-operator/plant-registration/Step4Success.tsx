@@ -11,7 +11,7 @@ interface Step4SuccessProps {
 const Step4Success: React.FC<Step4SuccessProps> = ({ uploadedData, onGoToDashboard }) => {
   return (
     <div className="text-center p-6">
-      <h2 className="text-xl font-bold mb-4">Plant Registered Successfully!</h2>
+      <h2 className="text-lg font-semibold tracking-tight text-slate-900 mb-4">Plant Registered Successfully!</h2>
       <p>
         Plant with ID <strong>{uploadedData.plant_id}</strong> added successfully by plant operator <strong>{uploadedData.operator_id}</strong>.
       </p>

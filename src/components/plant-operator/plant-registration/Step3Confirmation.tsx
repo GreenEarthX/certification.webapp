@@ -147,7 +147,7 @@ const Step3Confirmation: React.FC<Step3ConfirmationProps> = ({
     <div>
       {!certificateSaved ? (
         <>
-          <h3 className="text-xl font-bold mb-6 text-center">Certification Uploaded</h3>
+          <h3 className="text-lg font-semibold tracking-tight text-slate-900 mb-6 text-center">Certification Uploaded</h3>
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Certification Name
@@ -189,7 +189,7 @@ const Step3Confirmation: React.FC<Step3ConfirmationProps> = ({
 
           {!showSuccessModal && (
             <div className="mt-10 text-center">
-              <h3 className="text-2xl font-semibold text-gray-800 mb-4">What do you want to do next?</h3>
+              <h3 className="text-xl font-semibold tracking-tight text-slate-900 mb-4">What do you want to do next?</h3>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto">
                 <button
                   onClick={() => {

@@ -518,7 +518,7 @@ export default function PlausibilityCheckPage() {
           {/* Step 1: Upload */}
           {step === 1 && (
             <div className="bg-white shadow-xl rounded-2xl p-8 border border-gray-100">
-              <h1 className="text-3xl font-bold text-gray-900 mb-8 text-center">Upload Documents</h1>
+              <h1 className="text-2xl font-semibold tracking-tight text-slate-900 mb-8 text-center">Upload Documents</h1>
               <div className="mb-8">
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Select Plant</label>
                 <Select value={selectedPlantId} onChange={handlePlantChange} options={mockUserPlants} placeholder="Choose a plant..." />
@@ -554,7 +554,7 @@ export default function PlausibilityCheckPage() {
           {/* Step 2: OCR */}
           {step === 2 && (
             <div className="bg-white shadow-xl rounded-2xl p-8 border border-gray-100">
-              <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">OCR Results</h2>
+              <h2 className="text-2xl font-semibold tracking-tight text-slate-900 mb-8 text-center">OCR Results</h2>
 
               {isVerifying ? (
                 <div className="text-center py-16">
@@ -572,7 +572,7 @@ export default function PlausibilityCheckPage() {
                   {Object.entries(ocrResults).map(([type, data]: [string, any]) => (
                     <div key={type} className="border-2 border-gray-200 rounded-xl p-6 bg-gradient-to-br from-gray-50 to-white">
                       <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-xl font-bold capitalize text-gray-800">
+                        <h3 className="text-lg font-semibold tracking-tight capitalize text-slate-900">
                           {type === "pos" ? "Proof of Sustainability" :
                            type === "invoice" ? "Invoice" :
                            type === "ppa" ? "PPA" :
@@ -601,7 +601,7 @@ export default function PlausibilityCheckPage() {
           {/* Step 3: Mint */}
           {step === 3 && (
             <div className="bg-white shadow-xl rounded-2xl p-8 border border-gray-100">
-              <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">Mint NFTs</h2>
+              <h2 className="text-2xl font-semibold tracking-tight text-slate-900 mb-8 text-center">Mint NFTs</h2>
 
               {isMinting ? (
                 <div className="text-center py-16">
@@ -666,7 +666,7 @@ export default function PlausibilityCheckPage() {
           {/* Step 4: Plausibility Check */}
           {step === 4 && (
             <div className="bg-white shadow-xl rounded-2xl p-8 border border-gray-100">
-              <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">Plausibility Check</h2>
+              <h2 className="text-2xl font-semibold tracking-tight text-slate-900 mb-8 text-center">Plausibility Check</h2>
 
               {isChecking ? (
                 <div className="text-center py-16">

@@ -47,7 +47,7 @@ const CertificationCard: React.FC<CertificationCards> = ({
       <div className="w-full md:w-2/3 flex flex-col md:flex-row gap-6">
         {/* Left Part: Certification Details (2/3 of the right div) */}
         <div className="w-full md:w-2/3">
-          <h2 className="text-xl font-bold mb-3">{certification}</h2>
+          <h2 className="text-lg font-semibold tracking-tight text-slate-900 mb-3">{certification}</h2>
           <p className="text-sm text-gray-600 mb-4">
             {description}  
           </p>

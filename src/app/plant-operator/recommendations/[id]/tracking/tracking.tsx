@@ -78,7 +78,7 @@ const TrackingPage = () => {
     <div>
       <br/>
     <section className="p-6 rounded-lg bg-white shadow-sm">
-      <h1 className="text-2xl font-bold mb-6 text-gray-800">Track My Certification</h1>
+      <h1 className="text-2xl font-semibold tracking-tight mb-6 text-slate-900">Track My Certification</h1>
       <table className="min-w-full table-auto">
         <thead>
           <tr className="text-left border-b">

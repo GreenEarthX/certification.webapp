@@ -51,7 +51,7 @@ const Step1Form: React.FC<Step1FormProps> = ({
 
   return (
     <form onSubmit={handleSubmit}>
-  <h2 className="text-xl font-bold mb-6 text-center">Plant Registration</h2>
+  <h2 className="text-lg font-semibold tracking-tight text-slate-900 mb-6 text-center">Plant Registration</h2>
 
   {/* 🔹 Row 1: Plant Name + Fuel Type */}
   <div className="mb-4 flex gap-4">

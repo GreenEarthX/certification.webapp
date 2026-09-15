@@ -68,11 +68,9 @@ export default function CertificationsTable() {
   const { certifications, loading, error } = useCertifications();
 
   return (
-    <div>
-      <br />
-      <section className="bg-white rounded-lg p-6 shadow-sm">
-        <h2 className="text-xl font-semibold mb-4">Certifications List</h2>
-        <br />
+    <div className="p-6">
+      <section className="rounded-gex-md border border-slate-200 bg-white p-6 shadow-gex-sm">
+        <h2 className="text-lg font-semibold tracking-tight text-slate-900 mb-4">Certifications List</h2>
 
         {loading ? (
           <InlineLoading label="Loading certifications…" />
