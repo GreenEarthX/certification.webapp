@@ -1,5 +1,7 @@
-import React, { useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
+import { Bell, BellOff } from "lucide-react";
 import { Notification } from "@/models/notification";
+import { useDismissable } from "@/hooks/useDismissable";
 
 interface NotificationsProps {
   notifications: Notification[];
@@ -10,70 +12,92 @@ interface NotificationsProps {
 
 const Notifications: React.FC<NotificationsProps> = ({ notifications, loading, error, markNotificationAsRead }) => {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const close = useCallback(() => setIsNotificationOpen(false), []);
+  useDismissable(rootRef, isNotificationOpen, close);
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   const handleNotificationClick = async (id: number) => {
     await markNotificationAsRead(id);
   };
 
   return (
-    <div className="relative">
+    <div className="relative" ref={rootRef}>
       <button
         onClick={() => setIsNotificationOpen(!isNotificationOpen)}
-        className="relative h-10 w-10 rounded-full bg-blue-50 text-blue-700 ring-1 ring-blue-200 flex items-center justify-center hover:bg-blue-100 transition"
+        className="relative h-10 w-10 rounded-full bg-slate-50 text-slate-600 ring-1 ring-slate-200 flex items-center justify-center hover:bg-brand-50 hover:text-brand-700 hover:ring-brand-200 active:scale-95"
         aria-label="View Notifications"
+        aria-haspopup="menu"
+        aria-expanded={isNotificationOpen}
       >
-        {/* Notification Icon */}
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          className="h-5 w-5"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-          />
-        </svg>
-        {notifications.filter((n) => !n.read).length > 0 && (
-          <span className="absolute -top-1 -right-1 px-1.5 py-0.5 text-[10px] font-bold text-white bg-red-600 rounded-full shadow-sm">
-            {notifications.filter((n) => !n.read).length}
+        <Bell className="size-5" />
+        {unreadCount > 0 && (
+          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 text-[10px] font-bold leading-[18px] text-white bg-red-600 rounded-full ring-2 ring-white tabular-nums">
+            {unreadCount}
           </span>
         )}
       </button>
 
       {isNotificationOpen && (
-        <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-lg border border-gray-200">
-          <div className="p-4 border-b">
-            <p className="text-sm font-medium text-gray-800">Notifications</p>
+        <div
+          role="menu"
+          className="absolute right-0 mt-2 w-80 overflow-hidden rounded-gex-md border border-slate-200 bg-white shadow-gex-lg animate-in fade-in-0 zoom-in-95 slide-in-from-top-1 duration-150 origin-top-right"
+        >
+          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+            <p className="text-sm font-semibold text-slate-900">Notifications</p>
+            {unreadCount > 0 && (
+              <span className="rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-semibold text-brand-700 tabular-nums">
+                {unreadCount} new
+              </span>
+            )}
           </div>
-          <ul>
+          <ul className="max-h-80 overflow-y-auto p-1">
             {loading ? (
-              <li className="p-4 text-sm text-gray-500">Loading...</li>
+              <li className="space-y-2 p-3">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="space-y-1.5">
+                    <div className="h-3 w-3/4 animate-pulse rounded bg-slate-200" />
+                    <div className="h-2.5 w-1/3 animate-pulse rounded bg-slate-100" />
+                  </div>
+                ))}
+              </li>
             ) : error ? (
-              <li className="p-4 text-sm text-red-500">{error}</li>
+              <li className="p-4 text-sm text-red-600">{error}</li>
             ) : notifications.length > 0 ? (
               notifications.map((notification) => (
                 <li key={notification.id}>
                   <button
+                    role="menuitem"
                     onClick={() => handleNotificationClick(notification.id)}
-                    className={`block w-full px-4 py-2 text-sm text-gray-700 text-left hover:bg-gray-100 ${
-                      !notification.read ? "bg-gray-50" : "bg-gray-100"
+                    className={`flex w-full items-start gap-3 rounded-gex-sm px-3 py-2 text-left text-sm hover:bg-slate-50 active:bg-slate-100 ${
+                      !notification.read ? "bg-brand-50/60" : ""
                     }`}
                   >
-                    <p className={`font-medium ${!notification.read ? "text-black" : "text-gray-500"}`}>
-                      {notification.message}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {new Date(notification.timestamp).toLocaleString()}
-                    </p>
+                    <span
+                      className={`mt-1.5 size-2 shrink-0 rounded-full ${
+                        !notification.read ? "bg-brand-600" : "bg-transparent"
+                      }`}
+                      aria-hidden
+                    />
+                    <span className="min-w-0">
+                      <p className={`leading-snug ${!notification.read ? "font-medium text-slate-900" : "text-slate-600"}`}>
+                        {notification.message}
+                      </p>
+                      <p className="mt-0.5 text-xs text-slate-500">
+                        {new Date(notification.timestamp).toLocaleString()}
+                      </p>
+                    </span>
                   </button>
                 </li>
               ))
             ) : (
-              <li className="p-4 text-sm text-gray-500">No new notifications</li>
+              <li className="flex flex-col items-center gap-2 px-4 py-8 text-center">
+                <span className="flex size-10 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+                  <BellOff className="size-5" />
+                </span>
+                <p className="text-sm font-medium text-slate-700">You&apos;re all caught up</p>
+                <p className="text-xs text-slate-500">No new notifications</p>
+              </li>
             )}
           </ul>
         </div>
