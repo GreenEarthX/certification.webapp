@@ -3,8 +3,19 @@
 import React, { useState } from "react";
 import { Plant } from "@/models/plant";
 import Link from "next/link";
-import { FaTrash } from "react-icons/fa";
+import { CheckCircle2, Trash2 } from "lucide-react";
 import { useDeletePlant } from "@/hooks/useDeletePlant";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface PlantsListProps {
   plants: Plant[];
@@ -29,121 +40,127 @@ const PlantsList: React.FC<PlantsListProps> = ({ plants, loading, error, onDelet
 
   const getRiskScoreText = (score: number): string => `${score}%`;
 
+  const closeDialog = () => setPlantToDelete(null);
+
   return (
     <div className="overflow-x-auto">
-      <br />
-      <table className="min-w-full">
+      <table className="min-w-full text-sm">
         <thead>
-          <tr className="text-left text-gray-500 text-sm uppercase">
-            <th className="pb-3 font-medium">Name</th>
-            <th className="pb-3 font-medium">Type</th>
-            <th className="pb-3 font-medium">Address</th>
-            <th className="pb-3 font-medium">Maturity SCORE</th>
-            <th className="pb-3 font-medium">Actions</th>
-            <th className="pb-3 font-medium"></th>
+          <tr className="border-b border-slate-200 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+            <th className="pb-3 pr-4">Name</th>
+            <th className="pb-3 pr-4">Type</th>
+            <th className="pb-3 pr-4">Address</th>
+            <th className="pb-3 pr-4">Maturity score</th>
+            <th className="pb-3 pr-4">Actions</th>
+            <th className="pb-3"></th>
           </tr>
         </thead>
-        <tbody className="text-gray-700">
+        <tbody className="text-slate-700">
           {plants.map((plant) => (
-            <tr key={plant.id || `${plant.name}-${plant.type}`} className="border-t border-gray-100">
-              <td className="py-4 font-medium">
-                <Link href={`/plant-operator/dashboard/${plant.id}/plant-dashboard`}>
-                  <span className="text-blue-600 hover:text-blue-700 cursor-pointer">{plant.name}</span>
+            <tr
+              key={plant.id || `${plant.name}-${plant.type}`}
+              className="border-b border-slate-100 last:border-0 transition-colors duration-150 hover:bg-slate-50"
+            >
+              <td className="py-3.5 pr-4 font-medium">
+                <Link
+                  href={`/plant-operator/dashboard/${plant.id}/plant-dashboard`}
+                  className="text-brand-700 hover:text-brand-800 hover:underline underline-offset-4"
+                >
+                  {plant.name}
                 </Link>
               </td>
-              <td className="py-4">{plant.type}</td>
-              <td className="py-4">{plant.address}</td>
-              <td className="py-4">
+              <td className="py-3.5 pr-4">{plant.type}</td>
+              <td className="py-3.5 pr-4">{plant.address}</td>
+              <td className="py-3.5 pr-4">
                 <div className="flex items-center">
-                  <div className="w-32 bg-gray-200 rounded-full h-2 mr-3">
+                  <div className="mr-3 h-2 w-32 rounded-full bg-slate-200">
                     <div
                       className={`${getRiskScoreColor(plant.riskScore)} h-2 rounded-full`}
                       style={{ width: `${plant.riskScore}%` }}
                     ></div>
                   </div>
-                  <span className="text-sm font-medium">{getRiskScoreText(plant.riskScore)}</span>
+                  <span className="text-sm font-medium tabular-nums">{getRiskScoreText(plant.riskScore)}</span>
                 </div>
               </td>
-              <td className="py-4">
-              <Link href={`/plant-operator/manage-plants-indian?selected=${plant.id}`}>
-
-                  <span className="text-sm font-medium text-blue-600 hover:text-blue-700 cursor-pointer">
-                    Manage Plant Details
-                  </span>
+              <td className="py-3.5 pr-4">
+                <Link
+                  href={`/plant-operator/manage-plants-indian?selected=${plant.id}`}
+                  className="text-sm font-medium text-brand-700 hover:text-brand-800 hover:underline underline-offset-4"
+                >
+                  Manage Plant Details
                 </Link>
               </td>
-              <td className="py-4">
-                <div
+              <td className="py-3.5 text-right">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-red-600 hover:bg-red-50 hover:text-red-700"
                   onClick={() => {
                     setPlantToDelete(plant);
                     setDeleteSuccess(false); // reset success state
                   }}
-                  className="flex items-center text-red-500 hover:text-red-700 cursor-pointer"
                 >
-                  <span className="mr-2">Delete</span>
-                  <FaTrash />
-                </div>
+                  <Trash2 />
+                  Delete
+                </Button>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
 
-      {/* Modal delete/confirm */}
-      {plantToDelete && (
-      <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-        <div className="bg-white p-6 rounded-lg shadow-lg max-w-sm w-full text-center">
+      {/* Delete confirm / success */}
+      <AlertDialog open={plantToDelete !== null} onOpenChange={(open) => !open && closeDialog()}>
+        <AlertDialogContent className="max-w-sm">
           {!deleteSuccess ? (
             <>
-              <h2 className="text-lg font-semibold mb-4 text-gray-800">
-                Confirm Deletion
-              </h2>
-              <p className="text-sm text-gray-600 mb-6">
-                Are you sure you want to delete <strong>{plantToDelete.name}</strong>?
-              </p>
-              <div className="flex justify-end space-x-4">
-                <button
-                  onClick={() => setPlantToDelete(null)}
-                  className="px-4 py-2 text-gray-700 border border-gray-300 rounded hover:bg-gray-100"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={async () => {
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete plant?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to delete <strong className="text-slate-900">{plantToDelete?.name}</strong>? This
+                  cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-red-600 hover:bg-red-700 active:bg-red-800"
+                  disabled={!!plantToDelete && deletingId === plantToDelete.id}
+                  onClick={async (e) => {
+                    e.preventDefault(); // keep the dialog open until the request settles
+                    if (!plantToDelete) return;
                     const result = await deletePlant(plantToDelete.id);
                     if (result.success) {
                       setDeleteSuccess(true);
                       onDelete?.(plantToDelete.id);
                     } else {
                       alert(`Error: ${result.message}`);
-                      setPlantToDelete(null);
+                      closeDialog();
                     }
                   }}
-                  className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
                 >
-                  {deletingId === plantToDelete.id ? "Deleting..." : "Confirm Delete"}
-                </button>
-              </div>
+                  {plantToDelete && deletingId === plantToDelete.id ? "Deleting..." : "Confirm Delete"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
             </>
           ) : (
             <>
-              <h2 className="text-lg font-semibold mb-6 text-red-600">
-                  ❗ Plant deleted successfully!
-              </h2>
-              <div className="flex justify-center">
-                <button
-                  onClick={() => setPlantToDelete(null)}
-                  className="px-6 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
-                >
-                  Close
-                </button>
-              </div>
+              <AlertDialogHeader className="items-center text-center sm:text-center">
+                <span className="flex size-12 items-center justify-center rounded-full bg-brand-50 text-brand-700">
+                  <CheckCircle2 className="size-6" />
+                </span>
+                <AlertDialogTitle>Plant deleted</AlertDialogTitle>
+                <AlertDialogDescription>
+                  <strong className="text-slate-900">{plantToDelete?.name}</strong> was removed from your portfolio.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter className="sm:justify-center">
+                <AlertDialogCancel onClick={closeDialog}>Close</AlertDialogCancel>
+              </AlertDialogFooter>
             </>
           )}
-        </div>
-      </div>
-    )}
-
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
