@@ -164,16 +164,41 @@ body.plant-exporting .plant-export-overlay {
   --foreground-rgb: 0, 0, 0;
   --background-start-rgb: 240, 245, 255;
   --background-end-rgb: 250, 250, 255;
+
+  /* ── GreenEarthX brand tokens ──────────────────────────────────────
+     Anchored on the #0F766E green already used by <Button>. Mapped to
+     Tailwind as `brand-*`, `rounded-gex-*`, `shadow-gex-*` in
+     tailwind.config.js. Additive: nothing changes until a class uses it. */
+  --gex-green-50: #F0FDFA;
+  --gex-green-100: #CCFBF1;
+  --gex-green-200: #99F6E4;
+  --gex-green-300: #5EEAD4;
+  --gex-green-400: #2DD4BF;
+  --gex-green-500: #14B8A6;
+  --gex-green-600: #0D9488;
+  --gex-green-700: #0F766E;
+  --gex-green-800: #115E59;
+  --gex-green-900: #134E4A;
+
+  --gex-surface: #F8FAFC;        /* app background behind cards */
+  --gex-surface-tint: #F1F7F6;   /* faint green-tinted page background */
+
+  --gex-ring: rgba(15, 118, 110, 0.35);
+
+  --gex-radius-sm: 0.5rem;
+  --gex-radius-md: 0.75rem;
+  --gex-radius-lg: 1rem;
+
+  --gex-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(15, 23, 42, 0.04);
+  --gex-shadow-md: 0 4px 12px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.04);
+  --gex-shadow-lg: 0 10px 28px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.04);
+
+  --navbar-height: 72px;
 }
 
 body {
   color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+  background: var(--gex-surface-tint);
 }
 
 body.plant-exporting .canvas-controls {
