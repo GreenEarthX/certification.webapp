@@ -1,16 +1,25 @@
 import type { ComponentType } from "react";
 import {
   ClipboardList,
-  ShieldCheck,
+  Scale,
   Waypoints,
   type LucideIcon,
 } from "lucide-react";
+import MassEnergyBalancesEquationsPreview from "@/components/plant-builder/reports/MassEnergyBalancesEquationsPreview";
+import MassEnergyBalancesPreview from "@/components/plant-builder/reports/MassEnergyBalancesPreview";
+import MassEnergyBalancesSpecificationPreview from "@/components/plant-builder/reports/MassEnergyBalancesSpecificationPreview";
 import PlantComponentRegistryPreview from "@/components/plant-builder/reports/PlantComponentRegistryPreview";
 import ProcessFlowOperationsPreview from "@/components/plant-builder/reports/ProcessFlowOperationsPreview";
 import {
+  generateMassEnergyBalances,
+  generateMassEnergyBalancesEquations,
+  generateMassEnergyBalancesSpecification,
   generatePlantComponentRegistry,
   generateProcessFlowOperations,
 } from "@/services/plant-builder/reports";
+import { renderMassEnergyBalancesEquationsPdf } from "./mass-energy-balances-equations.pdf";
+import { renderMassEnergyBalancesSpecificationPdf } from "./mass-energy-balances-specification.pdf";
+import { renderMassEnergyBalancesPdf } from "./mass-energy-balances.pdf";
 import { renderPlantComponentRegistryPdf } from "./plant-component-registry.pdf";
 import { renderProcessFlowOperationsPdf } from "./process-flow-operations.pdf";
 import type { ReportBodyBase, ReportTypeId } from "./types";
@@ -31,6 +40,21 @@ export interface ReportStage {
   weight: number;
 }
 
+/**
+ * A document set: one main report plus its annexes, presented as a single box
+ * in the picker with one button per document. Each document is still its own
+ * ReportDefinition (own generate / Preview / toPdf and its own document
+ * reference); the group only decides how the picker lays them out.
+ */
+export interface ReportGroup {
+  id: string;
+  title: string;
+  subtitle: string;
+  description: string;
+  icon: LucideIcon;
+  accent: string;
+}
+
 export interface ReportDefinition<TData extends ReportBodyBase = ReportBodyBase> {
   id: ReportTypeId;
   title: string;
@@ -40,6 +64,10 @@ export interface ReportDefinition<TData extends ReportBodyBase = ReportBodyBase>
   accent: string;
   status: ReportStatus;
   comingSoonNote?: string;
+  /** ReportGroup.id; absent for a standalone report. */
+  group?: string;
+  /** The button label inside the group box, e.g. "Annex 1: Specification". */
+  groupLabel?: string;
 
   /** Present exactly when status === "available". */
   generate?: (digitalTwinId: number) => Promise<TData>;
@@ -59,6 +87,21 @@ export const REPORT_STAGES: readonly ReportStage[] = [
   { key: "rendering", label: "Laying out the document…", weight: 85 },
   { key: "ready", label: "Ready", weight: 100 },
 ];
+
+export const REPORT_GROUPS: ReportGroup[] = [
+  {
+    id: "mass_energy_balances",
+    title: "Mass & Energy Balances",
+    subtitle: "Main report · Specification · Equations",
+    description:
+      "The technical assessment of the plant: every material and energy stream with its value, the per-stream specification, and the equations behind each computed figure.",
+    icon: Scale,
+    accent: "#1D4ED8",
+  },
+];
+
+export const getReportGroup = (id: string) =>
+  REPORT_GROUPS.find((g) => g.id === id);
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const REPORT_REGISTRY: ReportDefinition<any>[] = [
@@ -91,15 +134,52 @@ export const REPORT_REGISTRY: ReportDefinition<any>[] = [
     stages: REPORT_STAGES,
   },
   {
-    id: "compliance_dossier",
-    title: "Compliance Dossier",
-    subtitle: "Evidence · Certification",
+    id: "mass_energy_balances",
+    title: "Mass & Energy Balances",
+    subtitle: "Main Report",
     description:
-      "The certification evidence pack assembled from the plant's declared sources.",
-    icon: ShieldCheck,
-    accent: "#A1CB35",
-    status: "coming_soon",
-    comingSoonNote: "Available with the certification module.",
+      "Every stream of the process flow with its carrier, source, destination and value.",
+    icon: Scale,
+    accent: "#1D4ED8",
+    status: "available",
+    group: "mass_energy_balances",
+    groupLabel: "Main Report",
+    generate: generateMassEnergyBalances,
+    Preview: MassEnergyBalancesPreview,
+    toPdf: renderMassEnergyBalancesPdf,
+    stages: REPORT_STAGES,
+  },
+  {
+    id: "mass_energy_balances_specification",
+    title: "Mass & Energy Balances: Specification",
+    subtitle: "Annex 1",
+    description:
+      "Per-stream attributes by process block, plus the electricity and heat balance.",
+    icon: Scale,
+    accent: "#1D4ED8",
+    status: "available",
+    group: "mass_energy_balances",
+    groupLabel: "Annex 1: Specification",
+    generate: generateMassEnergyBalancesSpecification,
+    Preview: MassEnergyBalancesSpecificationPreview,
+    toPdf: renderMassEnergyBalancesSpecificationPdf,
+    stages: REPORT_STAGES,
+  },
+  {
+    id: "mass_energy_balances_equations",
+    title: "Mass & Energy Balances: Equations",
+    subtitle: "Annex 2",
+    description:
+      "Equation cards per equipment, grouped by engineering category, with the values of the latest calculation run.",
+    icon: Scale,
+    accent: "#1D4ED8",
+    status: "available",
+    group: "mass_energy_balances",
+    groupLabel: "Annex 2: Equations",
+    generate: generateMassEnergyBalancesEquations,
+    Preview: MassEnergyBalancesEquationsPreview,
+    toPdf: renderMassEnergyBalancesEquationsPdf,
+    stages: REPORT_STAGES,
   },
 ];
 

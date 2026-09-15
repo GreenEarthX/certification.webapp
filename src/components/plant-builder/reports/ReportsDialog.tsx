@@ -27,8 +27,10 @@ import {
 } from "@/components/ui/tooltip";
 import { nextPaint } from "@/lib/reports/format";
 import {
+  REPORT_GROUPS,
   REPORT_REGISTRY,
   type ReportDefinition,
+  type ReportGroup,
 } from "@/lib/reports/registry";
 import type { ReportBodyBase, ReportTypeId } from "@/lib/reports/types";
 
@@ -47,6 +49,86 @@ type View =
 
 const TOOLTIP_CLASS =
   "bg-white text-slate-700 border border-slate-200 shadow-md";
+
+const CARD_CLASS =
+  "flex h-full w-full flex-col rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-[#0F766E] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#0F766E]/40";
+const CARD_DISABLED_CLASS =
+  "flex h-full w-full cursor-not-allowed flex-col rounded-xl border border-slate-200 bg-slate-50 p-4 text-left opacity-60";
+
+/**
+ * A document set as one box: the group's identity on the left, one button per
+ * document on the right. Each button generates its own document with its own
+ * reference; the box only says they belong together.
+ */
+function GroupBox({
+  group,
+  members,
+  onRun,
+}: {
+  group: ReportGroup;
+  members: ReportDefinition[];
+  onRun: (def: ReportDefinition) => void;
+}) {
+  const Icon = group.icon;
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:col-span-3">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start">
+        <div className="md:w-1/3">
+          <span
+            className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-lg"
+            style={{ backgroundColor: `${group.accent}1A` }}
+          >
+            <Icon className="h-[18px] w-[18px]" style={{ color: group.accent }} />
+          </span>
+          <div className="text-[15px] font-semibold leading-tight text-slate-900">
+            {group.title}
+          </div>
+          <div className="mt-0.5 text-[11px] font-medium uppercase tracking-wide text-slate-400">
+            {group.subtitle}
+          </div>
+          <p className="mt-2 text-xs leading-relaxed text-slate-500">
+            {group.description}
+          </p>
+        </div>
+
+        <div className="grid flex-1 gap-2 sm:grid-cols-3">
+          {members.map((def) => {
+            const disabled = def.status !== "available";
+            return (
+              <button
+                key={def.id}
+                type="button"
+                disabled={disabled}
+                onClick={() => onRun(def)}
+                className={
+                  disabled
+                    ? "flex h-full flex-col rounded-lg border border-slate-200 bg-slate-50 p-3 text-left opacity-60"
+                    : "flex h-full flex-col rounded-lg border border-slate-200 bg-slate-50/60 p-3 text-left transition hover:border-[#0F766E] hover:bg-white hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-[#0F766E]/40"
+                }
+              >
+                <span className="text-[13px] font-semibold text-slate-900">
+                  {def.groupLabel ?? def.title}
+                </span>
+                <span className="mt-1 flex-1 text-[11px] leading-relaxed text-slate-500">
+                  {def.description}
+                </span>
+                <span
+                  className={`mt-3 inline-flex w-fit rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
+                    disabled
+                      ? "bg-slate-200 text-slate-500"
+                      : "bg-[#0F766E] text-white"
+                  }`}
+                >
+                  {disabled ? "Coming soon" : "Generate"}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function ReportsDialog({
   open,
@@ -155,7 +237,7 @@ export default function ReportsDialog({
 
             <div className="grid gap-4 overflow-y-auto px-6 py-6 sm:grid-cols-3">
               <TooltipProvider delayDuration={120}>
-                {REPORT_REGISTRY.map((def) => {
+                {REPORT_REGISTRY.filter((def) => !def.group).map((def) => {
                   const Icon = def.icon;
                   const disabled = def.status !== "available";
 
@@ -164,11 +246,7 @@ export default function ReportsDialog({
                       type="button"
                       disabled={disabled}
                       onClick={() => run(def)}
-                      className={
-                        disabled
-                          ? "flex h-full w-full cursor-not-allowed flex-col rounded-xl border border-slate-200 bg-slate-50 p-4 text-left opacity-60"
-                          : "flex h-full w-full flex-col rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-[#0F766E] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#0F766E]/40"
-                      }
+                      className={disabled ? CARD_DISABLED_CLASS : CARD_CLASS}
                     >
                       <span
                         className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-lg"
@@ -215,6 +293,16 @@ export default function ReportsDialog({
                     </Tooltip>
                   );
                 })}
+
+                {/* Document sets: one box, one button per document. */}
+                {REPORT_GROUPS.map((group) => (
+                  <GroupBox
+                    key={group.id}
+                    group={group}
+                    members={REPORT_REGISTRY.filter((d) => d.group === group.id)}
+                    onRun={run}
+                  />
+                ))}
               </TooltipProvider>
             </div>
           </>

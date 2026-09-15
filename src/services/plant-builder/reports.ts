@@ -3,6 +3,9 @@
 
 import { apiFetch } from "@/services/api-client";
 import type {
+  MassEnergyBalancesDto,
+  MassEnergyBalancesEquationsDto,
+  MassEnergyBalancesSpecificationDto,
   PlantComponentRegistryDto,
   ProcessFlowOperationsDto,
   ReportBody,
@@ -44,6 +47,36 @@ export async function generateProcessFlowOperations(
 ): Promise<ProcessFlowOperationsDto> {
   return generateReport<ProcessFlowOperationsDto>(
     "process_flow_operations",
+    digitalTwinId
+  );
+}
+
+/** Main report: every stream of the process flow, direction and value. */
+export async function generateMassEnergyBalances(
+  digitalTwinId: number
+): Promise<MassEnergyBalancesDto> {
+  return generateReport<MassEnergyBalancesDto>(
+    "mass_energy_balances",
+    digitalTwinId
+  );
+}
+
+/** Annex: per-stream attributes by block, plus the electricity and heat tables. */
+export async function generateMassEnergyBalancesSpecification(
+  digitalTwinId: number
+): Promise<MassEnergyBalancesSpecificationDto> {
+  return generateReport<MassEnergyBalancesSpecificationDto>(
+    "mass_energy_balances_specification",
+    digitalTwinId
+  );
+}
+
+/** Annex: equation cards per equipment, grouped by engineering category. */
+export async function generateMassEnergyBalancesEquations(
+  digitalTwinId: number
+): Promise<MassEnergyBalancesEquationsDto> {
+  return generateReport<MassEnergyBalancesEquationsDto>(
+    "mass_energy_balances_equations",
     digitalTwinId
   );
 }
