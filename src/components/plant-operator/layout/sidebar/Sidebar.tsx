@@ -109,9 +109,9 @@ const Sidebar: React.FC = () => {
               <ListItemText
                 primary={item.text}
                 primaryTypographyProps={{
-                  fontWeight: isActive(item.path) ? 'medium' : 'normal',
-                  fontSize: '0.9rem',
-                  color: isActive(item.path) ? '#1e40af' : '#0f172a',
+                  fontWeight: isActive(item.path) ? 600 : 500,
+                  fontSize: '0.875rem',
+                  color: 'inherit',
                 }}
               />
             )}
