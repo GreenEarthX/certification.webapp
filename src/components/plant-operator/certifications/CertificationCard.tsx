@@ -81,7 +81,7 @@ const CertificationCard: React.FC<CertificationCards> = ({
           </div>
 
           {/* View Button */}
-          <button className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors font-semibold text-sm">
+          <button className="bg-brand-600 text-white px-6 py-2 rounded-lg hover:bg-brand-700 transition-colors font-semibold text-sm">
             View Certificate
           </button>
         </div>

@@ -180,7 +180,7 @@ const Step1Form: React.FC<Step1FormProps> = ({
           value="yes"
           checked={formData.certification === true}
           onChange={handleCertificationChange}
-          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+          className="h-4 w-4 text-brand-700 focus:ring-brand-600 border-gray-300"
         />
         <span className="ml-2">Yes</span>
       </label>
@@ -191,7 +191,7 @@ const Step1Form: React.FC<Step1FormProps> = ({
           value="no"
           checked={formData.certification === false}
           onChange={handleCertificationChange}
-          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+          className="h-4 w-4 text-brand-700 focus:ring-brand-600 border-gray-300"
         />
         <span className="ml-2">No</span>
       </label>
@@ -221,8 +221,8 @@ const Step1Form: React.FC<Step1FormProps> = ({
       type="submit"
       className={`px-4 py-2 rounded-md focus:outline-none ${
         isFormComplete
-          ? "bg-blue-600 text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-700"
-          : "bg-blue-200 text-blue-400 cursor-not-allowed"
+          ? "bg-brand-700 text-white hover:bg-brand-800 focus:ring-2 focus:ring-brand-800"
+          : "bg-brand-200 text-brand-500 cursor-not-allowed"
       }`}
       disabled={!isFormComplete}
     >

@@ -31,7 +31,7 @@ export default function Recommendations() {
         <select
           value={selectedPlant}
           onChange={handleChange}
-          className="border border-gray-300 rounded-md px-4 py-2 bg-white shadow-sm focus:ring focus:ring-blue-200 text-gray-700 cursor-pointer"
+          className="border border-gray-300 rounded-md px-4 py-2 bg-white shadow-sm focus:ring focus:ring-brand-200 text-gray-700 cursor-pointer"
         >
           <option value="">All Plants</option>
           {plants.map((plant) => (

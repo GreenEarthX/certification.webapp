@@ -144,8 +144,8 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({ recommen
             flex: 1,
             borderRadius: "0 0 0 8px",
             py: 1.5,
-            backgroundColor: "#1976d2",
-            "&:hover": { backgroundColor: "#1565c0" },
+            backgroundColor: "var(--gex-green-700)",
+            "&:hover": { backgroundColor: "var(--gex-green-800)" },
           }}
           onClick={handleViewDetails}
         >

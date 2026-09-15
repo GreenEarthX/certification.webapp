@@ -18,7 +18,7 @@ const CertificationReportComponent: React.FC<CertificationReportComponentProps> 
                 <h3 className="text-lg font-medium">{report.title}</h3>
                 <a
                   href={report.link}
-                  className="text-blue-600 hover:text-blue-700 underline"
+                  className="text-brand-700 hover:text-brand-800 underline"
                 >
                   Read report
                 </a>

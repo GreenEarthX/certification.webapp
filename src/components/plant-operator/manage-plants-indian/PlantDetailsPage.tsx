@@ -109,14 +109,14 @@ export default function PlantDetailsPage() {
   const StepContainer: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
     <div>
       <StepNotice />
-      <h2 className="text-lg font-semibold text-blue-900 mb-2">{title}</h2>
+      <h2 className="text-lg font-semibold text-brand-900 mb-2">{title}</h2>
       <div className="bg-white shadow rounded-lg p-6">{children}</div>
     </div>
   );
 
   const StepContainerNoNotice: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
     <div>
-      <h2 className="text-lg font-semibold text-blue-900 mb-2">{title}</h2>
+      <h2 className="text-lg font-semibold text-brand-900 mb-2">{title}</h2>
       <div className="bg-white shadow rounded-lg p-6">{children}</div>
     </div>
   );
@@ -124,7 +124,7 @@ export default function PlantDetailsPage() {
   const StepContainersplited: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
     <div>
       <StepNotice />
-      <h2 className="text-lg font-semibold text-blue-900 mb-2">{title}</h2>
+      <h2 className="text-lg font-semibold text-brand-900 mb-2">{title}</h2>
       {children}
     </div>
   );
@@ -175,7 +175,7 @@ export default function PlantDetailsPage() {
       />
       <div className="text-sm text-gray-500 ml-4">
           {saving ? (
-            <span className="text-blue-500 animate-pulse">Saving...</span>
+            <span className="text-brand-600 animate-pulse">Saving...</span>
           ) : lastSaved ? (
             <span
               className="text-green-600 flex items-center gap-1"
@@ -193,8 +193,8 @@ export default function PlantDetailsPage() {
         <div className="absolute top-[5px] left-[4%] right-[3%] h-[1px] bg-gray-400 z-0"></div>
         {steps.map((step, index) => (
           <div key={step} className="flex flex-col items-center cursor-pointer z-10" onClick={() => handleStepClick(index)}>
-            <div className={`w-3 h-3 rounded-full ${currentStep === index ? 'bg-blue-500' : 'bg-gray-500'}`}></div>
-            <span className={`text-xs mt-2 text-center ${currentStep === index ? 'text-blue-500 font-semibold' : 'text-gray-500'}`}>{step}</span>
+            <div className={`w-3 h-3 rounded-full ${currentStep === index ? 'bg-brand-600' : 'bg-gray-500'}`}></div>
+            <span className={`text-xs mt-2 text-center ${currentStep === index ? 'text-brand-600 font-semibold' : 'text-gray-500'}`}>{step}</span>
           </div>
         ))}
       </div>
@@ -215,7 +215,7 @@ export default function PlantDetailsPage() {
       {currentStep === 2 && (
         <div>
             <StepNotice />
-          <h2 className="text-lg font-semibold text-blue-900 mb-2">{steps[2]}</h2>
+          <h2 className="text-lg font-semibold text-brand-900 mb-2">{steps[2]}</h2>
           <br/>
             <ElectricityStep
               data={formData.electricity}
@@ -243,7 +243,7 @@ export default function PlantDetailsPage() {
       {currentStep === 3 && (
         <div>
         <StepNotice />
-        <h2 className="text-lg font-semibold text-blue-900 mb-2">{steps[3]}</h2>
+        <h2 className="text-lg font-semibold text-brand-900 mb-2">{steps[3]}</h2>
         <br/>
           <GHGReductionStep data={formData.ghg} onChange={(updated) => setFormData(prev => ({ ...prev, ghg: updated }))} />
         </div>
@@ -252,7 +252,7 @@ export default function PlantDetailsPage() {
       {currentStep === 4 && (
         <div>
           <StepNotice />
-          <h2 className="text-lg font-semibold text-blue-900 mb-2">{steps[4]}</h2>
+          <h2 className="text-lg font-semibold text-brand-900 mb-2">{steps[4]}</h2>
           <br/>
           <TraceabilityStep data={formData.traceability} onChange={(updated) => setFormData(prev => ({ ...prev, traceability: updated }))} />
         </div>
@@ -261,7 +261,7 @@ export default function PlantDetailsPage() {
       {currentStep === 1 && (
         <div>
           <StepNotice />
-          <h2 className="text-lg font-semibold text-blue-900 mb-2">{steps[1]}</h2>
+          <h2 className="text-lg font-semibold text-brand-900 mb-2">{steps[1]}</h2>
           <br/>
           <OffTakersStep data={formData.offtakers} onChange={(updated) => setFormData(prev => ({ ...prev, offtakers: updated }))} />
           </div>
@@ -280,7 +280,7 @@ export default function PlantDetailsPage() {
           {currentStep > 0 && (
             <button
             type="button" // 🔴 This line prevents form submission!
-            className="px-4 py-2 bg-blue-100 text-blue-600 rounded-md shadow hover:bg-blue-200"
+            className="px-4 py-2 bg-brand-100 text-brand-700 rounded-md shadow hover:bg-brand-200"
             onClick={prevStep}
           >
             Back
@@ -291,7 +291,7 @@ export default function PlantDetailsPage() {
           {currentStep < steps.length - 1 ? (
             <button
             type="button" // 🔴 Same here!
-            className="px-4 py-2 bg-blue-600 text-white rounded-md shadow hover:bg-blue-700"
+            className="px-4 py-2 bg-brand-700 text-white rounded-md shadow hover:bg-brand-800"
             onClick={nextStep}
           >
             Next
@@ -301,7 +301,7 @@ export default function PlantDetailsPage() {
             
               <button
                 type="button"
-                className="px-4 py-2 bg-blue-600 text-white rounded-md shadow hover:bg-blue-700"
+                className="px-4 py-2 bg-brand-700 text-white rounded-md shadow hover:bg-brand-800"
                 onClick={handleFinish}
               >
                 Finish

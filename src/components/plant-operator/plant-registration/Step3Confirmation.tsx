@@ -171,7 +171,7 @@ const Step3Confirmation: React.FC<Step3ConfirmationProps> = ({
           <button
             onClick={handleSave}
             disabled={isLoading}
-            className="w-full px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md"
+            className="w-full px-4 py-2 bg-brand-700 text-white hover:bg-brand-800 rounded-md"
           >
             {isLoading ? "Saving..." : "Save Certificate"}
           </button>
@@ -208,7 +208,7 @@ const Step3Confirmation: React.FC<Step3ConfirmationProps> = ({
                     });
                     setCertificateSaved(false);
                   }}
-                  className="w-full px-6 py-3 bg-blue-600 text-white border border-blue-700 rounded-xl hover:bg-blue-700 transition"
+                  className="w-full px-6 py-3 bg-brand-700 text-white border border-brand-800 rounded-xl hover:bg-brand-800 transition"
                 >
                   Add Another Certificate
                 </button>
@@ -230,14 +230,14 @@ const Step3Confirmation: React.FC<Step3ConfirmationProps> = ({
                     setCurrentStep(1);
                     router.push("/plant-operator/plants/add?step=1");
                   }}
-                  className="w-full px-6 py-3 bg-blue-600 text-white border border-blue-700 rounded-xl hover:bg-blue-700 transition"
+                  className="w-full px-6 py-3 bg-brand-700 text-white border border-brand-800 rounded-xl hover:bg-brand-800 transition"
                 >
                   Register Another Plant
                 </button>
 
                 <button
                   onClick={() => setCurrentStep(5)}
-                  className="w-full px-6 py-3 bg-blue-600 text-white border border-blue-700 rounded-xl hover:bg-blue-700 transition"
+                  className="w-full px-6 py-3 bg-brand-700 text-white border border-brand-800 rounded-xl hover:bg-brand-800 transition"
                 >
                   Finish
                 </button>
