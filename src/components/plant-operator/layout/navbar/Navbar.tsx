@@ -60,22 +60,29 @@ const Navbar: React.FC = () => {
   
 
   return (
-    <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/90 backdrop-blur-md shadow-gex-sm">
+    <header
+      className="sticky top-0 z-50 border-b border-brand-100 bg-gradient-to-r from-white via-white to-brand-50/70 backdrop-blur-md shadow-gex-sm
+                 before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-0.5 before:bg-gradient-to-r before:from-brand-700 before:via-brand-500 before:to-brand-300/40
+                 relative"
+    >
       <div className="flex justify-between items-center w-full px-6 h-[var(--navbar-height)]">
         {/* Left Section */}
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-full bg-white shadow-gex-sm ring-1 ring-brand-200 flex items-center justify-center">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 shadow-gex-sm ring-1 ring-brand-200/80">
             <Image
               src="/logoGEX.png"
               alt="Green Fuel Compliance"
-              width={32}
-              height={32}
-              className="rounded-full"
+              width={30}
+              height={30}
+              className="rounded-lg"
             />
           </div>
-          <div className="leading-tight">
+          <div className="flex items-center gap-3">
             <h1 className="text-lg font-semibold tracking-tight text-slate-900">Green Fuel Compliance</h1>
-            <p className="text-xs font-medium text-brand-700">{title}</p>
+            <span className="hidden h-5 w-px bg-brand-200 sm:block" aria-hidden />
+            <span className="hidden items-center rounded-full bg-brand-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-brand-800 ring-1 ring-inset ring-brand-200/70 sm:inline-flex">
+              {title}
+            </span>
           </div>
         </div>
 

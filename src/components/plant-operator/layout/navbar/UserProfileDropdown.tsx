@@ -27,7 +27,7 @@ const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({ userName }) =
       {/* User Avatar Button */}
       <button
         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-        className="w-10 h-10 rounded-full bg-brand-700 ring-2 ring-brand-100 flex items-center justify-center text-white font-semibold text-sm hover:bg-brand-800 hover:ring-brand-200 active:scale-95"
+        className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-brand-600 to-brand-800 text-sm font-semibold text-white shadow-gex-sm ring-1 ring-brand-700/30 ring-offset-1 ring-offset-white hover:from-brand-700 hover:to-brand-900 active:scale-95"
         aria-label="User Menu"
         aria-haspopup="menu"
         aria-expanded={isDropdownOpen}

@@ -25,14 +25,15 @@ const Notifications: React.FC<NotificationsProps> = ({ notifications, loading, e
     <div className="relative" ref={rootRef}>
       <button
         onClick={() => setIsNotificationOpen(!isNotificationOpen)}
-        className="relative h-10 w-10 rounded-full bg-slate-50 text-slate-600 ring-1 ring-slate-200 flex items-center justify-center hover:bg-brand-50 hover:text-brand-700 hover:ring-brand-200 active:scale-95"
+        className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-white text-slate-600 shadow-gex-sm ring-1 ring-slate-200 hover:bg-brand-50 hover:text-brand-700 hover:ring-brand-200 active:scale-95 data-[open=true]:bg-brand-50 data-[open=true]:text-brand-700 data-[open=true]:ring-brand-300"
+        data-open={isNotificationOpen}
         aria-label="View Notifications"
         aria-haspopup="menu"
         aria-expanded={isNotificationOpen}
       >
         <Bell className="size-5" />
         {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 text-[10px] font-bold leading-[18px] text-white bg-red-600 rounded-full ring-2 ring-white tabular-nums">
+          <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 text-[10px] font-bold leading-[18px] text-white bg-red-600 rounded-full ring-2 ring-white tabular-nums">
             {unreadCount}
           </span>
         )}
