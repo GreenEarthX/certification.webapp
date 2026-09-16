@@ -45,11 +45,24 @@ class PlantService {
   }
   
 
-  async getPlantDetailsById(plantId: number): Promise<any> {
+  /**
+   * Reads a plant's details, scoped to the plants this user operates.
+   *
+   * Ownership is enforced in the WHERE clause rather than by a separate
+   * check so it cannot be bypassed by a caller that forgets to run it.
+   * Throws "Plant not found" when the plant does not exist OR is not the
+   * user's - callers must not distinguish the two, or this leaks which
+   * plant ids exist.
+   */
+  async getPlantDetailsById(userSub: string, plantId: number): Promise<any> {
     try {
       const result = await pool.query(
-        'SELECT plant_details FROM plants WHERE plant_id = $1',
-        [plantId]
+        `SELECT plant_details
+         FROM plants
+         WHERE plant_id = $1 AND operator_id = (
+           SELECT user_id FROM users WHERE auth0sub = $2
+         )`,
+        [plantId, userSub]
       );
 
       if (result.rows.length === 0) {
@@ -58,20 +71,37 @@ class PlantService {
 
       return result.rows[0].plant_details;
     } catch (error) {
+      if (error instanceof Error && error.message === "Plant not found") {
+        throw error;
+      }
       console.error("Error fetching plant details:", error);
       throw new Error("Failed to fetch plant details");
     }
   }
 
-  async updatePlantDetailsById(plantId: number, data: any): Promise<void> {
+  /** Updates a plant's details, scoped to the plants this user operates. */
+  async updatePlantDetailsById(
+    userSub: string,
+    plantId: number,
+    data: any
+  ): Promise<void> {
     try {
-      await pool.query(
+      const result = await pool.query(
         `UPDATE plants
          SET plant_details = $1
-         WHERE plant_id = $2`,
-        [data, plantId]
+         WHERE plant_id = $2 AND operator_id = (
+           SELECT user_id FROM users WHERE auth0sub = $3
+         )`,
+        [data, plantId, userSub]
       );
+
+      if (result.rowCount === 0) {
+        throw new Error("Plant not found");
+      }
     } catch (error) {
+      if (error instanceof Error && error.message === "Plant not found") {
+        throw error;
+      }
       console.error("Error updating plant details:", error);
       throw new Error("Failed to update plant details");
     }

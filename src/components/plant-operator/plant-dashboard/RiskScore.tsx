@@ -9,7 +9,7 @@ import {
   Box,
   Divider,
 } from "@mui/material";
-import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import { Info } from "lucide-react";
 
 interface RiskScoreProps {
   score: number;
@@ -32,7 +32,7 @@ const RiskScore: React.FC<RiskScoreProps> = ({ score }) => {
       onMouseLeave={() => setHovered(false)}
     >
       {/* Maturity Score Label */}
-      <span className="text-2xl font-semibold text-[#17598d] cursor-default">
+      <span className="text-lg font-semibold tracking-tight text-slate-900 cursor-default">
         My Maturity Score
       </span>
 
@@ -51,7 +51,7 @@ const RiskScore: React.FC<RiskScoreProps> = ({ score }) => {
 
       {/* Tooltip with beautiful centered link */}
       {hovered && (
-        <div className="absolute top-14 left-0 z-10 w-96 bg-white border border-blue-300 rounded-lg shadow-lg p-4 text-sm text-gray-700 transition-all duration-200">
+        <div className="absolute top-14 left-0 z-10 w-96 bg-white border border-brand-300 rounded-lg shadow-lg p-4 text-sm text-gray-700 transition-all duration-200">
           <p className="font-semibold mb-2">Maturity Score calculation based on:</p>
           <ul className="list-disc pl-5 space-y-1">
             <li><span className="font-medium">Financial Readiness</span></li>
@@ -63,9 +63,9 @@ const RiskScore: React.FC<RiskScoreProps> = ({ score }) => {
           <div className="flex justify-center mt-4">
             <button
               onClick={() => setShowFullModal(true)}
-              className="bg-blue-600 text-white text-xs font-medium px-4 py-1.5 rounded-full hover:bg-blue-700 flex items-center gap-1 transition"
+              className="bg-brand-700 text-white text-xs font-medium px-4 py-1.5 rounded-full hover:bg-brand-800 flex items-center gap-1 transition"
             >
-              <InfoOutlinedIcon fontSize="small" />
+              <Info className="size-4" />
               View Full Calculation Process
             </button>
           </div>
@@ -80,7 +80,7 @@ const RiskScore: React.FC<RiskScoreProps> = ({ score }) => {
         fullWidth
         PaperProps={{
           sx: {
-            backgroundColor: "#f7fbff",
+            backgroundColor: "#ffffff",
             borderRadius: 3,
             p: 3,
             maxHeight: "95vh",
@@ -89,12 +89,12 @@ const RiskScore: React.FC<RiskScoreProps> = ({ score }) => {
         }}
       >
 
-<DialogContent sx={{ backgroundColor: "#f1f7fd", px: 2, py: 3 }}>
+<DialogContent sx={{ backgroundColor: "var(--gex-surface)", px: 2, py: 3 }}>
   <Box
     sx={{
       backgroundColor: "#fff",
       borderRadius: "12px",
-      border: "1px solid #d0e4f7",
+      border: "1px solid #e2e8f0",
       padding: "24px",
       maxWidth: "100%",
     }}
@@ -105,7 +105,7 @@ const RiskScore: React.FC<RiskScoreProps> = ({ score }) => {
   variant="h6"
   sx={{
     fontWeight: 600,
-    color: "#17598d",
+    color: "#0f172a",
     textAlign: "center",
     mb: 1.5,
   }}
@@ -118,7 +118,7 @@ const RiskScore: React.FC<RiskScoreProps> = ({ score }) => {
 
     {/* Section 1 */}
     <Box sx={{ mb: 3 }}>
-      <Typography sx={{ fontWeight: 600, color: "#1565c0", mb: 1 }}>
+      <Typography sx={{ fontWeight: 600, color: "var(--gex-green-800)", mb: 1 }}>
         1. Data Collection :
       </Typography>
       <Typography sx={{ mb: 1 }}>
@@ -136,7 +136,7 @@ const RiskScore: React.FC<RiskScoreProps> = ({ score }) => {
 
     {/* Section 2 */}
     <Box sx={{ mb: 3 }}>
-      <Typography sx={{ fontWeight: 600, color: "#1565c0", mb: 1 }}>
+      <Typography sx={{ fontWeight: 600, color: "var(--gex-green-800)", mb: 1 }}>
         2. Define Risk Categories
       </Typography>
       <Typography sx={{ mb: 1 }}>
@@ -154,7 +154,7 @@ const RiskScore: React.FC<RiskScoreProps> = ({ score }) => {
 
     {/* Section 3 */}
     <Box sx={{ mb: 3 }}>
-      <Typography sx={{ fontWeight: 600, color: "#1565c0", mb: 1 }}>
+      <Typography sx={{ fontWeight: 600, color: "var(--gex-green-800)", mb: 1 }}>
         3. Assign Weight to Each Category
       </Typography>
       <Typography>
@@ -164,7 +164,7 @@ const RiskScore: React.FC<RiskScoreProps> = ({ score }) => {
 
     {/* Section 4 */}
     <Box sx={{ mb: 3 }}>
-      <Typography sx={{ fontWeight: 600, color: "#1565c0", mb: 1 }}>
+      <Typography sx={{ fontWeight: 600, color: "var(--gex-green-800)", mb: 1 }}>
         4. Score Each Category
       </Typography>
       <Typography>
@@ -181,13 +181,13 @@ const RiskScore: React.FC<RiskScoreProps> = ({ score }) => {
 
     {/* Section 5 */}
     <Box sx={{ mb: 3 }}>
-      <Typography sx={{ fontWeight: 600, color: "#1565c0", mb: 1 }}>
+      <Typography sx={{ fontWeight: 600, color: "var(--gex-green-800)", mb: 1 }}>
         5. Calculate the Weighted Risk Score
       </Typography>
       <Typography sx={{ mb: 0.5 }}>
         Apply the following formula:
       </Typography>
-      <Typography sx={{ fontWeight: 500, color: "#0d47a1", fontSize: "0.95rem" }}>
+      <Typography sx={{ fontWeight: 500, color: "var(--gex-green-900)", fontSize: "0.95rem" }}>
         Risk Score = (Category Score × Category Weight) + ...
       </Typography>
       <Typography sx={{ fontWeight: 500, fontSize: "0.95rem" }}>
@@ -197,7 +197,7 @@ const RiskScore: React.FC<RiskScoreProps> = ({ score }) => {
 
     {/* Section 6 */}
     <Box>
-      <Typography sx={{ fontWeight: 600, color: "#1565c0", mb: 1 }}>
+      <Typography sx={{ fontWeight: 600, color: "var(--gex-green-800)", mb: 1 }}>
         6. Categorize Final Risk Score
       </Typography>
       <Typography sx={{ mb: 1 }}>
@@ -218,14 +218,14 @@ const RiskScore: React.FC<RiskScoreProps> = ({ score }) => {
     onClick={() => setShowFullModal(false)}
     variant="contained"
     sx={{
-      backgroundColor: "#1976d2",
+      backgroundColor: "var(--gex-green-700)",
       px: 3,
       py: 1,
       borderRadius: "6px",
       fontWeight: 500,
       fontSize: "0.85rem",
       textTransform: "none",
-      "&:hover": { backgroundColor: "#1565c0" },
+      "&:hover": { backgroundColor: "var(--gex-green-800)" },
     }}
   >
     Close

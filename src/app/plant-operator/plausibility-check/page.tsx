@@ -74,7 +74,7 @@ const Select = ({ value, onChange, options, placeholder }: any) => {
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="w-full px-4 py-2.5 text-left bg-white border border-gray-300 rounded-lg shadow-sm flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+        className="w-full px-4 py-2.5 text-left bg-white border border-gray-300 rounded-lg shadow-sm flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-brand-600 transition"
       >
         <span className={value ? "text-gray-900" : "text-gray-500"}>
           {value ? options.find((o: any) => o.id === value)?.name : placeholder}
@@ -88,7 +88,7 @@ const Select = ({ value, onChange, options, placeholder }: any) => {
               key={option.id}
               type="button"
               onClick={() => { onChange(option.id); setOpen(false); }}
-              className="w-full px-4 py-2 text-left text-sm hover:bg-blue-50 transition"
+              className="w-full px-4 py-2 text-left text-sm hover:bg-brand-50 transition"
             >
               {option.name}
             </button>
@@ -142,11 +142,11 @@ const DocumentSection = ({ title, files, onAddFiles, onRemoveFile, type }: any) 
   };
 
   return (
-    <div className="space-y-3 p-4 border-2 border-dashed border-gray-300 rounded-xl bg-gradient-to-br from-gray-50 to-white hover:border-blue-400 transition">
+    <div className="space-y-3 p-4 border-2 border-dashed border-gray-300 rounded-xl bg-gradient-to-br from-gray-50 to-white hover:border-brand-500 transition">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
           {type === "proof" && <span className="text-xs font-bold text-green-600">[PoS]</span>}
-          {type === "invoice" && <span className="text-xs font-bold text-blue-600">[INV]</span>}
+          {type === "invoice" && <span className="text-xs font-bold text-brand-700">[INV]</span>}
           {type === "ppa" && <span className="text-xs font-bold text-purple-600">[PPA]</span>}
           {type === "termsheet" && <span className="text-xs font-bold text-orange-600">[TERM]</span>}
           {title}
@@ -154,7 +154,7 @@ const DocumentSection = ({ title, files, onAddFiles, onRemoveFile, type }: any) 
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100 transition"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-brand-700 bg-brand-50 rounded-md hover:bg-brand-100 transition"
         >
           <Plus className="w-4 h-4" /> {files.length > 0 ? "Replace" : "Add File"}
         </button>
@@ -496,7 +496,7 @@ export default function PlausibilityCheckPage() {
 
   return (
     <>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 py-8 px-4">
+      <div className="min-h-screen bg-gradient-to-br from-brand-50 via-white to-green-50 py-8 px-4">
         <div className="max-w-6xl mx-auto">
 
           {/* Progress Bar */}
@@ -505,7 +505,7 @@ export default function PlausibilityCheckPage() {
               <div key={i} className="flex items-center">
                 <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-white shadow-md transition-all ${
                   step > i + 1 ? "bg-green-600" :
-                  step === i + 1 ? "bg-blue-600 scale-110" : "bg-gray-300"
+                  step === i + 1 ? "bg-brand-700 scale-110" : "bg-gray-300"
                 }`}>
                   {step > i + 1 ? <CheckCircle2 className="w-6 h-6" /> : i + 1}
                 </div>
@@ -518,7 +518,7 @@ export default function PlausibilityCheckPage() {
           {/* Step 1: Upload */}
           {step === 1 && (
             <div className="bg-white shadow-xl rounded-2xl p-8 border border-gray-100">
-              <h1 className="text-3xl font-bold text-gray-900 mb-8 text-center">Upload Documents</h1>
+              <h1 className="text-2xl font-semibold tracking-tight text-slate-900 mb-8 text-center">Upload Documents</h1>
               <div className="mb-8">
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Select Plant</label>
                 <Select value={selectedPlantId} onChange={handlePlantChange} options={mockUserPlants} placeholder="Choose a plant..." />
@@ -543,7 +543,7 @@ export default function PlausibilityCheckPage() {
                     }
                     setStep(2);
                   }}
-                  className="px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 shadow-lg transition transform hover:scale-105"
+                  className="px-8 py-3 bg-gradient-to-r from-brand-700 to-brand-800 text-white rounded-lg font-semibold hover:from-brand-800 hover:to-brand-800 shadow-lg transition transform hover:scale-105"
                 >
                   Next: Run OCR
                 </button>
@@ -554,11 +554,11 @@ export default function PlausibilityCheckPage() {
           {/* Step 2: OCR */}
           {step === 2 && (
             <div className="bg-white shadow-xl rounded-2xl p-8 border border-gray-100">
-              <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">OCR Results</h2>
+              <h2 className="text-2xl font-semibold tracking-tight text-slate-900 mb-8 text-center">OCR Results</h2>
 
               {isVerifying ? (
                 <div className="text-center py-16">
-                  <Loader2 className="w-16 h-16 animate-spin mx-auto text-blue-600" />
+                  <Loader2 className="w-16 h-16 animate-spin mx-auto text-brand-700" />
                   <p className="mt-6 text-lg text-gray-600">Extracting data...</p>
                 </div>
               ) : Object.keys(ocrResults).length === 0 ? (
@@ -572,13 +572,13 @@ export default function PlausibilityCheckPage() {
                   {Object.entries(ocrResults).map(([type, data]: [string, any]) => (
                     <div key={type} className="border-2 border-gray-200 rounded-xl p-6 bg-gradient-to-br from-gray-50 to-white">
                       <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-xl font-bold capitalize text-gray-800">
+                        <h3 className="text-lg font-semibold tracking-tight capitalize text-slate-900">
                           {type === "pos" ? "Proof of Sustainability" :
                            type === "invoice" ? "Invoice" :
                            type === "ppa" ? "PPA" :
                            "Term Sheet"}
                         </h3>
-                        <button onClick={() => downloadOCR(type, data)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm">
+                        <button onClick={() => downloadOCR(type, data)} className="flex items-center gap-2 px-4 py-2 bg-brand-700 text-white rounded-lg hover:bg-brand-800 transition text-sm">
                           <Download className="w-4 h-4" /> JSON
                         </button>
                       </div>
@@ -601,7 +601,7 @@ export default function PlausibilityCheckPage() {
           {/* Step 3: Mint */}
           {step === 3 && (
             <div className="bg-white shadow-xl rounded-2xl p-8 border border-gray-100">
-              <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">Mint NFTs</h2>
+              <h2 className="text-2xl font-semibold tracking-tight text-slate-900 mb-8 text-center">Mint NFTs</h2>
 
               {isMinting ? (
                 <div className="text-center py-16">
@@ -627,9 +627,9 @@ export default function PlausibilityCheckPage() {
                           </h4>
                           {results.map((item, i) => (
                             <div key={i} className="space-y-3">
-                              <a href={`https://ipfs.io/ipfs/${item.cid}`} target="_blank" rel="noopener noreferrer" className="block p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl border border-blue-200 hover:shadow-md transition text-center">
-                                <Eye className="w-5 h-5 text-blue-600 mx-auto mb-1" />
-                                <span className="font-medium text-blue-900">View PDF</span>
+                              <a href={`https://ipfs.io/ipfs/${item.cid}`} target="_blank" rel="noopener noreferrer" className="block p-4 bg-gradient-to-br from-brand-50 to-brand-100 rounded-xl border border-brand-200 hover:shadow-md transition text-center">
+                                <Eye className="w-5 h-5 text-brand-700 mx-auto mb-1" />
+                                <span className="font-medium text-brand-900">View PDF</span>
                               </a>
                               <a 
                                 href={`https://hashscan.io/testnet/token/0.0.${getTokenId(key)}/${item.serial}`} 
@@ -666,7 +666,7 @@ export default function PlausibilityCheckPage() {
           {/* Step 4: Plausibility Check */}
           {step === 4 && (
             <div className="bg-white shadow-xl rounded-2xl p-8 border border-gray-100">
-              <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">Plausibility Check</h2>
+              <h2 className="text-2xl font-semibold tracking-tight text-slate-900 mb-8 text-center">Plausibility Check</h2>
 
               {isChecking ? (
                 <div className="text-center py-16">

@@ -178,7 +178,7 @@ const Chart: React.FC<TrendChartProps> = ({ data }) => {
         <div className="relative">
           <div
             onClick={() => setShowTimeRangeDropdown(!showTimeRangeDropdown)}
-            className="flex items-center space-x-2 cursor-pointer text-blue-600 hover:text-blue-700"
+            className="flex items-center space-x-2 cursor-pointer text-brand-700 hover:text-brand-800"
           >
             {/* Calendar Icon */}
             <svg
@@ -229,7 +229,7 @@ const Chart: React.FC<TrendChartProps> = ({ data }) => {
         <div className="relative">
           <div
             onClick={() => setShowPlantDropdown(!showPlantDropdown)}
-            className="flex items-center space-x-2 cursor-pointer text-blue-600 hover:text-blue-700"
+            className="flex items-center space-x-2 cursor-pointer text-brand-700 hover:text-brand-800"
           >
             <span className="text-sm font-medium">{selectedPlant.name}</span>
             <svg

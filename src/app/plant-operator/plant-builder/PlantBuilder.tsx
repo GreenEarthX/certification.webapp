@@ -20,17 +20,14 @@ import {
   X,
   Save,
   Play,
-  Plus,
   MessageSquare,
   Share2,
-  Download,
   ChevronLeft,
   ChevronRight,
   Settings,
-  Sigma,
+  FileText,
 } from "lucide-react";
 import html2canvas from "html2canvas";
-import jsPDF from "jspdf";
 import PlantInfoForm from "@/components/plant-builder/PlantInfoForm";
 import ProductForm from "@/components/plant-builder/ProductForm";
 import LoadingPage from "@/components/plant-builder/LoadingPage";
@@ -45,14 +42,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -106,7 +95,7 @@ import {
   equipmentRefsFromComponents,
   type EquipmentRunMap,
 } from "@/lib/plant-builder/equations";
-import EquationReportDialog from "@/components/plant-builder/EquationReportDialog";
+import ReportsDialog from "@/components/plant-builder/reports/ReportsDialog";
 import { toInstanceId, toOptionalNumber } from "@/lib/plant-builder/ids";
 import { updateComponentInstance, deleteComponentInstance, fetchComponentInstances } from "@/services/plant-builder/componentInstances";
 import { buildConnectionPayloadForComponent, StoredConnectionPayload } from "@/lib/plant-builder/connection-utils";
@@ -527,7 +516,6 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
   const [plantInfo, setPlantInfo] = useState<PlantInfo | null>(null);
   const [productInfo, setProductInfo] = useState<ProductInfo[]>([]);
   const [verifiedProducts, setVerifiedProducts] = useState<string[]>([]);
-  const [showDataModel, setShowDataModel] = useState(false);
   const [showAssistantModal, setShowAssistantModal] = useState(false);
   const [components, setComponents] = useState<PlacedComponent[]>([]);
   const [connections, setConnections] = useState<Connection[]>([]);
@@ -549,7 +537,6 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
   const [sortBy, setSortBy] = useState<"product" | "scheme" | "confidence" | "fuelClass">("confidence");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [error, setError] = useState<string | null>(null);
-  const [plantModelJson, setPlantModelJson] = useState<string>("");
   const [validationResult, setValidationResult] = useState<DigitalTwinValidationResult | null>(null);
   const [validationStep, setValidationStep] = useState<"structure" | "ports" | "equations" | null>(null);
   const [isValidating, setIsValidating] = useState(false);
@@ -558,14 +545,13 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
   const [computingEquipmentIds, setComputingEquipmentIds] = useState<Set<number>>(
     () => new Set()
   );
-  const [showEquationReport, setShowEquationReport] = useState(false);
+  const [showReports, setShowReports] = useState(false);
+  const [reportsTwinId, setReportsTwinId] = useState<number | null>(null);
   const [carrierDefNames, setCarrierDefNames] = useState<Record<number, string>>({});
   const [showValidationPanel, setShowValidationPanel] = useState(true);
   const [focusRequest, setFocusRequest] = useState<{ id: string; ts: number } | null>(null);
   const [highlightedComponentId, setHighlightedComponentId] = useState<string | null>(null);
   const highlightTimerRef = useRef<number | null>(null);
-  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
-  const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
   const [isEditingPlantInfo, setIsEditingPlantInfo] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
@@ -589,7 +575,6 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
   const templatePreviewRef = useRef<HTMLDivElement | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [portsByDefinitionId, setPortsByDefinitionId] = useState<Record<number, EquipmentPortsDto>>({});
-  const [showExportModal, setShowExportModal] = useState(false);
   const [exportTimestamp, setExportTimestamp] = useState<string | null>(null);
 
   useEffect(() => {
@@ -671,19 +656,6 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
     return lines;
   }, [exportSummaryLines, exportTimestamp]);
 
-  const waitForNextFrame = useCallback(
-    () =>
-      new Promise<void>((resolve) => {
-        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
-      }),
-    []
-  );
-
-  const prepareExport = useCallback(async () => {
-    setExportTimestamp(new Date().toISOString());
-    await waitForNextFrame();
-  }, [waitForNextFrame]);
-
   const lastSavedLabel = useMemo(() => {
     if (!lastSavedAt) return "Not saved yet";
     return new Intl.DateTimeFormat(undefined, {
@@ -698,13 +670,6 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
   const markSavedNow = useCallback((timestamp?: string) => {
     setLastSavedAt(timestamp ?? new Date().toISOString());
   }, []);
-
-  useEffect(() => {
-    if (showDataModel) {
-      setShowComponentLibrary(false);
-      window.dispatchEvent(new CustomEvent("plant-builder:close-sidebar"));
-    }
-  }, [showDataModel]);
 
   useEffect(() => {
     const body = document.body;
@@ -1244,8 +1209,6 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
 
     (async () => {
       try {
-        toast.info("Loading digital twin from database…");
-
         const records = await fetchDigitalTwinJsonForPlant(plantId);
 
         if (!records.length) {
@@ -1268,6 +1231,7 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
         };
 
         const categoryFromDefinition = (def: any) => {
+          if (def?.category) return def.category;
           const schema = def?.field_schema;
           const fields = Array.isArray(schema?.fields) ? schema.fields : [];
           const fallback = def?.component_type
@@ -1354,7 +1318,6 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
                 console.warn("Failed to load plant details:", err);
               }
 
-              toast.success("Digital twin loaded from database.");
               return;
             }
           }
@@ -1433,7 +1396,6 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
           console.warn("Failed to load plant details:", err);
         }
 
-        toast.success("Digital twin loaded from database.");
       } catch (err: any) {
         console.error("Failed to load digital twin JSON:", err);
         setError("Failed to load digital twin model from database.");
@@ -1458,7 +1420,6 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
   // Create plant and digital twin; set global IDs for component persistence
   const handleInfoSubmit = async (info: PlantInfo) => {
   try {
-    toast.loading("Creating plant...");
 
     const payload = infoToPlantPayload(info);
 
@@ -1630,7 +1591,6 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
           return;
         }
         setStep("compliance");
-        toast.info("Starting compliance check process.");
       } else {
         toast.error(
           `Port validation failed with ${finalResult.errors.length} issue${
@@ -1661,6 +1621,18 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
     const twinId = Number((window as any).currentTwinId);
     return twinId && !Number.isNaN(twinId) ? twinId : null;
   }, []);
+
+  // The twin id lives on a window global, so it cannot drive a `disabled`
+  // prop — mutating it does not re-render. Resolve it at click time instead.
+  const handleOpenReports = useCallback(() => {
+    const twinId = resolveTwinId();
+    if (!twinId) {
+      toast.error("Save the plant model before generating a report.");
+      return;
+    }
+    setReportsTwinId(twinId);
+    setShowReports(true);
+  }, [resolveTwinId]);
 
   // Step 3a: run the equations of ONE equipment (per-card Run button).
   // Resolves parameters from the current persisted state — upstream equipment
@@ -1712,13 +1684,6 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
     [equationsReady, equipmentRefs, resolveTwinId]
   );
 
-  // Open the consolidated report of whatever has been run per equipment.
-  // Computation is strictly per equipment — from an equipment's form (Mass
-  // Balance Equations module) or its card in the Equations panel.
-  const handleGenerateEquationReport = useCallback(() => {
-    setShowEquationReport(true);
-  }, []);
-
   // Hydrate persisted results once the equations step unlocks, so the panel
   // shows the last saved run per equipment across page reloads.
   const hydratedTwinRef = useRef<number | null>(null);
@@ -1768,7 +1733,6 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
         return;
       }
 
-      toast.loading("Saving plant model...");
 
       // LOG: Current state before Save
       logJson(`[PlantBuilder] ========== SAVE START ==========`);
@@ -1929,302 +1893,7 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
     }
   };
 
-  const deriveGateEquipmentConnections = useCallback(
-    (connectionList: Connection[], componentList: { id: string; type?: string }[]) => {
-      const componentMap = new Map(componentList.map((c) => [String(c.id), c]));
-      const normalizeType = (type?: string) => (type || "").toLowerCase();
-      const isEndpoint = (type?: string) => {
-        const normalized = normalizeType(type);
-        return normalized === "equipment" || normalized === "gate";
-      };
-      const isCarrier = (type?: string) => normalizeType(type) === "carrier";
-      const isGateEquipmentPair = (fromType?: string, toType?: string) => {
-        const from = normalizeType(fromType);
-        const to = normalizeType(toType);
-        return (from === "gate" && to === "equipment") || (from === "equipment" && to === "gate");
-      };
-
-      const outgoingByFrom = new Map<string, Connection[]>();
-      connectionList.forEach((conn) => {
-        const key = String(conn.from);
-        if (!outgoingByFrom.has(key)) outgoingByFrom.set(key, []);
-        outgoingByFrom.get(key)!.push(conn);
-      });
-
-      const directPairs = new Set<string>();
-      connectionList.forEach((conn) => {
-        const fromType = componentMap.get(String(conn.from))?.type;
-        const toType = componentMap.get(String(conn.to))?.type;
-        if (isEndpoint(fromType) && isEndpoint(toType)) {
-          directPairs.add(`${conn.from}->${conn.to}`);
-        }
-      });
-
-      const derived = new Map<
-        string,
-        { from: string; to: string; via: string; sourceIds: string[] }
-      >();
-
-      connectionList.forEach((conn) => {
-        const fromType = componentMap.get(String(conn.from))?.type;
-        const toType = componentMap.get(String(conn.to))?.type;
-        if (!isEndpoint(fromType) || !isCarrier(toType)) return;
-
-        const carrierId = String(conn.to);
-        const carrierOutgoing = outgoingByFrom.get(carrierId) || [];
-        carrierOutgoing.forEach((next) => {
-          const nextType = componentMap.get(String(next.to))?.type;
-          if (!isEndpoint(nextType)) return;
-          if (!isGateEquipmentPair(fromType, nextType)) return;
-
-          const key = `${conn.from}->${next.to}`;
-          if (directPairs.has(key) || derived.has(key)) return;
-
-          derived.set(key, {
-            from: String(conn.from),
-            to: String(next.to),
-            via: carrierId,
-            sourceIds: [conn.id, next.id],
-          });
-        });
-      });
-
-      return Array.from(derived.values());
-    },
-    []
-  );
-
-  const buildDataModel = useCallback(() => {
-    const derivedConnections = deriveGateEquipmentConnections(
-      uniqueConnections,
-      normalizedComponents
-    );
-
-    return {
-      userDetails: userDetails || {},
-      plantInfo: plantInfo || {},
-      products: productInfo,
-      components: normalizedComponents.map((c) => ({
-        id: c.id,
-        type: c.type,
-        name: c.name,
-        category: c.category,
-        position: c.position,
-        data: c.data || {},
-        certifications: c.certifications || [],
-      })),
-      connections: [
-        ...uniqueConnections.map((c) => ({
-          id: c.id,
-          from: c.from,
-          to: c.to,
-          type: c.type,
-          reason: c.reason || "N/A",
-          data: c.data || {},
-        })),
-        ...derivedConnections.map((c) => ({
-          id: `derived-${c.from}-${c.to}-${c.via}`,
-          from: c.from,
-          to: c.to,
-          type: "derived",
-          reason: `Derived via carrier ${c.via}`,
-          data: { derived: true, via: c.via, sources: c.sourceIds },
-        })),
-      ],
-      regulatoryMetadata: {
-        projectType: plantInfo?.projectType || "N/A",
-        primaryFuelType: plantInfo?.primaryFuelType || "N/A",
-        country: plantInfo?.country || "N/A",
-        status: plantInfo?.status || "N/A",
-        commercialOperationalDate: plantInfo?.commercialOperationalDate || "N/A",
-      },
-    };
-  }, [
-    deriveGateEquipmentConnections,
-    normalizedComponents,
-    plantInfo,
-    productInfo,
-    uniqueConnections,
-    userDetails,
-  ]);
-
-  const captureCanvasSnapshot = useCallback(async () => {
-    const canvasNode = document.querySelector(
-      '[data-plant-builder-canvas="main"]'
-    ) as HTMLElement | null;
-    if (!canvasNode) {
-      toast.error("Canvas not found.");
-      return null;
-    }
-
-    const parent = canvasNode.parentElement;
-    const prevTransform = canvasNode.style.transform;
-    const prevOrigin = canvasNode.style.transformOrigin;
-    const prevParentOverflow = parent?.style.overflow;
-    const prevParentWidth = parent?.style.width;
-    const prevParentHeight = parent?.style.height;
-
-    try {
-      document.body.classList.add("plant-exporting");
-      canvasNode.style.transform = "scale(1)";
-      canvasNode.style.transformOrigin = "0 0";
-
-      if (parent) {
-        parent.style.overflow = "visible";
-        parent.style.width = `${canvasNode.scrollWidth}px`;
-        parent.style.height = `${canvasNode.scrollHeight}px`;
-      }
-
-      const exportWidth = canvasNode.scrollWidth || canvasNode.clientWidth;
-      const exportHeight = canvasNode.scrollHeight || canvasNode.clientHeight;
-
-      const canvas = await html2canvas(canvasNode, {
-        backgroundColor: "#ffffff",
-        scale: 4,
-        useCORS: true,
-        width: exportWidth,
-        height: exportHeight,
-        windowWidth: exportWidth,
-        windowHeight: exportHeight,
-      });
-
-      return canvas.toDataURL("image/png");
-    } finally {
-      if (parent) {
-        parent.style.overflow = prevParentOverflow ?? "";
-        parent.style.width = prevParentWidth ?? "";
-        parent.style.height = prevParentHeight ?? "";
-      }
-      canvasNode.style.transform = prevTransform;
-      canvasNode.style.transformOrigin = prevOrigin;
-      document.body.classList.remove("plant-exporting");
-    }
-  }, []);
-
-  const handleExportCanvasImage = async () => {
-    try {
-      await prepareExport();
-      const url = await captureCanvasSnapshot();
-      if (!url) return;
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `${plantInfo?.plantName || "plant-design"}.png`;
-      link.click();
-      toast.success("Canvas image exported successfully!");
-    } catch (err) {
-      console.error("Failed to export canvas image:", err);
-      toast.error("Failed to export canvas image.");
-    }
-  };
-
-  const handleExportPDF = async () => {
-    try {
-      await prepareExport();
-
-      if (!previewImageUrl && !isGeneratingPreview) {
-        setIsGeneratingPreview(true);
-        const url = await captureCanvasSnapshot();
-        setPreviewImageUrl(url);
-        setIsGeneratingPreview(false);
-        await waitForNextFrame();
-      }
-
-      const exportNode = document.querySelector("#plant-data-export") as HTMLElement | null;
-      if (!exportNode) {
-        toast.error("Export content not found.");
-        return;
-      }
-
-      const pages = Array.from(exportNode.querySelectorAll(".pdf-page")) as HTMLElement[];
-      if (!pages.length) {
-        toast.error("PDF pages not found.");
-        return;
-      }
-
-      document.body.classList.add("plant-exporting");
-
-      try {
-        const pdf = new jsPDF("p", "mm", "a4");
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = pdf.internal.pageSize.getHeight();
-
-        const addCanvasToPdf = (canvas: HTMLCanvasElement, addNewPage: boolean) => {
-          const imgData = canvas.toDataURL("image/png");
-          const scale = Math.min(pdfWidth / canvas.width, pdfHeight / canvas.height);
-          const imgWidth = canvas.width * scale;
-          const imgHeight = canvas.height * scale;
-          const offsetX = Math.max(0, (pdfWidth - imgWidth) / 2);
-          const offsetY = Math.max(0, (pdfHeight - imgHeight) / 2);
-
-          if (addNewPage) {
-            pdf.addPage();
-          }
-
-          pdf.addImage(imgData, "PNG", offsetX, offsetY, imgWidth, imgHeight);
-        };
-
-        for (let i = 0; i < pages.length; i += 1) {
-          const page = pages[i];
-          const images = Array.from(page.querySelectorAll("img"));
-          await Promise.all(
-            images.map(
-              (img) =>
-                new Promise<void>((resolve) => {
-                  if (img.complete) {
-                    resolve();
-                  } else {
-                    img.onload = () => resolve();
-                    img.onerror = () => resolve();
-                  }
-                })
-            )
-          );
-
-          const canvas = await html2canvas(page, {
-            backgroundColor: "#ffffff",
-            scale: 4,
-            useCORS: true,
-            width: page.scrollWidth || page.clientWidth,
-            height: page.scrollHeight || page.clientHeight,
-            windowWidth: page.scrollWidth || page.clientWidth,
-            windowHeight: page.scrollHeight || page.clientHeight,
-          });
-
-          addCanvasToPdf(canvas, i > 0);
-        }
-
-        pdf.save(`${plantInfo?.plantName || "plant-design"}.pdf`);
-        toast.success("PDF export ready!");
-      } finally {
-        document.body.classList.remove("plant-exporting");
-      }
-    } catch (err) {
-      console.error("Failed to export PDF:", err);
-      toast.error("Failed to export PDF.");
-      setIsGeneratingPreview(false);
-    }
-  };
-
   // Prepare and export complete plant data model
-  const handleSaveDataModel = async () => {
-    try {
-      setShowComponentLibrary(false);
-      setShowDataModel(true);
-      const dataModel = buildDataModel();
-      setPlantModelJson(JSON.stringify(dataModel, null, 2));
-      console.log("Data Model:", dataModel);
-      setIsGeneratingPreview(true);
-      setPreviewImageUrl(null);
-      const url = await captureCanvasSnapshot();
-      setPreviewImageUrl(url);
-    } catch (err) {
-      setError("Failed to save data model. Please try again.");
-      toast.error("Error saving data model.");
-    } finally {
-      setIsGeneratingPreview(false);
-    }
-  };
-
   const handleSendShare = async () => {
     const twinId = Number((window as any).currentTwinId);
     if (!twinId || Number.isNaN(twinId)) {
@@ -2318,7 +1987,6 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
       setIsApplyingTemplate(true);
       setShowTemplatesModal(false);
       setStep("loading");
-      toast.info("Applying template. Please wait...");
       await instantiateTemplate(template.id, { plantId, name });
       toast.success("Template instantiated.");
       window.location.href = `/plant-operator/plant-builder/builder?plantId=${plantId}`;
@@ -2463,289 +2131,9 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
     [components, connections, persistConnectionsForComponent, setConnections, uniqueConnections]
   );
 
-  // Update plant model JSON for export
-  const handleCanvasModelChange = (model: {
-    components: PlacedComponent[];
-    connections: Connection[];
-  }) => {
-    const derivedConnections = deriveGateEquipmentConnections(
-      model.connections,
-      model.components
-    );
-    const normalized = {
-      components: model.components.map((c) => ({
-        id: c.id,
-        type: c.type,
-        name: c.name,
-        category: c.category,
-        position: c.position,
-        data: c.data || {},
-      })),
-      connections: [
-        ...model.connections.map((conn) => ({
-          id: conn.id,
-          from: conn.from,
-          to: conn.to,
-          data: conn.data || {},
-        })),
-        ...derivedConnections.map((c) => ({
-          id: `derived-${c.from}-${c.to}-${c.via}`,
-          from: c.from,
-          to: c.to,
-          data: { derived: true, via: c.via, sources: c.sourceIds },
-        })),
-      ],
-    };
-
-    setPlantModelJson(JSON.stringify(normalized, null, 2));
-  };
-
   const toggleComponentLibrary = () => {
     setShowComponentLibrary((prev) => !prev);
   };
-
-  const componentById = useMemo(
-    () => new Map(normalizedComponents.map((c) => [String(c.id), c])),
-    [normalizedComponents]
-  );
-
-  const getComponentLabel = (id: string) => {
-    const component = componentById.get(String(id));
-    if (!component) return `Unknown (ID ${id})`;
-    return `${component.name} (ID ${component.id})`;
-  };
-
-  const renderComponentsSummaryTable = () => {
-    const grouped = (["equipment", "carrier", "gate"] as const).map((type) => ({
-      type,
-      label: type.charAt(0).toUpperCase() + type.slice(1),
-      items: normalizedComponents.filter((c) => c.type === type),
-    }));
-
-    const rows: Array<
-      | { kind: "group"; label: string }
-      | { kind: "empty"; label: string }
-      | { kind: "item"; id: string; name: string; typeLabel: string }
-    > = [];
-
-    grouped.forEach((group) => {
-      rows.push({ kind: "group", label: group.label });
-      if (group.items.length === 0) {
-        rows.push({ kind: "empty", label: group.label });
-      } else {
-        group.items.forEach((c) =>
-          rows.push({
-            kind: "item",
-            id: String(c.id),
-            name: c.name,
-            typeLabel: group.label,
-          })
-        );
-      }
-    });
-
-    const chunkRows = <T,>(data: T[], size: number) => {
-      const chunks: T[][] = [];
-      for (let i = 0; i < data.length; i += size) {
-        chunks.push(data.slice(i, i + size));
-      }
-      return chunks;
-    };
-
-    const MAX_COMPONENT_ROWS = 21;
-    const pages = chunkRows(rows, MAX_COMPONENT_ROWS);
-
-    return pages.map((pageRows, pageIndex) => (
-      <section
-        key={`components-page-${pageIndex}`}
-        className="pdf-page rounded-lg border border-slate-200 p-6 shadow-sm"
-      >
-        <div className="pdf-header">
-          <div className="text-lg font-semibold text-gray-800">Components</div>
-        </div>
-        <div className="w-full">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-[#0F766E]/10">
-                  <TableHead className="font-semibold text-gray-700 text-sm">Component ID</TableHead>
-                  <TableHead className="font-semibold text-gray-700 text-sm">Component Name</TableHead>
-                  <TableHead className="font-semibold text-gray-700 text-sm">Type</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {pageRows.map((row, idx) => {
-                  if (row.kind === "group") {
-                    return (
-                      <TableRow key={`group-${row.label}-${idx}`} className="bg-slate-50">
-                        <TableCell colSpan={3} className="text-gray-700 text-sm font-semibold">
-                          {row.label}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  }
-                  if (row.kind === "empty") {
-                    return (
-                      <TableRow key={`empty-${row.label}-${idx}`}>
-                        <TableCell colSpan={3} className="text-center text-gray-500 text-sm">
-                          No {row.label.toLowerCase()} components
-                        </TableCell>
-                      </TableRow>
-                    );
-                  }
-                  return (
-                    <TableRow key={`item-${row.id}-${idx}`} className="hover:bg-[#0F766E]/5">
-                      <TableCell className="text-gray-900 text-sm">{row.id}</TableCell>
-                      <TableCell className="text-gray-900 text-sm">{row.name}</TableCell>
-                      <TableCell className="text-gray-900 text-sm">{row.typeLabel}</TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
-        </div>
-      </section>
-    ));
-  };
-
-  const renderConnectionsTable = () => {
-    const normalizeType = (type?: string) => (type || "").toLowerCase();
-    const isEndpoint = (type?: string) => {
-      const normalized = normalizeType(type);
-      return normalized === "equipment" || normalized === "gate";
-    };
-    const isCarrier = (type?: string) => normalizeType(type) === "carrier";
-
-    const outgoingByFrom = new Map<string, Connection[]>();
-    uniqueConnections.forEach((conn) => {
-      const key = String(conn.from);
-      if (!outgoingByFrom.has(key)) outgoingByFrom.set(key, []);
-      outgoingByFrom.get(key)!.push(conn);
-    });
-
-    const derivedPairs = new Map<string, { from: string; to: string }>();
-
-    uniqueConnections.forEach((conn) => {
-      const fromType = componentById.get(String(conn.from))?.type;
-      const toType = componentById.get(String(conn.to))?.type;
-
-      // Direct equipment/gate connections stay as-is.
-      if (isEndpoint(fromType) && isEndpoint(toType)) {
-        const key = `${conn.from}->${conn.to}`;
-        derivedPairs.set(key, { from: String(conn.from), to: String(conn.to) });
-        return;
-      }
-
-      // Collapse equipment/gate -> carrier -> equipment/gate
-      if (isEndpoint(fromType) && isCarrier(toType)) {
-        const carrierId = String(conn.to);
-        const carrierOutgoing = outgoingByFrom.get(carrierId) || [];
-        carrierOutgoing.forEach((next) => {
-          const nextType = componentById.get(String(next.to))?.type;
-          if (isEndpoint(nextType)) {
-            const key = `${conn.from}->${next.to}`;
-            derivedPairs.set(key, { from: String(conn.from), to: String(next.to) });
-          }
-        });
-      }
-    });
-
-    const filteredConnections = Array.from(derivedPairs.values());
-
-    const chunkRows = <T,>(data: T[], size: number) => {
-      const chunks: T[][] = [];
-      for (let i = 0; i < data.length; i += size) {
-        chunks.push(data.slice(i, i + size));
-      }
-      return chunks;
-    };
-
-    const MAX_CONNECTION_ROWS = 23;
-    const pages = filteredConnections.length
-      ? chunkRows(filteredConnections, MAX_CONNECTION_ROWS)
-      : [[]];
-
-    return pages.map((pageRows, pageIndex) => (
-      <section
-        key={`connections-page-${pageIndex}`}
-        className="pdf-page rounded-lg border border-slate-200 p-6 shadow-sm"
-      >
-        <div className="pdf-header">
-          <div className="text-lg font-semibold text-gray-800">Connections</div>
-        </div>
-        <div className="w-full">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-[#0F766E]/10">
-                  <TableHead className="font-semibold text-gray-700 text-sm">From</TableHead>
-                  <TableHead className="font-semibold text-gray-700 text-sm">To</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {pageRows.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={2} className="text-center text-gray-500 text-sm">
-                      No connections
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  pageRows.map((c) => (
-                    <TableRow key={`${c.from}->${c.to}`} className="hover:bg-[#0F766E]/5">
-                      <TableCell className="text-gray-900 text-sm">{getComponentLabel(c.from)}</TableCell>
-                      <TableCell className="text-gray-900 text-sm">{getComponentLabel(c.to)}</TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </div>
-      </section>
-    ));
-  };
-
-  const renderPlantInfoTable = () => (
-    <div className="w-full">
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-[#0F766E]/10">
-              <TableHead className="font-semibold text-gray-700 text-sm">Field</TableHead>
-              <TableHead className="font-semibold text-gray-700 text-sm">Value</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {plantInfo ? (
-              Object.entries(plantInfo).map(([key, value]) => (
-                <TableRow key={key} className="hover:bg-[#0F766E]/5">
-                  <TableCell className="text-gray-900 text-sm capitalize">
-                    {key.replace(/([A-Z])/g, " $1")}
-                  </TableCell>
-                  <TableCell className="text-gray-900 text-sm">
-                    {key === "investment" && typeof value === "object" && value !== null
-                      ? `${(value as { amount: number; unit: string }).amount} ${(value as { amount: number; unit: string }).unit}`
-                      : Array.isArray(value)
-                      ? value.map((item: any) => JSON.stringify(item)).join(", ")
-                      : typeof value === "string"
-                      ? value || "N/A"
-                      : JSON.stringify(value) || "N/A"}
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={2} className="text-center text-gray-500 text-sm">
-                  No plant information
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
-  );
 
   return (
     <div className="h-[calc(100dvh-80px)] max-h-[calc(100dvh-80px)] flex flex-col bg-gray-50 min-h-0 overflow-hidden">
@@ -2798,11 +2186,7 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
                 </Tooltip>
               </TooltipProvider>
             )}
-          </div>
-        </div>
-        <div className="flex items-center gap-4">
-          {step === "builder" && !showTemplatesModal && (
-            <div className="flex items-center gap-2">
+            {step === "builder" && !showTemplatesModal && (
               <TooltipProvider delayDuration={120}>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -2810,7 +2194,7 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
                       variant="outline"
                       onClick={handleSave}
                       size="sm"
-                      className="h-8 text-xs border-[#0F766E] hover:bg-[#0F766E]/10"
+                      className="ml-1 h-8 text-xs border-[#0F766E] hover:bg-[#0F766E]/10"
                     >
                       <Save className="h-4 w-4 mr-2" />
                       Save
@@ -2821,6 +2205,12 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-4">
+          {step === "builder" && !showTemplatesModal && (
+            <div className="flex items-center gap-2">
               <Button
                 onClick={handleRunComplianceCheck}
                 disabled={isValidating || components.length === 0}
@@ -2830,42 +2220,28 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
                 <Play className="h-4 w-4 mr-2" />
                 {isValidating ? "Checking..." : "Check Process Flow"}
               </Button>
-              <Button
-                size="sm"
-                className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
-                onClick={() => setShowExportModal(true)}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Export Design
-              </Button>
-              <Button
-                size="sm"
-                className="h-8 text-xs bg-green-600 hover:bg-green-700 text-white"
-                onClick={handleSaveDataModel}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Save Plant Model
-              </Button>
               <TooltipProvider delayDuration={120}>
                 <Tooltip>
                   <TooltipTrigger asChild>
+                    {/* A disabled button swallows pointer events, so the
+                        tooltip trigger has to wrap it. */}
                     <span>
                       <Button
                         size="sm"
                         variant="outline"
-                        disabled={!equationsReady}
-                        onClick={handleGenerateEquationReport}
+                        disabled={components.length === 0}
+                        onClick={handleOpenReports}
                         className="h-8 text-xs border-[#0F766E] text-[#0F766E] hover:bg-[#0F766E]/10"
                       >
-                        <Sigma className="h-4 w-4 mr-2" />
-                        Equation Report
+                        <FileText className="h-4 w-4 mr-2" />
+                        Reports
                       </Button>
                     </span>
                   </TooltipTrigger>
                   <TooltipContent side="bottom" align="end" className="bg-white">
-                    {equationsReady
-                      ? "Run the mass-balance engine and view the report"
-                      : "Pass the Structure and Port checks first"}
+                    {components.length === 0
+                      ? "Add components to the canvas first"
+                      : "Generate a plant document"}
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -3049,7 +2425,6 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
                   connections={connections}
                   setConnections={setConnections}
                   onConnect={onConnect}  // PASSED
-                  onModelChange={handleCanvasModelChange}
                   onAutoSave={markSavedNow}
                   exportId="main"
                   exportTitle={plantInfo?.plantName || plantInfo?.projectName || "Plant Model"}
@@ -3079,28 +2454,33 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
               </div>
             )}
             {/* Sidebar Container (overlay; does not shift canvas) */}
-            {!showTemplatesModal && !showDataModel && (
+            {!showTemplatesModal && (
               <div
                 className={`absolute top-0 left-0 h-full flex transition-all duration-300 ease-in-out ${
                   showComponentLibrary ? "w-full sm:w-96" : "w-10"
-                } bg-white border-r border-gray-200 shadow-sm overflow-hidden z-20`}
+                } bg-white/95 backdrop-blur-sm border-r border-brand-100 shadow-gex-md overflow-hidden z-20`}
               >
                 {showComponentLibrary && (
                   <div className="flex-1 overflow-y-auto">
                     <ComponentLibrary />
                   </div>
                 )}
-                <div
-                  className="w-10 bg-gray-100 hover:bg-[#0F766E]/10 cursor-pointer flex items-center justify-center transition-colors duration-200"
+                <button
+                  type="button"
+                  className="group flex w-10 cursor-pointer items-center justify-center border-l border-brand-100/80 bg-gradient-to-b from-brand-50/70 to-brand-50/30 transition-colors duration-200 hover:from-brand-100 hover:to-brand-50 focus-visible:outline-none"
                   onClick={toggleComponentLibrary}
                   title={showComponentLibrary ? "Hide Library" : "Show Library"}
+                  aria-label={showComponentLibrary ? "Hide component library" : "Show component library"}
+                  aria-expanded={showComponentLibrary}
                 >
-                  {showComponentLibrary ? (
-                    <ChevronLeft className="h-5 w-5 text-[#0F766E]" />
-                  ) : (
-                    <ChevronRight className="h-5 w-5 text-[#0F766E]" />
-                  )}
-                </div>
+                  <span className="flex h-12 w-6 items-center justify-center rounded-full bg-white text-brand-700 shadow-gex-sm ring-1 ring-brand-200 transition-[transform,box-shadow] duration-150 group-hover:shadow-gex-md group-active:scale-95">
+                    {showComponentLibrary ? (
+                      <ChevronLeft className="h-4 w-4" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4" />
+                    )}
+                  </span>
+                </button>
               </div>
             )}
 
@@ -3121,13 +2501,10 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
                 onRunEquipment={handleRunEquipment}
               />
             )}
-            <EquationReportDialog
-              open={showEquationReport}
-              onOpenChange={setShowEquationReport}
-              runs={equationRuns}
-              equipment={equipmentRefs}
-              isComputing={computingEquipmentIds.size > 0}
-              plantName={plantInfo?.plantName || plantInfo?.projectName || undefined}
+            <ReportsDialog
+              open={showReports}
+              onOpenChange={setShowReports}
+              digitalTwinId={reportsTwinId}
             />
           </div>
         ) : step === "compliance" ? (
@@ -3168,87 +2545,6 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
             submitLabel="Save Plant Info"
             onSubmit={handleInfoUpdate}
           />
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={showDataModel} onOpenChange={setShowDataModel}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto bg-white rounded-lg">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-gray-900">Plant Data Model</DialogTitle>
-          </DialogHeader>
-          <div id="plant-data-export" className="space-y-6 p-4 bg-white">
-            <section className="pdf-page rounded-lg border border-slate-200 p-6 shadow-sm">
-              <div className="pdf-header">
-                <div className="pdf-title">{plantInfo?.plantName || "Plant Model Report"}</div>
-                <div className="pdf-subtitle">
-                  Generated {new Date().toLocaleString()}
-                </div>
-              </div>
-              <div className="text-sm text-gray-600">
-                This report summarizes the plant model layout, components, and connections.
-              </div>
-            </section>
-
-            <section className="pdf-page rounded-lg border border-slate-200 p-6 shadow-sm">
-              <div className="pdf-header">
-                <div className="text-lg font-semibold text-gray-800">Process Flow Diagram</div>
-              </div>
-              <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                {isGeneratingPreview ? (
-                  <div className="text-sm text-gray-500">Generating preview…</div>
-                ) : previewImageUrl ? (
-                  <img
-                    src={previewImageUrl}
-                    alt="Plant model preview"
-                    className="w-full h-auto rounded-md border border-gray-200 bg-white"
-                  />
-                ) : (
-                  <div className="text-sm text-gray-500">Preview unavailable.</div>
-                )}
-              </div>
-              <p className="text-xs text-gray-500 mt-2">
-                You can export it as image for better visualization.
-              </p>
-            </section>
-
-            <section className="pdf-page rounded-lg border border-slate-200 p-6 shadow-sm">
-              <div className="pdf-header">
-                <div className="text-lg font-semibold text-gray-800">Plant Information</div>
-              </div>
-              {renderPlantInfoTable()}
-            </section>
-
-            {renderComponentsSummaryTable()}
-
-            {renderConnectionsTable()}
-            <div className="flex flex-col sm:flex-row justify-between gap-4">
-              <div className="flex flex-col sm:flex-row gap-2">
-                <Button
-                  className="bg-[#0F766E] hover:bg-[#0C5F59] text-white text-sm"
-                  onClick={handleExportCanvasImage}
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Export Canvas Image
-                </Button>
-                <Button
-                  className="bg-green-600 hover:bg-green-700 text-white text-sm"
-                  onClick={handleExportPDF}
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Export PDF
-                </Button>
-              </div>
-              <div className="flex justify-end">
-                <Button
-                  variant="outline"
-                  className="text-sm"
-                  onClick={() => setShowDataModel(false)}
-                >
-                  Close
-                </Button>
-              </div>
-            </div>
-          </div>
         </DialogContent>
       </Dialog>
 
@@ -3393,67 +2689,6 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
             >
               {isSharingPlant ? "Sharing..." : "Share"}
             </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={showExportModal} onOpenChange={setShowExportModal}>
-        <DialogContent className="max-w-3xl bg-white rounded-xl">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-slate-900">
-              Export Plant Design
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-6 text-sm text-slate-600">
-            <p>
-              High-resolution export with title header, diagram, and stream color legend — each
-              in its own area, no overlap.
-            </p>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <button
-                type="button"
-                onClick={async () => {
-                  setShowExportModal(false);
-                  await handleExportCanvasImage();
-                }}
-                className="rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-emerald-400 hover:shadow-md"
-              >
-                <div className="text-base font-semibold text-slate-900">PNG</div>
-                <div className="mt-1 text-xs text-slate-500">4x hi-res</div>
-              </button>
-              <button
-                type="button"
-                onClick={async () => {
-                  setShowExportModal(false);
-                  await handleExportPDF();
-                }}
-                className="rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-emerald-400 hover:shadow-md"
-              >
-                <div className="text-base font-semibold text-slate-900">PDF</div>
-                <div className="mt-1 text-xs text-slate-500">A3 print-ready</div>
-              </button>
-              <button
-                type="button"
-                onClick={() => toast("GIF export is coming soon.")}
-                className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-left text-slate-400 shadow-sm"
-              >
-                <div className="text-base font-semibold">GIF</div>
-                <div className="mt-1 text-xs">Animated flows</div>
-              </button>
-            </div>
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Included in export
-              </div>
-              <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-slate-700">
-                <li>System boundary & all gates</li>
-                <li>Equipment with specifications</li>
-                <li>Carriers with stream types</li>
-                <li>Flow values on all connections</li>
-                <li>Stream color legend (separate panel)</li>
-                <li>Flow animations (GIF only)</li>
-              </ul>
-            </div>
           </div>
         </DialogContent>
       </Dialog>

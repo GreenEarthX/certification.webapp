@@ -23,7 +23,7 @@
       "@/*": ["./src/*"]
     },
     // 👇 ADD THIS SECTION to resolve 'estree' and 'node'
-    "types": ["node", "estree"]
+    "types": ["node", "estree", "jest"]
     // 👆 ADD THIS SECTION
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "src/types"],

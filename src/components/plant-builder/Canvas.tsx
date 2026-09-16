@@ -2340,9 +2340,11 @@ const Canvas = ({
         onMouseDown={handlePanStart}
         className={`flex-1 min-h-0 relative overflow-auto ${isPanMode ? (isPanning ? "cursor-grabbing" : "cursor-grab") : ""}`}
         style={{
-          backgroundImage:
-            "linear-gradient(hsl(var(--canvas-grid)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--canvas-grid)) 1px, transparent 1px)",
-          backgroundSize: `${20 * zoom}px ${20 * zoom}px`,
+          // Very faint dot grid instead of crossing lines: a barely-there
+          // alignment cue. Delete backgroundImage/backgroundSize for a flat canvas.
+          backgroundImage: "radial-gradient(circle, hsl(var(--canvas-grid) / 0.65) 0.7px, transparent 1.1px)",
+          backgroundSize: `${28 * zoom}px ${28 * zoom}px`,
+          backgroundPosition: "0 0",
         }}
       >
         <div

@@ -12,7 +12,10 @@ export type ComponentDefinitionDto = {
   component_id: string;
   component_name: string;
   component_type: ComponentType;
+  // Only present on single-definition fetches. The list endpoint returns the
+  // schema-derived `category` instead of the schema itself.
   field_schema?: any;
+  category?: string;
   created_at?: string;
   updated_at?: string;
 };
@@ -56,6 +59,7 @@ const defaultCategoryFor = (componentType: ComponentType) =>
 
 // Pull category metadata from the schema with multiple fallbacks
 const deriveCategoryFromSchema = (def: ComponentDefinitionDto) => {
+  if (def.category) return def.category;
   const schema = def.field_schema;
   if (!schema) return defaultCategoryFor(def.component_type);
 
@@ -80,8 +84,32 @@ const mapToComponentData = (def: ComponentDefinitionDto): ComponentData => ({
   icon: TYPE_TO_ICON[def.component_type] ?? "ArrowRightLeft",
 });
 
+// The plant builder asks for "all definitions" from half a dozen places on a
+// single page load, and only ever reads id / name / type / category from the
+// result. Serve that from the lightweight basic-details endpoint (no
+// field_schema — that alone was ~3 MB per call) and hand every caller the same
+// in-flight or completed request. Mutations clear the cache.
+const DEFINITIONS_CACHE_TTL_MS = 5 * 60 * 1000;
+let definitionsCache: { promise: Promise<ComponentDefinitionDto[]>; at: number } | null = null;
+
+export function invalidateComponentDefinitionsCache(): void {
+  definitionsCache = null;
+}
+
 export async function fetchComponentDefinitions(): Promise<ComponentDefinitionDto[]> {
-  return apiFetch<ComponentDefinitionDto[]>(COMPONENT_DEFINITIONS_PATH);
+  const now = Date.now();
+  if (definitionsCache && now - definitionsCache.at < DEFINITIONS_CACHE_TTL_MS) {
+    return definitionsCache.promise;
+  }
+  const promise = apiFetch<ComponentDefinitionDto[]>(`${COMPONENT_DEFINITIONS_PATH}/basic-details`).catch(
+    (err) => {
+      // Do not pin a failure for the whole TTL.
+      if (definitionsCache?.promise === promise) definitionsCache = null;
+      throw err;
+    }
+  );
+  definitionsCache = { promise, at: now };
+  return promise;
 }
 
 // Retrieve a single component definition for editing/detail views
@@ -111,6 +139,7 @@ export async function fetchComponentLibraryFromApi(): Promise<ComponentLibraryJS
 export async function createComponentDefinition(
   payload: Partial<ComponentDefinitionDto>
 ): Promise<ComponentDefinitionDto> {
+  invalidateComponentDefinitionsCache();
   return apiFetch<ComponentDefinitionDto>(COMPONENT_DEFINITIONS_PATH, {
     method: "POST",
     body: JSON.stringify(payload),

@@ -1,0 +1,38 @@
+# Keep secrets and local state out of the build context.
+#
+# The Dockerfile does `COPY . .` into the builder stage. Without this file the
+# local .env - which holds the Hedera operator key, Auth0 secrets and DB
+# credentials - and the full .git history were copied into that layer, and the
+# builder layer is exported to the GitHub Actions cache
+# (cache-to: type=gha,mode=max in .github/workflows/deploy.yml).
+#
+# The final runner stage only copies .next/standalone, .next/static and public,
+# so these never reached the published image - but they did reach the cache.
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# VCS
+.git
+.gitignore
+.github
+
+# Dependencies and build output (reinstalled/rebuilt inside the image)
+node_modules
+.next
+out
+coverage
+
+# Local tooling and editor state
+.vscode
+.idea
+*.log
+npm-debug.log*
+.DS_Store
+
+# Docs and test artefacts not needed to build
+README.md
+**/__tests__
+jest.config.js

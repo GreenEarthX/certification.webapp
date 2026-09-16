@@ -146,7 +146,7 @@ const QuestionWithLocationPortion: React.FC<Props> = ({ label, value, onChange, 
         <button
           type="button"
           onClick={addEntry}
-          className="mt-2 px-3 py-1 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700"
+          className="mt-2 px-3 py-1 bg-brand-700 text-white rounded-md text-sm hover:bg-brand-800"
         >
           + Add Country
         </button>

@@ -11,6 +11,14 @@ export async function POST(req: NextRequest) {
     // 🔍 Check if user already exists
     const existingUser = await UserService.getUserBySub(auth0Sub);
     if (!existingUser) {
+      // The email comes from the verified token; refuse to create a user
+      // without one rather than inserting an empty/undefined address.
+      if (!fullUser.email) {
+        return NextResponse.json(
+          { error: "Token is missing an email claim" },
+          { status: 400 }
+        );
+      }
       console.log("Registering user before completing profile:", fullUser.email, auth0Sub);
       await UserService.createUser(fullUser.email, auth0Sub);
     }

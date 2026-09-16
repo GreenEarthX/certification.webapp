@@ -1,10 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { recommendationService } from "@/services/recommendations/recommendationService";
+import { getSessionUser } from "@/lib/auth";
+import { authErrorResponse } from "@/lib/api-auth";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Only requested from authenticated recommendation pages.
+  try {
+    await getSessionUser(request);
+  } catch (error) {
+    const denied = authErrorResponse(error);
+    if (denied) return denied;
+    throw error;
+  }
+
   const { id: recommendationId } = await params;
 
   if (!recommendationId) {
