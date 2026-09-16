@@ -2342,7 +2342,7 @@ const Canvas = ({
         style={{
           // Very faint dot grid instead of crossing lines: a barely-there
           // alignment cue. Delete backgroundImage/backgroundSize for a flat canvas.
-          backgroundImage: "radial-gradient(circle, hsl(var(--canvas-grid) / 0.55) 0.7px, transparent 1.1px)",
+          backgroundImage: "radial-gradient(circle, hsl(var(--canvas-grid) / 0.65) 0.7px, transparent 1.1px)",
           backgroundSize: `${28 * zoom}px ${28 * zoom}px`,
           backgroundPosition: "0 0",
         }}
