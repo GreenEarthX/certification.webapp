@@ -2340,10 +2340,10 @@ const Canvas = ({
         onMouseDown={handlePanStart}
         className={`flex-1 min-h-0 relative overflow-auto ${isPanMode ? (isPanning ? "cursor-grabbing" : "cursor-grab") : ""}`}
         style={{
-          // Subtle dot grid instead of crossing lines: keeps the alignment cue
-          // without the visual noise. Dot pitch scales with zoom like before.
-          backgroundImage: "radial-gradient(circle, hsl(var(--canvas-grid)) 1.2px, transparent 1.6px)",
-          backgroundSize: `${24 * zoom}px ${24 * zoom}px`,
+          // Very faint dot grid instead of crossing lines: a barely-there
+          // alignment cue. Delete backgroundImage/backgroundSize for a flat canvas.
+          backgroundImage: "radial-gradient(circle, hsl(var(--canvas-grid) / 0.55) 0.7px, transparent 1.1px)",
+          backgroundSize: `${28 * zoom}px ${28 * zoom}px`,
           backgroundPosition: "0 0",
         }}
       >
