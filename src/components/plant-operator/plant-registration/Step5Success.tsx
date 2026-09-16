@@ -11,7 +11,7 @@ interface Step4SuccessProps {
 const Step5Success: React.FC<Step4SuccessProps> = ({ onGoToDashboard }) => {
   return (
     <div className="text-center p-6">
-      <h2 className="text-xl font-bold mb-4 text-green-700">Success!</h2>
+      <h2 className="text-lg font-semibold tracking-tight mb-4 text-brand-700">Success!</h2>
 
       <p className="text-gray-700">
         The process has been completed successfully.
@@ -19,7 +19,7 @@ const Step5Success: React.FC<Step4SuccessProps> = ({ onGoToDashboard }) => {
 
       <button
         onClick={onGoToDashboard}
-        className="mt-6 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+        className="mt-6 px-4 py-2 bg-brand-700 text-white rounded hover:bg-brand-800 transition"
       >
         Go to Dashboard
       </button>

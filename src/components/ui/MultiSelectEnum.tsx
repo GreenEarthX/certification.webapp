@@ -137,7 +137,7 @@ export function MultiSelectEnum({
           <button
             type="button"
             onClick={clearAll}
-            className="text-xs text-blue-600 underline"
+            className="text-xs text-brand-700 underline"
           >
             Clear all
           </button>

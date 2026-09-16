@@ -24,7 +24,7 @@ export default function DashboardLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <div
-      className={`${geistSans.variable} ${geistMono.variable} antialiased w-full min-h-screen bg-blue-50 flex flex-col`}
+      className={`${geistSans.variable} ${geistMono.variable} antialiased w-full min-h-screen bg-surface-tint flex flex-col`}
     >
       <Navbar />
       <div className="flex-1 min-h-0">{children}</div>

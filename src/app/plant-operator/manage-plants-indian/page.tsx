@@ -2,10 +2,11 @@
 
 import { Suspense } from 'react';
 import PlantDetailsPage from '@/components/plant-operator/manage-plants-indian/PlantDetailsPage'; 
+import { InlineLoading } from "@/components/common/LoadingState";
 
 export default function Page() {
   return (
-    <Suspense fallback={<div className="p-6">Loading...</div>}>
+    <Suspense fallback={<InlineLoading className="p-6" />}>
       <PlantDetailsPage />
     </Suspense>
   );

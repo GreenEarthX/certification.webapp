@@ -102,7 +102,7 @@ const GeneralInformations: React.FC<Props> = ({
   return (
     <div>
       <StepNotice />
-      <h2 className="text-lg font-semibold text-blue-900 mb-2">{steps[0]}</h2>
+      <h2 className="text-lg font-semibold text-brand-900 mb-2">{steps[0]}</h2>
       <div>
       <br/>
         {/* ─── Plant Details ───────────────────────────────────────────── */}
@@ -131,7 +131,7 @@ const GeneralInformations: React.FC<Props> = ({
             <label className="block mb-1 text-sm font-medium">When did you reach this stage?</label>
             <input
               type="date"
-              className="w-full bg-white text-gray-800 border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
+              className="w-full bg-white text-gray-800 border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-600 appearance-none"
               value={reachedDate}
               onChange={(e) => setReachedDate(e.target.value)}
             />

@@ -2,6 +2,8 @@
 
 import React from "react";
 import Link from "next/link";
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 // components
 import DashboardStats from "@/components/plant-operator/dashboard/stats/DashboardStats";
@@ -21,31 +23,31 @@ export default function Dashboard() {
   const { stats, loading: statsLoading, error: statsError } = useStats();
 
   return (
-    <div className="grid grid-cols-12 gap-6 mt-6">
+    <div className="grid grid-cols-12 gap-6 p-6">
       <div className="col-span-12 space-y-6">
         <DashboardStats stats={stats} loading={statsLoading} error={statsError} />
 
-        <section className="bg-white rounded-lg p-6 shadow-sm">
-          <div className="flex justify-between items-center mb-4">
-            <h2 style={{ color: "#17598d" }} className="text-xl font-semibold">All Plants</h2>
-            <Link href="/plant-operator/plants/add">
-              <button className="bg-blue-600 text-white px-5 py-1 rounded-lg hover:bg-blue-700">
+        <section className="rounded-gex-md border border-slate-200 bg-white p-6 shadow-gex-sm">
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <h2 className="text-lg font-semibold tracking-tight text-slate-900">All Plants</h2>
+            <Button asChild size="sm">
+              <Link href="/plant-operator/plants/add">
+                <Plus />
                 Add Plant
-              </button>
-            </Link>
+              </Link>
+            </Button>
           </div>
           <PlantsList plants={plants} loading={plantsLoading} error={plantsError} />
         </section>
       </div>
 
       <div className="col-span-12 grid grid-cols-12 gap-6">
-        <section className="col-span-12 lg:col-span-8 bg-white rounded-lg p-6 shadow-sm">
-          <h2 style={{ color: "#17598d" }} className="text-xl font-semibold">Maturity Profile</h2>
-          <br/>
+        <section className="col-span-12 rounded-gex-md border border-slate-200 bg-white p-6 shadow-gex-sm lg:col-span-8">
+          <h2 className="mb-4 text-lg font-semibold tracking-tight text-slate-900">Maturity Profile</h2>
           <Chart data={chartData} />
         </section>
 
-        <section className="col-span-12 lg:col-span-4 bg-white rounded-lg p-6 shadow-sm">
+        <section className="col-span-12 rounded-gex-md border border-slate-200 bg-white p-6 shadow-gex-sm lg:col-span-4">
           <Alerts alerts={alerts} loading={alertsLoading} error={alertsError} />
         </section>
       </div>

@@ -1,6 +1,7 @@
 import React from "react";
-import { FaCheckCircle, FaExclamationCircle, FaClock, FaTimesCircle } from "react-icons/fa";
+import { CheckCircle2, Clock, XCircle } from "lucide-react";
 import StatCard from "./StatCard";
+import { StatCardSkeleton } from "@/components/common/LoadingState";
 import { Stats } from "@/models/stat";
 
 interface DashboardStatsProps {
@@ -10,22 +11,25 @@ interface DashboardStatsProps {
 }
 
 const DashboardStats: React.FC<DashboardStatsProps> = ({ stats, loading, error }) => {
-  if (loading) return <p>Loading stats...</p>;
-  if (error) return <p className="text-red-500">{error}</p>;
+  if (loading) {
+    return (
+      <section>
+        <h2 className="mb-4 text-lg font-semibold tracking-tight text-slate-900">Certifications</h2>
+        <StatCardSkeleton count={3} />
+      </section>
+    );
+  }
+  if (error) return <p className="py-4 text-sm text-red-600">{error}</p>;
 
   return (
-    <div className="p-4 rounded-lg">
-  <h2 style={{ color: "#17598d" }} className="text-xl font-semibold">Certifications</h2>
-  <br />
-  <div className="flex justify-center">
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl">
-      <StatCard title="Valid" value={stats.active} icon={<FaCheckCircle />} iconColor="lightblue" bgColor="lightblue" />
-      <StatCard title="Pending" value={stats.pending} icon={<FaClock />} iconColor="lightblue" bgColor="lightblue" />
-      <StatCard title="Non Valid" value={+stats.rejected + +stats.expired} icon={<FaTimesCircle />} iconColor="lightblue" bgColor="lightblue" />
-    </div>
-  </div>
-</div>
-
+    <section>
+      <h2 className="mb-4 text-lg font-semibold tracking-tight text-slate-900">Certifications</h2>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <StatCard title="Valid" value={stats.active} icon={<CheckCircle2 />} iconColor="green" bgColor="green" />
+        <StatCard title="Pending" value={stats.pending} icon={<Clock />} iconColor="yellow" bgColor="yellow" />
+        <StatCard title="Non Valid" value={+stats.rejected + +stats.expired} icon={<XCircle />} iconColor="red" bgColor="red" />
+      </div>
+    </section>
   );
 };
 

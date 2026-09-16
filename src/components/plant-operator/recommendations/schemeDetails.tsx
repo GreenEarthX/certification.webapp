@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useServiceDetails } from "@/hooks/useSchemeDetails";
 import { Tooltip } from "@mui/material";
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography } from "@mui/material";
-import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import { Info } from "lucide-react";
 import { useState } from "react";
 
 const SchemeDetailsPage = () => {
@@ -75,7 +75,7 @@ const SchemeDetailsPage = () => {
         {activeTab === "requirements" && (
           <>
             <p className="mb-4 text-justify">{content?.description}</p>
-            <h2 className="text-lg font-semibold text-blue-500 mb-2">
+            <h2 className="text-lg font-semibold text-brand-600 mb-2">
               {content?.criteria?.title}
             </h2>
             <ul className="list-disc ml-6 mb-4">
@@ -91,7 +91,7 @@ const SchemeDetailsPage = () => {
               ))}
             </ul>
   
-            <h2 className="text-lg font-semibold text-blue-400 mb-2">
+            <h2 className="text-lg font-semibold text-brand-500 mb-2">
               {content?.specific_green?.title} :
             </h2>
             <p className="mb-2 text-justify">{content?.specific_green?.description}</p>
@@ -101,7 +101,7 @@ const SchemeDetailsPage = () => {
               ))}
             </ul>
   
-            <h2 className="text-lg font-semibold text-blue-400 mb-2">
+            <h2 className="text-lg font-semibold text-brand-500 mb-2">
               {content?.specific_low?.title} :
             </h2>
             <p className="mb-2 text-justify">{content?.specific_low?.description}</p>
@@ -118,7 +118,7 @@ const SchemeDetailsPage = () => {
           <>
             {content?.steps?.map((step: any, index: number) => (
               <div key={index} className="mb-6">
-                <h2 className="text-lg font-semibold text-blue-500 mb-2">
+                <h2 className="text-lg font-semibold text-brand-600 mb-2">
                   {step.title}
                 </h2>
                 <ul className="list-disc ml-6">
@@ -147,7 +147,7 @@ const SchemeDetailsPage = () => {
     <section className="p-6 rounded-lg">
       {/* Scheme title and compliance score */}
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-800">{schemeName}</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">{schemeName}</h1>
         <div
   className="relative flex items-center space-x-3"
   onMouseEnter={handleMouseEnter}
@@ -170,7 +170,7 @@ const SchemeDetailsPage = () => {
 
   {hovered && (
   <div
-    className="absolute top-10 left-0 z-10 w-96 bg-white border border-blue-300 rounded-lg shadow-lg p-4 text-sm text-gray-700 transition-all duration-200"
+    className="absolute top-10 left-0 z-10 w-96 bg-white border border-brand-300 rounded-lg shadow-lg p-4 text-sm text-gray-700 transition-all duration-200"
     onMouseEnter={handleMouseEnter}
     onMouseLeave={handleMouseLeave}
   >
@@ -185,9 +185,9 @@ const SchemeDetailsPage = () => {
       <div className="flex justify-center mt-4">
         <button
           onClick={() => setShowComplianceModal(true)}
-          className="bg-blue-600 text-white text-xs font-medium px-4 py-1.5 rounded-full hover:bg-blue-700 flex items-center gap-1 transition"
+          className="bg-brand-700 text-white text-xs font-medium px-4 py-1.5 rounded-full hover:bg-brand-800 flex items-center gap-1 transition"
         >
-          <InfoOutlinedIcon fontSize="small" />
+          <Info className="size-4" />
           View Full Calculation Process
         </button>
       </div>
@@ -263,7 +263,7 @@ const SchemeDetailsPage = () => {
   fullWidth
   PaperProps={{
     sx: {
-      backgroundColor: "#f7fbff",
+      backgroundColor: "#ffffff",
       borderRadius: 3,
       p: 3,
       maxHeight: "95vh",
@@ -271,9 +271,9 @@ const SchemeDetailsPage = () => {
     },
   }}
 >
-  <DialogContent sx={{ backgroundColor: "#f1f7fd", px: 2, py: 3 }}>
-    <div className="bg-white border border-blue-200 rounded-xl p-6 text-gray-800">
-      <Typography variant="h6" sx={{ fontWeight: 600, color: "#17598d", textAlign: "center", mb: 2 }}>
+  <DialogContent sx={{ backgroundColor: "var(--gex-surface)", px: 2, py: 3 }}>
+    <div className="bg-white border border-brand-200 rounded-xl p-6 text-gray-800">
+      <Typography variant="h6" sx={{ fontWeight: 600, color: "#0f172a", textAlign: "center", mb: 2 }}>
         Compliance Score Calculation Process
       </Typography>
 
@@ -291,14 +291,14 @@ const SchemeDetailsPage = () => {
       onClick={() => setShowComplianceModal(false)}
       variant="contained"
       sx={{
-        backgroundColor: "#1976d2",
+        backgroundColor: "var(--gex-green-700)",
         px: 3,
         py: 1,
         borderRadius: "6px",
         fontWeight: 500,
         fontSize: "0.85rem",
         textTransform: "none",
-        "&:hover": { backgroundColor: "#1565c0" },
+        "&:hover": { backgroundColor: "var(--gex-green-800)" },
       }}
     >
       Close

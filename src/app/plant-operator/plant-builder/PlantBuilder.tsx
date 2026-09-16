@@ -2458,24 +2458,29 @@ export const PlantBuilder = ({ initialView = "builder" }: PlantBuilderProps) => 
               <div
                 className={`absolute top-0 left-0 h-full flex transition-all duration-300 ease-in-out ${
                   showComponentLibrary ? "w-full sm:w-96" : "w-10"
-                } bg-white border-r border-gray-200 shadow-sm overflow-hidden z-20`}
+                } bg-white/95 backdrop-blur-sm border-r border-brand-100 shadow-gex-md overflow-hidden z-20`}
               >
                 {showComponentLibrary && (
                   <div className="flex-1 overflow-y-auto">
                     <ComponentLibrary />
                   </div>
                 )}
-                <div
-                  className="w-10 bg-gray-100 hover:bg-[#0F766E]/10 cursor-pointer flex items-center justify-center transition-colors duration-200"
+                <button
+                  type="button"
+                  className="group flex w-10 cursor-pointer items-center justify-center border-l border-brand-100/80 bg-gradient-to-b from-brand-50/70 to-brand-50/30 transition-colors duration-200 hover:from-brand-100 hover:to-brand-50 focus-visible:outline-none"
                   onClick={toggleComponentLibrary}
                   title={showComponentLibrary ? "Hide Library" : "Show Library"}
+                  aria-label={showComponentLibrary ? "Hide component library" : "Show component library"}
+                  aria-expanded={showComponentLibrary}
                 >
-                  {showComponentLibrary ? (
-                    <ChevronLeft className="h-5 w-5 text-[#0F766E]" />
-                  ) : (
-                    <ChevronRight className="h-5 w-5 text-[#0F766E]" />
-                  )}
-                </div>
+                  <span className="flex h-12 w-6 items-center justify-center rounded-full bg-white text-brand-700 shadow-gex-sm ring-1 ring-brand-200 transition-[transform,box-shadow] duration-150 group-hover:shadow-gex-md group-active:scale-95">
+                    {showComponentLibrary ? (
+                      <ChevronLeft className="h-4 w-4" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4" />
+                    )}
+                  </span>
+                </button>
               </div>
             )}
 

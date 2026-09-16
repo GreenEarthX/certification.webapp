@@ -3,7 +3,10 @@
 import React, { useMemo } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { ArrowLeft, ArrowRight, Upload } from "lucide-react";
 import { usePlants } from "@/hooks/usePlants";
+import { Button } from "@/components/ui/button";
+import { InlineLoading } from "@/components/common/LoadingState";
 
 const moduleCards = [
   {
@@ -76,7 +79,7 @@ export default function PlantDashboard() {
   }, [params.id, plants]);
 
   if (loading) {
-    return <div className="p-6 text-sm text-muted-foreground">Loading plant...</div>;
+    return <InlineLoading label="Loading plant…" className="p-6" />;
   }
 
   if (error) {
@@ -87,8 +90,12 @@ export default function PlantDashboard() {
     <div className="space-y-6 p-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-2">
-          <Link href="/plant-operator/dashboard" className="text-xs font-semibold text-emerald-700">
-            &larr; Back to Portfolio
+          <Link
+            href="/plant-operator/dashboard"
+            className="inline-flex items-center gap-1 text-xs font-semibold text-brand-700 hover:text-brand-800"
+          >
+            <ArrowLeft className="size-3.5" />
+            Back to Portfolio
           </Link>
           <div>
             <h1 className="text-2xl font-semibold text-slate-900">
@@ -99,26 +106,29 @@ export default function PlantDashboard() {
               <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-600">
                 {plant?.type || "Fuel type"}
               </span>
-              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-emerald-700">
+              <span className="rounded-full bg-brand-50 px-2 py-0.5 font-medium text-brand-700">
                 Maturity {plant?.riskScore ?? 0}%
               </span>
             </div>
           </div>
         </div>
-        <Link
-          href="/plant-operator/plant-builder/builder"
-          className="inline-flex items-center rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
-        >
-          Open Canvas
-        </Link>
+        <Button asChild variant="outline">
+          <Link href="/plant-operator/plant-builder/builder">Open Canvas</Link>
+        </Button>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
         {moduleCards.map((card) => (
-          <div key={card.title} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div
+            key={card.title}
+            className="group rounded-gex-md border border-slate-200 bg-white p-4 shadow-gex-sm transition-[box-shadow,border-color] duration-150 hover:border-brand-200 hover:shadow-gex-md"
+          >
             <div className="flex items-center justify-between">
               <div className="text-sm font-semibold text-slate-900">{card.title}</div>
-              <span className="text-xs font-semibold text-emerald-700">Open module &rarr;</span>
+              <span className="inline-flex items-center gap-1 text-xs font-semibold text-brand-700">
+                Open module
+                <ArrowRight className="size-3.5 transition-transform duration-150 group-hover:translate-x-0.5" />
+              </span>
             </div>
             <div className="mt-3 grid grid-cols-3 gap-4 text-xs text-slate-600">
               {card.rows.map((row) => (
@@ -132,24 +142,25 @@ export default function PlantDashboard() {
         ))}
       </div>
 
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="rounded-gex-md border border-slate-200 bg-white p-6 shadow-gex-sm">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-slate-900">Document Inventory</h2>
+            <h2 className="text-lg font-semibold tracking-tight text-slate-900">Document Inventory</h2>
             <p className="text-xs text-slate-500">Available files & deliverables by lifecycle event</p>
           </div>
-          <button className="rounded-md border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600">
+          <Button variant="outline" size="sm">
+            <Upload />
             Upload
-          </button>
+          </Button>
         </div>
         <div className="mt-4 divide-y divide-slate-100">
           {documents.map((doc) => (
-            <div key={doc.name} className="flex items-center justify-between py-3 text-sm">
+            <div key={doc.name} className="flex items-center justify-between gap-4 py-3 text-sm">
               <div>
                 <div className="font-medium text-slate-900">{doc.name}</div>
                 <div className="text-xs text-slate-500">{doc.type}</div>
               </div>
-              <div className="text-xs text-slate-500">{doc.date}</div>
+              <div className="text-xs tabular-nums text-slate-500">{doc.date}</div>
             </div>
           ))}
         </div>
