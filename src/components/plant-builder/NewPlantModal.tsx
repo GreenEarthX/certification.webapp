@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Check, Plus, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Check, LayoutTemplate, Plus, Trash2, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -36,19 +36,20 @@ import {
   type PlantFuelRow,
   type PlantPayload,
 } from "@/services/plant-builder/plants";
+import type { TemplateDto } from "@/services/plant-builder/templates";
+import { templateStats } from "@/lib/plant-builder/templates";
+import TemplateBadges from "@/components/plant-builder/templates/TemplateBadges";
+import TemplateDiagram from "@/components/plant-builder/templates/TemplateDiagram";
 
-// Static-theme styling (no dark/light variants; explicit GreenEarthX colors).
-// The shadcn semantic tokens (ring/border-input/accent) are undefined in this
-// app, so focus rings and outline-button states are set explicitly here.
-const inputClass =
-  "h-11 bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-[#0F766E]/30 focus-visible:border-[#0F766E]";
-const triggerClass =
-  "h-11 bg-white border-slate-300 text-slate-900 focus:ring-2 focus:ring-[#0F766E]/30 focus:border-[#0F766E] data-[state=open]:border-[#0F766E]";
-const contentClass = "bg-white border-slate-200 text-slate-900";
-const outlineBtnClass =
-  "border-slate-300 bg-white text-slate-700 hover:bg-slate-100 hover:text-slate-900";
-const primaryBtnClass =
-  "bg-[#0F766E] hover:bg-[#0C5F59] text-white min-w-[140px] shadow-sm transition-colors";
+import {
+  brandOutlineBtnClass,
+  contentClass,
+  dialogHeaderClass,
+  inputClass,
+  outlineBtnClass,
+  primaryBtnClass,
+  triggerClass,
+} from "@/components/plant-builder/form-styles";
 
 const EMPTY_FUEL: PlantFuelRow = {
   fuel_type: "",
@@ -81,6 +82,11 @@ type Props = {
   onOpenChange: (open: boolean) => void;
   submitting: boolean;
   onSubmit: (payload: PlantPayload) => void;
+  /** Template the new plant will start from; null for a blank plant. */
+  template?: TemplateDto | null;
+  /** Opens the template gallery. Omit to hide the "Start from" section. */
+  onBrowseTemplates?: () => void;
+  onClearTemplate?: () => void;
 };
 
 export default function NewPlantModal({
@@ -88,10 +94,20 @@ export default function NewPlantModal({
   onOpenChange,
   submitting,
   onSubmit,
+  template = null,
+  onBrowseTemplates,
+  onClearTemplate,
 }: Props) {
   const [step, setStep] = useState<1 | 2>(1);
   const [form, setForm] = useState<PlantFormValues>(EMPTY_FORM);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // A template suggests its pathway, but never overrides one already chosen.
+  const templatePathway = template?.pathway ?? null;
+  useEffect(() => {
+    if (!templatePathway) return;
+    setForm((prev) => (prev.pathway ? prev : { ...prev, pathway: templatePathway }));
+  }, [templatePathway]);
 
   const set =
     <K extends keyof PlantFormValues>(field: K) =>
@@ -164,23 +180,30 @@ export default function NewPlantModal({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-3xl max-h-[88vh] overflow-hidden flex flex-col bg-white p-0">
-        <DialogHeader className="bg-gradient-to-br from-[#0F766E] to-[#15936B] px-6 py-5">
+        <DialogHeader className={dialogHeaderClass}>
           <DialogTitle className="text-xl font-bold text-white">
             New Plant
           </DialogTitle>
           <p className="text-sm text-teal-50/90">
-            Set up the plant profile, then add the products it makes.
+            {template
+              ? `Starting from the "${template.name}" template. Set up the plant profile, then add the products it makes.`
+              : "Set up the plant profile, then add the products it makes."}
           </p>
           <Stepper step={step} />
         </DialogHeader>
 
         <div className="flex-1 min-h-0 overflow-y-auto px-6 py-6">
           {step === 1 ? (
-            <Section1
-              form={form}
-              errors={errors}
-              set={set}
-            />
+            <div className="space-y-6">
+              {onBrowseTemplates && (
+                <StartFromCard
+                  template={template}
+                  onBrowse={onBrowseTemplates}
+                  onClear={onClearTemplate}
+                />
+              )}
+              <Section1 form={form} errors={errors} set={set} />
+            </div>
           ) : (
             <Section2
               form={form}
@@ -226,7 +249,11 @@ export default function NewPlantModal({
               disabled={submitting}
               className={primaryBtnClass}
             >
-              {submitting ? "Creating…" : "Create Plant"}
+              {submitting
+                ? "Creating…"
+                : template
+                  ? "Create from Template"
+                  : "Create Plant"}
             </Button>
           )}
         </div>
@@ -266,6 +293,84 @@ function Stepper({ step }: { step: 1 | 2 }) {
         );
       })}
     </div>
+  );
+}
+
+function StartFromCard({
+  template,
+  onBrowse,
+  onClear,
+}: {
+  template: TemplateDto | null;
+  onBrowse: () => void;
+  onClear?: () => void;
+}) {
+  if (!template) {
+    return (
+      <SubCard title="Start From">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-slate-600">
+            Blank plant. Or start from a template to get a ready-made layout.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onBrowse}
+            className={`shrink-0 ${brandOutlineBtnClass}`}
+          >
+            <LayoutTemplate className="mr-2 h-4 w-4" />
+            Browse templates
+          </Button>
+        </div>
+      </SubCard>
+    );
+  }
+
+  const stats = templateStats(template);
+  return (
+    <SubCard title="Start From">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+        <div className="h-24 w-full shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-white sm:w-40">
+          <TemplateDiagram
+            topology={template.template_json}
+            showLabels={false}
+            title={`${template.name} process flow`}
+            className="h-full w-full p-2"
+          />
+        </div>
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="truncate text-sm font-semibold text-slate-900">{template.name}</div>
+          <TemplateBadges template={template} />
+          <p className="text-xs text-slate-500">
+            {stats.components} components · {stats.connections} connections, applied when
+            the plant is created. Parameter values start empty.
+          </p>
+        </div>
+        <div className="flex shrink-0 gap-2 sm:flex-col">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onBrowse}
+            className={outlineBtnClass}
+          >
+            Change
+          </Button>
+          {onClear && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onClear}
+              className="text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+            >
+              <X className="mr-1 h-3.5 w-3.5" />
+              Remove
+            </Button>
+          )}
+        </div>
+      </div>
+    </SubCard>
   );
 }
 

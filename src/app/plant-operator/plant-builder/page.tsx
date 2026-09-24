@@ -21,6 +21,7 @@ import {
   ShieldCheck,
   CalendarClock,
   Clock,
+  LayoutTemplate,
 } from "lucide-react";
 import {
   PRIMARY_PATHWAYS,
@@ -63,6 +64,12 @@ import {
 } from "@/services/plant-builder/plants";
 import { createDigitalTwin } from "@/services/plant-builder/digitalTwins";
 import NewPlantModal from "@/components/plant-builder/NewPlantModal";
+import TemplateGalleryDialog from "@/components/plant-builder/templates/TemplateGalleryDialog";
+import { brandOutlineBtnClass } from "@/components/plant-builder/form-styles";
+import {
+  instantiateTemplate,
+  type TemplateDto,
+} from "@/services/plant-builder/templates";
 import {
   fetchCurrentBackendUser,
   type BackendUser,
@@ -127,6 +134,10 @@ export default function ChoosePlantPage() {
   const [currentUser, setCurrentUser] = useState<BackendUser | null>(null);
   const [showNewPlantModal, setShowNewPlantModal] = useState(false);
   const [creatingPlant, setCreatingPlant] = useState(false);
+  const [showTemplateGallery, setShowTemplateGallery] = useState(false);
+  // Where the gallery was opened from, so closing it returns there.
+  const [galleryOrigin, setGalleryOrigin] = useState<"header" | "modal">("header");
+  const [selectedTemplate, setSelectedTemplate] = useState<TemplateDto | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -188,25 +199,78 @@ export default function ChoosePlantPage() {
   };
 
   const handleAddNewPlant = () => {
+    setSelectedTemplate(null);
     setShowNewPlantModal(true);
   };
 
+  // ── Templates ──────────────────────────────────────────────────────────────
+  // The gallery and the New Plant modal are never open together: picking a
+  // template (from either entry point) always lands in the modal, pre-set.
+
+  const handleBrowseTemplates = () => {
+    setGalleryOrigin("header");
+    setShowTemplateGallery(true);
+  };
+
+  const handleBrowseTemplatesFromModal = () => {
+    setGalleryOrigin("modal");
+    setShowNewPlantModal(false); // programmatic close keeps the form's state
+    setShowTemplateGallery(true);
+  };
+
+  const handleUseTemplate = (template: TemplateDto) => {
+    setSelectedTemplate(template);
+    setShowTemplateGallery(false);
+    setShowNewPlantModal(true);
+  };
+
+  const handleTemplateGalleryOpenChange = (open: boolean) => {
+    setShowTemplateGallery(open);
+    if (!open && galleryOrigin === "modal") setShowNewPlantModal(true);
+  };
+
+  const handleNewPlantModalOpenChange = (open: boolean) => {
+    setShowNewPlantModal(open);
+    if (!open) setSelectedTemplate(null);
+  };
+
   const handleCreatePlant = async (payload: PlantPayload) => {
+    const template = selectedTemplate;
     setCreatingPlant(true);
     try {
       const plant = await createPlant(payload);
+      const twinName = `${plant.name} Digital Twin`;
       try {
         await createDigitalTwin({
           plant_id: plant.id,
-          name: `${plant.name} Digital Twin`,
+          name: twinName,
           version: "1",
           is_active: true,
         });
       } catch (twinErr) {
+        // Not fatal: instantiating a template creates the twin if it is missing.
         console.error("Failed to create digital twin:", twinErr);
       }
-      toast.success(`Created "${plant.name}".`);
+
+      if (template) {
+        try {
+          await instantiateTemplate(template.id, { plantId: plant.id, name: twinName });
+          toast.success(`Created "${plant.name}" from "${template.name}".`);
+        } catch (templateErr: any) {
+          // The plant exists either way — land the user in it rather than strand them.
+          console.error("Failed to apply template:", templateErr);
+          toast.error(
+            `"${plant.name}" was created, but the template could not be applied: ${
+              templateErr?.message || "unknown error"
+            }`
+          );
+        }
+      } else {
+        toast.success(`Created "${plant.name}".`);
+      }
+
       setShowNewPlantModal(false);
+      setSelectedTemplate(null);
       router.push(`/plant-operator/plant-builder/builder?plantId=${plant.id}`);
     } catch (err: any) {
       console.error("Failed to create plant:", err);
@@ -551,6 +615,14 @@ export default function ChoosePlantPage() {
             </div>
             <div className="flex items-center gap-2">
               <Button
+                variant="outline"
+                className={`text-sm ${brandOutlineBtnClass}`}
+                onClick={handleBrowseTemplates}
+              >
+                <LayoutTemplate className="h-4 w-4 mr-2" />
+                Browse Templates
+              </Button>
+              <Button
                 className="bg-[#0F766E] hover:bg-[#0C5F59] text-white text-sm"
                 onClick={handleAddNewPlant}
               >
@@ -674,13 +746,23 @@ export default function ChoosePlantPage() {
                   : "Try adjusting the search or status filter."}
               </p>
               {activeTab !== "archived" && (
-                <Button
-                  className="mt-4 bg-[#0F766E] hover:bg-[#0C5F59] text-white text-sm"
-                  onClick={handleAddNewPlant}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Plant
-                </Button>
+                <div className="mt-4 flex flex-wrap justify-center gap-2">
+                  <Button
+                    className="bg-[#0F766E] hover:bg-[#0C5F59] text-white text-sm"
+                    onClick={handleAddNewPlant}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Plant
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className={`text-sm ${brandOutlineBtnClass}`}
+                    onClick={handleBrowseTemplates}
+                  >
+                    <LayoutTemplate className="h-4 w-4 mr-2" />
+                    Start from a Template
+                  </Button>
+                </div>
               )}
             </Card>
           </div>
@@ -930,9 +1012,19 @@ export default function ChoosePlantPage() {
 
       <NewPlantModal
         open={showNewPlantModal}
-        onOpenChange={setShowNewPlantModal}
+        onOpenChange={handleNewPlantModalOpenChange}
         submitting={creatingPlant}
         onSubmit={handleCreatePlant}
+        template={selectedTemplate}
+        onBrowseTemplates={handleBrowseTemplatesFromModal}
+        onClearTemplate={() => setSelectedTemplate(null)}
+      />
+
+      <TemplateGalleryDialog
+        open={showTemplateGallery}
+        onOpenChange={handleTemplateGalleryOpenChange}
+        onUse={handleUseTemplate}
+        subtitle="Pick a template, then set up the plant profile. The layout is applied when the plant is created."
       />
 
       <Dialog open={showShareModal} onOpenChange={setShowShareModal}>
