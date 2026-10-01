@@ -3,6 +3,7 @@
 import React, { useState, ChangeEvent } from "react";
 import { RecommendationCard } from "@/components/plant-operator/recommendations/RecommendationCard";
 import { useRecommendations } from "@/hooks/useRecommendations";
+import { InlineLoading } from "@/components/common/LoadingState";
 
 export default function Recommendations() {
   const { recommendations, loading, error } = useRecommendations();
@@ -30,7 +31,7 @@ export default function Recommendations() {
         <select
           value={selectedPlant}
           onChange={handleChange}
-          className="border border-gray-300 rounded-md px-4 py-2 bg-white shadow-sm focus:ring focus:ring-blue-200 text-gray-700 cursor-pointer"
+          className="border border-gray-300 rounded-md px-4 py-2 bg-white shadow-sm focus:ring focus:ring-brand-200 text-gray-700 cursor-pointer"
         >
           <option value="">All Plants</option>
           {plants.map((plant) => (
@@ -42,7 +43,7 @@ export default function Recommendations() {
       </div>
 
       {/* Show loading or error message */}
-      {loading && <p>Loading recommendations...</p>}
+      {loading && <InlineLoading label="Loading recommendations…" />}
       {error && <p className="text-red-500">{error}</p>}
 
       {/* Filtered Recommendations */}

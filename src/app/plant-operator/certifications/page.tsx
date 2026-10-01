@@ -4,6 +4,7 @@ import React from "react";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
 import { useMediaQuery } from "@mui/material";
 import { useCertifications } from "@/hooks/useCertifications";
+import { InlineLoading } from "@/components/common/LoadingState";
 
 const columns: GridColDef[] = [
   { field: "Certification", headerName: "Certification", flex: 1, minWidth: 120 },
@@ -17,7 +18,7 @@ const columns: GridColDef[] = [
     flex: 1,
     minWidth: 100,
     renderCell: (params) => (
-      <a href={`/plant-operator/certifications/${params.row.id}`} className="text-blue-600 hover:text-blue-700">
+      <a href={`/plant-operator/certifications/${params.row.id}`} className="text-brand-700 hover:text-brand-800">
         View Details
       </a>
     ),
@@ -67,14 +68,12 @@ export default function CertificationsTable() {
   const { certifications, loading, error } = useCertifications();
 
   return (
-    <div>
-      <br />
-      <section className="bg-white rounded-lg p-6 shadow-sm">
-        <h2 className="text-xl font-semibold mb-4">Certifications List</h2>
-        <br />
+    <div className="p-6">
+      <section className="rounded-gex-md border border-slate-200 bg-white p-6 shadow-gex-sm">
+        <h2 className="text-lg font-semibold tracking-tight text-slate-900 mb-4">Certifications List</h2>
 
         {loading ? (
-          <p>Loading certifications...</p>
+          <InlineLoading label="Loading certifications…" />
         ) : error ? (
           <p className="text-red-500">{error}</p>
         ) : (

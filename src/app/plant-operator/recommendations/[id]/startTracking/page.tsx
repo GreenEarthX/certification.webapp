@@ -19,7 +19,7 @@ const GanttAndTrackingPage = () => {
                   key={tab}
                   className={`cursor-pointer pb-2 border-b-2 ${
                     activeTab === tab
-                      ? "border-blue-500 text-blue-600 font-semibold"
+                      ? "border-brand-600 text-brand-700 font-semibold"
                       : "border-transparent text-gray-600"
                   }`}
                   onClick={() => setActiveTab(tab as "todo" | "gantt")}

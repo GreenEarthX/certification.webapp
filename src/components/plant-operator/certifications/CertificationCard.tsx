@@ -47,7 +47,7 @@ const CertificationCard: React.FC<CertificationCards> = ({
       <div className="w-full md:w-2/3 flex flex-col md:flex-row gap-6">
         {/* Left Part: Certification Details (2/3 of the right div) */}
         <div className="w-full md:w-2/3">
-          <h2 className="text-xl font-bold mb-3">{certification}</h2>
+          <h2 className="text-lg font-semibold tracking-tight text-slate-900 mb-3">{certification}</h2>
           <p className="text-sm text-gray-600 mb-4">
             {description}  
           </p>
@@ -81,7 +81,7 @@ const CertificationCard: React.FC<CertificationCards> = ({
           </div>
 
           {/* View Button */}
-          <button className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors font-semibold text-sm">
+          <button className="bg-brand-600 text-white px-6 py-2 rounded-lg hover:bg-brand-700 transition-colors font-semibold text-sm">
             View Certificate
           </button>
         </div>

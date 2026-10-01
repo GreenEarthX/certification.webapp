@@ -228,7 +228,7 @@ const ElectricityStep: React.FC<Props> = ({ data, onChange }) => {
         <button
           type="button"
           onClick={addEnergySource}
-          className="mt-2 px-3 py-1 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700"
+          className="mt-2 px-3 py-1 bg-brand-700 text-white rounded-md text-sm hover:bg-brand-800"
         >
           + Add Energy Source
         </button>

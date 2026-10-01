@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Plug } from "lucide-react";
+import { GripVertical, Layers, Plug, Search } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -76,23 +76,39 @@ let cachedError: string | null = null;
 let inflight: Promise<ComponentLibraryJSON> | null = null;
 
 // === TAILWIND COLORS ===
+// Layer colours match the canvas legend (equipment / carrier / gate); the
+// panel chrome itself uses the brand green.
 const layerStyles = {
   equipment: {
     dot: "bg-blue-500",
-    border: "border-blue-300",
-    hover: "hover:border-blue-500 hover:bg-blue-50",
+    accent: "border-l-blue-500",
+    hover: "hover:border-blue-300 hover:bg-blue-50/60",
   },
   carrier: {
     dot: "bg-green-500",
-    border: "border-green-300",
-    hover: "hover:border-green-500 hover:bg-green-50",
+    accent: "border-l-green-500",
+    hover: "hover:border-green-300 hover:bg-green-50/60",
   },
   gate: {
     dot: "bg-purple-500",
-    border: "border-purple-300",
-    hover: "hover:border-purple-500 hover:bg-purple-50",
+    accent: "border-l-purple-500",
+    hover: "hover:border-purple-300 hover:bg-purple-50/60",
   },
 };
+
+const PanelHeader = ({ subtitle, tone = "muted" }: { subtitle: string; tone?: "muted" | "error" }) => (
+  <div className="border-b border-brand-100 bg-gradient-to-b from-brand-50/80 to-white px-3 py-3">
+    <div className="flex items-center gap-2.5">
+      <span className="flex size-8 items-center justify-center rounded-lg bg-brand-100 text-brand-700 ring-1 ring-inset ring-brand-200/70">
+        <Layers className="size-4" />
+      </span>
+      <div className="leading-tight">
+        <h2 className="text-sm font-semibold tracking-tight text-slate-900">Component Library</h2>
+        <p className={`mt-0.5 text-[11px] ${tone === "error" ? "text-red-600" : "text-slate-500"}`}>{subtitle}</p>
+      </div>
+    </div>
+  </div>
+);
 
 const ComponentLibrary = () => {
   const [searchTerms, setSearchTerms] = useState({
@@ -225,14 +241,17 @@ const ComponentLibrary = () => {
 
     return (
       <div className="space-y-3">
-        <Input
-          value={searchValue}
-          onChange={(e) =>
-            setSearchTerms((prev) => ({ ...prev, [type]: e.target.value }))
-          }
-          placeholder={`Search ${title.toLowerCase()}`}
-          className="h-8 text-xs"
-        />
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-slate-400" />
+          <Input
+            value={searchValue}
+            onChange={(e) =>
+              setSearchTerms((prev) => ({ ...prev, [type]: e.target.value }))
+            }
+            placeholder={`Search ${title.toLowerCase()}`}
+            className="h-8 rounded-gex-sm border-slate-200 bg-white pl-8 text-xs text-slate-900 placeholder:text-slate-400 focus-visible:border-brand-300 focus-visible:ring-brand focus-visible:ring-offset-0"
+          />
+        </div>
         {sortedCategories.map(([category, items]) => {
           const normalized = category.trim().toLowerCase();
           const hideCategory =
@@ -243,7 +262,8 @@ const ComponentLibrary = () => {
           return (
             <div key={category} className="space-y-2">
               {!hideCategory && (
-                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
+                <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                  <span className={`size-1.5 rounded-full ${style.dot}`} aria-hidden />
                   {category}
                 </div>
               )}
@@ -320,19 +340,26 @@ const ComponentLibrary = () => {
                     key={component.id}
                     draggable
                     onDragStart={(e) => handleDragStart(e, component)}
-                    className={`p-2 cursor-move border ${style.border} ${style.hover} transition-all text-sm rounded-md shadow-sm`}
+                    className={`group cursor-grab border border-slate-200 border-l-[3px] ${style.accent} ${style.hover} rounded-gex-sm p-2 pl-2.5 text-sm shadow-none transition-[background-color,border-color,box-shadow] duration-150 hover:shadow-gex-sm active:cursor-grabbing`}
                   >
                       <div className="flex items-start justify-between gap-2">
-                        <div
-                          className="font-medium whitespace-normal break-words leading-snug"
-                          title={component.name}
-                        >
-                          {component.name}
+                        <div className="flex min-w-0 items-start gap-1.5">
+                          <GripVertical className="mt-0.5 size-3.5 shrink-0 text-slate-300 transition-colors group-hover:text-slate-400" aria-hidden />
+                          <div
+                            className="whitespace-normal break-words font-medium leading-snug text-slate-800"
+                            title={component.name}
+                          >
+                            {component.name}
+                          </div>
                         </div>
                       {type === "equipment" && typeof component.definitionId === "number" && (
                         <button
                           type="button"
-                          className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-slate-100"
+                          className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border bg-white transition-colors ${
+                            isActive
+                              ? "border-brand-300 bg-brand-50 text-brand-700"
+                              : "border-slate-200 text-slate-500 hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700"
+                          }`}
                           title="View ports"
                           onMouseDown={(e) => e.stopPropagation()}
                           onClick={async (e) => {
@@ -369,13 +396,8 @@ const ComponentLibrary = () => {
   // === UI states ===
   if (loading) {
     return (
-      <div className="w-80 border-r border-border bg-card flex flex-col">
-        <div className="p-3 border-b border-border">
-          <h2 className="font-bold text-base">Component Library</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Loading components…
-          </p>
-        </div>
+      <div className="flex w-80 flex-col bg-white">
+        <PanelHeader subtitle="Loading components…" />
         <div className="flex-1 overflow-hidden">
           <div className="p-3 space-y-4 animate-pulse">
             {["Equipment", "Carriers", "Gates"].map((label, idx) => (
@@ -400,13 +422,8 @@ const ComponentLibrary = () => {
 
   if (error || !library) {
     return (
-      <div className="w-80 border-r border-border bg-card flex flex-col">
-        <div className="p-3 border-b border-border">
-          <h2 className="font-bold text-base">Component Library</h2>
-          <p className="text-xs text-destructive mt-0.5">
-            {error || "Unable to load component library."}
-          </p>
-        </div>
+      <div className="flex w-80 flex-col bg-white">
+        <PanelHeader subtitle={error || "Unable to load component library."} tone="error" />
       </div>
     );
   }
@@ -414,13 +431,8 @@ const ComponentLibrary = () => {
   const { equipment, carrier, gate } = library;
 
   return (
-    <div className="w-80 border-r border-border bg-card flex flex-col">
-      <div className="p-3 border-b border-border">
-        <h2 className="font-bold text-base">Component Library</h2>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          Drag to canvas
-        </p>
-      </div>
+    <div className="flex w-80 flex-col bg-white">
+      <PanelHeader subtitle="Drag a component onto the canvas" />
 
       <Tabs
         value={activeTab}
@@ -428,26 +440,26 @@ const ComponentLibrary = () => {
         className="flex-1 flex flex-col"
       >
         <div className="px-3 pt-3">
-          <TabsList className="grid w-full grid-cols-3 bg-slate-100">
+          <TabsList className="grid h-9 w-full grid-cols-3 rounded-gex-sm bg-slate-100/90 p-1 text-slate-500">
             <TabsTrigger
               value="equipment"
-              className="gap-1.5 data-[state=active]:bg-blue-100 data-[state=active]:text-blue-800 data-[state=active]:shadow-sm"
+              className="gap-1.5 rounded-[6px] text-xs data-[state=active]:bg-white data-[state=active]:text-blue-800 data-[state=active]:shadow-gex-sm data-[state=active]:ring-1 data-[state=active]:ring-blue-200"
             >
-              <span className="h-2.5 w-2.5 rounded-full bg-blue-600 border border-blue-700 shrink-0" />
+              <span className="size-2 shrink-0 rounded-full bg-blue-500" />
               Equipment
             </TabsTrigger>
             <TabsTrigger
               value="carrier"
-              className="gap-1.5 data-[state=active]:bg-green-100 data-[state=active]:text-green-800 data-[state=active]:shadow-sm"
+              className="gap-1.5 rounded-[6px] text-xs data-[state=active]:bg-white data-[state=active]:text-green-800 data-[state=active]:shadow-gex-sm data-[state=active]:ring-1 data-[state=active]:ring-green-200"
             >
-              <span className="h-2.5 w-2.5 rounded-full bg-green-600 border border-green-700 shrink-0" />
+              <span className="size-2 shrink-0 rounded-full bg-green-500" />
               Carrier
             </TabsTrigger>
             <TabsTrigger
               value="gate"
-              className="gap-1.5 data-[state=active]:bg-purple-100 data-[state=active]:text-purple-800 data-[state=active]:shadow-sm"
+              className="gap-1.5 rounded-[6px] text-xs data-[state=active]:bg-white data-[state=active]:text-purple-800 data-[state=active]:shadow-gex-sm data-[state=active]:ring-1 data-[state=active]:ring-purple-200"
             >
-              <span className="h-2.5 w-2.5 rounded-full bg-purple-600 border border-purple-700 shrink-0" />
+              <span className="size-2 shrink-0 rounded-full bg-purple-500" />
               Gate
             </TabsTrigger>
           </TabsList>

@@ -52,7 +52,7 @@ const QuestionWithMultiSelect: React.FC<Props> = ({ label, options, selected, on
       {open && (
         <div className="mt-1 border rounded-md shadow-md bg-white max-h-52 overflow-y-auto z-50 relative">
           {options.map((option, index) => (
-            <label key={index} className="block px-3 py-2 hover:bg-blue-50 cursor-pointer">
+            <label key={index} className="block px-3 py-2 hover:bg-brand-50 cursor-pointer">
               <input
                 type="checkbox"
                 className="mr-2 accent-blue-600"
@@ -71,12 +71,12 @@ const QuestionWithMultiSelect: React.FC<Props> = ({ label, options, selected, on
           {selected.map((item, index) => (
             <div
               key={index}
-              className="border border-blue-500 rounded-full px-3 py-1 text-sm text-blue-900 flex items-center gap-2"
+              className="border border-brand-600 rounded-full px-3 py-1 text-sm text-brand-900 flex items-center gap-2"
             >
               {item}
               <button
                 onClick={() => removeOption(item)}
-                className="text-blue-700 hover:text-red-500"
+                className="text-brand-800 hover:text-red-500"
               >
                 &times;
               </button>

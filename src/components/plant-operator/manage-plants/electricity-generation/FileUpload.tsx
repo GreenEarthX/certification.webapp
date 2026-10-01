@@ -20,15 +20,15 @@ const FileUpload: React.FC<FileUploadProps> = ({ label, onChange, fileName }) =>
 
   return (
     <div className="my-4">
-      <span className="block text-sm text-blue-900 mb-1">{label}</span>
+      <span className="block text-sm text-brand-900 mb-1">{label}</span>
       <label
         onDrop={handleDrop}
         onDragOver={(e) => e.preventDefault()}
-        className="flex items-center justify-between gap-4 px-4 py-2 border-2 border-dashed border-blue-300 rounded-md cursor-pointer hover:border-blue-500 transition"
+        className="flex items-center justify-between gap-4 px-4 py-2 border-2 border-dashed border-brand-300 rounded-md cursor-pointer hover:border-brand-600 transition"
         onClick={() => inputRef.current?.click()}
       >
         <span className="text-gray-600 text-sm">Drag and drop or click to upload</span>
-        <div className="flex items-center gap-1 text-blue-700">
+        <div className="flex items-center gap-1 text-brand-800">
           <UploadCloud size={20} />
           <span className="text-sm font-medium">PDF</span>
         </div>

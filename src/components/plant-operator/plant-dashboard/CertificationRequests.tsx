@@ -25,13 +25,13 @@ const CertificationRequests: React.FC<CertificationRequestsProps> = ({ requests 
                 <td className="py-2">
                   <div className="flex items-center">
                     <div className="w-32 bg-gray-200 rounded-full h-2 mr-3">
-                      <div className="bg-blue-500 h-2 rounded-full" style={{ width: `${progress}%` }}></div>
+                      <div className="bg-brand-600 h-2 rounded-full" style={{ width: `${progress}%` }}></div>
                     </div>
                     <span className="text-xs font-medium">{progress}%</span>
                   </div>
                 </td>
                 <td className="py-2">
-                  <span className="text-blue-600 hover:text-blue-700 cursor-pointer font-medium">
+                  <span className="text-brand-700 hover:text-brand-800 cursor-pointer font-medium">
                     Track my certification
                   </span>
                 </td> 

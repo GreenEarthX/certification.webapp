@@ -14,6 +14,7 @@
   border-top-right-radius: 0;
   border-bottom-right-radius: 0;
   overflow: hidden;
+  transition: width 0.2s ease;
 }
 
 .logoBox {
@@ -33,11 +34,21 @@
 .listItem {
   margin: 4px 12px;
   padding: 10px 14px;
-  border-radius: 12px;
+  border-radius: var(--gex-radius-md);
   display: flex;
   align-items: center;
   gap: 10px;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  color: #0f172a;
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.listItem:hover {
+  background-color: var(--gex-green-50);
+  color: var(--gex-green-800);
+}
+
+.listItem:active {
+  background-color: var(--gex-green-100);
 }
 
 .listItemIcon {
@@ -47,14 +58,11 @@
   justify-content: center;
 }
 
-.listItemActive {
-  background: linear-gradient(90deg, rgba(59, 130, 246, 0.16), rgba(59, 130, 246, 0.04));
-  color: #1d4ed8;
-  box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.18);
-}
-
-.listItemHover:hover {
-  background-color: rgba(59, 130, 246, 0.08);
+.listItemActive,
+.listItemActive:hover {
+  background: var(--gex-green-50);
+  color: var(--gex-green-800);
+  box-shadow: inset 3px 0 0 var(--gex-green-700);
 }
 
 .signOutItem:hover {
@@ -106,7 +114,7 @@ z-index: 1200; /* Ensure it's above other elements */
 }
 
 .toggleButtonContainer:hover {
-background: rgba(59, 130, 246, 0.12);
+background: var(--gex-green-50);
 }
 
 .toggleButton {
@@ -127,32 +135,26 @@ transition: color 0.2s ease, filter 0.2s ease; /* Smooth transition */
 }
 
 .toggleButtonContainer:hover .arrowIcon {
-color: #2196F3; /* Blue color on hover */
-filter: drop-shadow(0 0 4px rgba(33, 150, 243, 0.5)); /* Blue reflection effect */
+color: var(--gex-green-700);
 }
-
-
 
 /* Icon Styles */
 .listItemIcon svg {
 width: 20px;
 height: 20px;
 color: #475569;
+transition: color 0.15s ease;
 }
 
+.listItem:hover .listItemIcon svg,
 .listItemActive .listItemIcon svg {
-color: #1d4ed8;
+color: var(--gex-green-700);
 }
 
 /* Arrow Icon */
 .arrowIcon {
 width: 16px; /* Adjust arrow size */
 height: 16px; /* Adjust arrow size */
-color: #000; /* Default arrow color */
-transition: color 0.2s ease, filter 0.2s ease; /* Smooth transition */
-}
-
-.toggleButtonContainer:hover .arrowIcon {
-color: #2196F3; /* Blue color on hover */
-filter: drop-shadow(0 0 4px rgba(33, 150, 243, 0.5)); /* Blue reflection effect */
+color: #475569;
+transition: color 0.15s ease;
 }

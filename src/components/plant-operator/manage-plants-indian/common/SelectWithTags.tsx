@@ -63,7 +63,7 @@ const SelectWithCheckboxTags: React.FC<Props> = ({ label, options, selected, onC
             {options.map((option) => (
               <label
                 key={option}
-                className="flex items-center px-3 py-2 hover:bg-blue-50 cursor-pointer"
+                className="flex items-center px-3 py-2 hover:bg-brand-50 cursor-pointer"
               >
                 <input
                   type="checkbox"
@@ -84,12 +84,12 @@ const SelectWithCheckboxTags: React.FC<Props> = ({ label, options, selected, onC
           {selected.map((item) => (
             <div
               key={item}
-              className="border border-blue-500 rounded-md px-3 py-1 text-sm text-blue-900 flex justify-between items-center"
+              className="border border-brand-600 rounded-md px-3 py-1 text-sm text-brand-900 flex justify-between items-center"
             >
               <span>{item}</span>
               <button
                 onClick={() => removeOption(item)}
-                className="text-blue-700 hover:text-red-500 ml-2"
+                className="text-brand-800 hover:text-red-500 ml-2"
               >
                 &times;
               </button>

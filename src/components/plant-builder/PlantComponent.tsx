@@ -152,13 +152,13 @@ const getTypeIcon = (type: string, colorClass: string) => {
 const getBaseShapeClasses = (type: string) => {
   switch (type) {
     case "equipment":
-      return "w-56 h-36 rounded-lg";
+      return "w-56 h-36 rounded-2xl";
     case "carrier":
       return "w-36 h-36 rounded-full";
     case "gate":
-      return "w-48 h-72 rounded-md";
+      return "w-48 h-72 rounded-2xl";
     default:
-      return "w-48 h-32 rounded-lg";
+      return "w-48 h-32 rounded-2xl";
   }
 };
 
@@ -382,7 +382,7 @@ const PlantComponent = ({
       }}
     >
       <Card
-        className={`${shapeClasses} border-2 shadow-md hover:shadow-lg transition-shadow relative group flex flex-col items-center justify-center p-2 overflow-visible ${colors.border} ${colors.bg} ${
+        className={`${shapeClasses} border shadow-md hover:shadow-lg transition-[box-shadow,border-color,opacity] duration-200 relative group flex flex-col items-center justify-center p-2 overflow-visible ${colors.border} ${colors.bg} ${
           isHighlighted ? "ring-2 ring-amber-300 ring-offset-2 ring-offset-white" : ""
         } ${isPersisting ? "opacity-80" : ""}`}
         style={
@@ -396,7 +396,7 @@ const PlantComponent = ({
               style.borderColor = carrierAccent;
             }
             if (glowColor) {
-              style.boxShadow = `0 6px 16px rgba(15, 23, 42, 0.08), 0 0 18px rgba(${glowColor}, 0.45)`;
+              style.boxShadow = `0 4px 14px rgba(15, 23, 42, 0.06), 0 0 0 1px rgba(${glowColor}, 0.12), 0 0 22px rgba(${glowColor}, 0.22)`;
             }
             return Object.keys(style).length > 0 ? style : undefined;
           })()

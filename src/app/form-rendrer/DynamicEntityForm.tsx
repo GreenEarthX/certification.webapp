@@ -332,7 +332,7 @@ const DynamicEntityForm: React.FC<DynamicEntityFormProps> = ({ definition }) => 
 
       <button
         type="submit"
-        className="mt-4 rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+        className="mt-4 rounded bg-brand-700 px-4 py-2 text-white hover:bg-brand-800"
       >
         Submit
       </button>

@@ -97,7 +97,7 @@ interface Props {
             onClick={() =>
               addFuel(supplyFuels, setSupplyFuels, supplyFuelSelect, setSupplyFuelSelect, 'supplyFuels')
             }
-            className="w-44 px-3 py-1.5 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700"
+            className="w-44 px-3 py-1.5 bg-brand-700 text-white rounded-md text-sm hover:bg-brand-800"
           >
             + Add fuel
           </button>
@@ -158,7 +158,7 @@ interface Props {
             onClick={() =>
               addFuel(steamFuels, setSteamFuels, steamFuelSelect, setSteamFuelSelect, 'steamFuels')
             }
-            className="w-44 px-3 py-1.5 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700"
+            className="w-44 px-3 py-1.5 bg-brand-700 text-white rounded-md text-sm hover:bg-brand-800"
           >
             + Add Steam fuel
           </button>
@@ -222,7 +222,7 @@ interface Props {
                 'inputMaterials'
               )
             }
-            className="w-44 px-3 py-1.5 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700"
+            className="w-44 px-3 py-1.5 bg-brand-700 text-white rounded-md text-sm hover:bg-brand-800"
           >
             + Add Input Material
           </button>

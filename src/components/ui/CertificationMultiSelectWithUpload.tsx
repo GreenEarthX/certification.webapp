@@ -116,7 +116,7 @@ export function CertificationMultiSelectWithUpload({
                     href={f.url}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-xs text-blue-600 underline"
+                    className="text-xs text-brand-700 underline"
                   >
                     {f.name}
                   </a>
