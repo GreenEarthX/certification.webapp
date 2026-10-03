@@ -12,6 +12,21 @@ export const PRIMARY_PATHWAYS: Option[] = [
   { value: "other", label: "Other" },
 ];
 
+// Plant family a template models — the primary filter in the template gallery.
+// Mirrors TEMPLATE_CATEGORY in
+// certification_backend/src/modules/templates/templates.constants.ts
+export const TEMPLATE_CATEGORIES: Option[] = [
+  { value: "green_hydrogen", label: "Green Hydrogen" },
+  { value: "biogas", label: "Biogas / Biomethane" },
+  { value: "biofuels", label: "Biofuels" },
+  { value: "saf", label: "Sustainable Aviation Fuel (SAF)" },
+  { value: "ammonia", label: "Ammonia" },
+  { value: "methanol", label: "Methanol" },
+  { value: "e_ng", label: "e-NG / e-Fuels" },
+  { value: "ccu_ccs", label: "CCU / CCS" },
+  { value: "other", label: "Other" },
+];
+
 export const PLANT_CONFIGURATIONS: Option[] = [
   { value: "new_build", label: "New Build" },
   { value: "retrofit", label: "Retrofit" },
